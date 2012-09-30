@@ -1,0 +1,3 @@
+extends: 'ex_base'
+sleep: 12
+tasks: 1
