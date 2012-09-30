@@ -1,7 +1,7 @@
 ddts
 ====
 
-Dependency-Driven Test Suite System
+Dependency-Driven Test Suite system
 
 ### Notes
 
