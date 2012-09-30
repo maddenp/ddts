@@ -1,0 +1,38 @@
+
+FIM Test Suite
+
+Quick Start
+
+  ts [suite]             : do the standard or named suite
+  ts baseline [suite]    : do the standard or named suite & store a baseline
+  ts clean               : remove most objects created by the test suite
+  ts cleaner             : ts clean + removes 'baseline' & data archive
+  ts show run|suite name : show configuration of the named run or suite
+
+  Any other argument to 'ts' is interpreted as a suite name.
+
+Baseline Creation / Comparison
+
+  To create a baseline, run 'ts baseline <suite>'. If <suite> is unspecified,
+  the standard suite will be used. A directory named 'baseline' (which must not
+  already exist) will be created in the current directory, and the output of the
+  test-suite jobs stored there, in an appropriate directory hierarchy.
+
+  The test suite will automatically compare its runs' output to the contents of
+  the 'baseline' directory if it exists. You may copy or link a previously-
+  generated baseline directory here, or make a new one with the 'baseline'
+  command (see above).
+
+A useful workflow might consist of these steps:
+
+  1. Check out a fresh FIM working copy from Subversion.
+  2. Run 'ts baseline <suite>' to generate a clean baseline.
+  3. Make changes to the working copy as needed.
+  4. Run 'ts' to verify your changes against the baseline.
+
+Logging
+
+  Each 'ts' invocation that does not fail immediately generates a verbose
+  logfile named 'log.timestamp', where timestamp is the seconds-since-epoch
+  test-suite start time.
+

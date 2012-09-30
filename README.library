@@ -1,0 +1,75 @@
+
+Overview
+
+  library.rb contains methods defining the interface between the test suite and
+  the model or platform.
+
+  profiles.rb contains modules used to extend individual test-suite Run objects
+  with the appropriate library methods. Each such module starts by including all
+  of the library methods as defaults, then defines aliases for any methods that
+  must be overridden. The section 'Model/Platform Methods', below, describes
+  each method that must be implemented, either by name or alias.
+
+  Library methods should not use class or instance variables. Any communication
+  with the test-suite driver or with other library methods should be done either
+  via method arguments, or via one of the 'spec' (e.g. buildspec, runspec)
+  config objects.
+
+Model/Platform Methods
+
+  lib_build_cmd(buildspec)
+
+    Returns a string containing the shell command that must be issued, in the
+    top-level test-suite directory, to perform the model build described by the
+    'buildspec' Hash argument.
+
+  lib_build_post(buildspec,output)
+
+    Returns a string containing the path to a directory that should be copied
+    into the test suite's 'runs' directory to be used by a single run. An array
+    of lines representing the combined stdout and stderr streams of the build
+    command is provided in the 'output' argument.
+
+  lib_build_prep(buildspec)
+
+    Returns nothing. Takes any actions required prior to starting a build.
+
+  lib_dataspecs()
+
+    Returns an array containing: 1. the shell command that must be executed to
+    produce the data-archive file in the top-level test-suite directory; and
+    2. the expected MD5 checksum of the data-archive file.
+
+  lib_outfiles(path)
+
+    Returns an array containing the pathnames of the files that will be (1)
+    added to this run's baseline if one is being produced; (2) compared against
+    an existing baseline, if baseline comparison is being performed; and (3)
+    compared against comparable runs. The 'path' argument specifies the path to
+    a unique directory belonging to the given run, which contains the output
+    files in some subdirectory. Each entry in the returned array is in the form
+    [path1,path2], where path1+path2 forms the absolute path to  the file, and
+    path2 is the suffix of the path that is (a) the same across runs in the
+    comparison group; and (b) what should be stored in a baseline image.
+
+  lib_prep_job(rundir,runspec)
+
+    Returns a string containing the path to the directory where the queue-
+    submission script should be executed. This may be the 'rundir' that was
+    passed in, or something else. Takes any actions required prior to submitting
+    a job to the queue system. The 'rundir' argument contains the name of a
+    unique directory to be used by this run. The 'runspec' argument is a hash-of
+    -hashes (perhaps containing still-deeper hashes) containing the merged run
+    configuration for this job. Additionally, it contains the name of the job,
+    under the top-level 'name' key, and may contain other unspecified items
+    useful for a given run.
+
+  lib_re_str_success()
+
+    Returns the string expected to appear in the model binary's stdout to
+    indicate that the run completed successfully.
+
+  lib_run_job(rundir,runspec,activeruns,[restart])
+
+    Returns a string containing the path to the run's stdout. Performs a run.
+
