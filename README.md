@@ -1,7 +1,7 @@
 ddts
 ====
 
-Dependency-Driven Test Suite system
+A Ruby-Based Dependency-Driven Test Suite system
 
 ### Notes
 
