@@ -10,7 +10,7 @@ module Library
   end
 
   def lib_build_post(buildspec,output)
-    File.join(buildspec['buildroot'],buildspec['builddir'],buildspec['bindir'])
+    File.join(buildspec['builddir'],buildspec['bindir'])
   end
 
   def lib_build_prep(buildspec)
