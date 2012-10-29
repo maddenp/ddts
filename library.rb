@@ -21,7 +21,7 @@ module Library
   end
 
   def lib_dataspecs
-    ['cp ex/data.tgz .','924b1bbda31dde8caadc35613fe9934c']
+    ['cp ex/data.tgz .','d49037f1ef796b8a7ca3906e713fc33b']
   end
 
   def lib_outfiles(path)
