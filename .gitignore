@@ -1,6 +1,6 @@
-baseline
-builds
-./data
-./data.tgz
-log*
+^baseline
+^builds
+^data
+^data.tgz
+^log*
 ^runs

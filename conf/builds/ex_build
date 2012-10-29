@@ -1,0 +1,7 @@
+bindir: 'bin'
+binname: 'tr'
+builddir: 'ex'
+buildroot: 'builds'
+compiler: 'mpif90'
+srcdir: 'ex'
+srcfile: 'tr.f90'
