@@ -115,6 +115,15 @@ module Common
     @ilog.info "#{@pre}: #{msg}"
   end
 
+  def logw(msg)
+
+    # A convenience wrapper that logs WARN-level messages to the 'immediate'
+    # logger, to appear both on stdout and in the log file.
+
+    @ilog.warn "#{@pre}: WARNING! #{msg}"
+    @ilog.warned=true
+  end
+
   def parse(file)
 
     # Instantiate a Ruby object from a YAML config file.
@@ -129,8 +138,10 @@ module Common
         die 'Error parsing YAML from '+file
       end
     unless @dlog.nil?
-      logd "* Read config:"
-      pp(o).split("\n").each { |e| logd e }
+      c=File.basename(file)
+      logd "Read config #{c}:"
+      die "Config '#{c}' is invalid" unless o
+      pp(o).each { |e| logd e }
       logd_flush
     end
     o
@@ -197,7 +208,7 @@ module Common
       if v.is_a?(Hash)
         me[k]=specmerge(me[k],v)
       elsif v.is_a?(Array)
-        me[k]+=v
+        me[k]=(me[k].nil?)?(v):(me[k]+v)
       else
         me[k]=v
       end
@@ -312,10 +323,12 @@ class Run
       buildrun=build
       prep_data
       logi "Started"
-      logd "* Collected (delayed) run output:"
-      @rundir=Dir.pwd+"/runs/#{@r}.#{@uniq}"
+      @rundir=File.join(Dir.pwd,"runs","#{@r}.#{@uniq}")
       FileUtils.mkdir_p(@rundir)
+      logd "* Output from run prep:"
       @rundir=lib_prep_job(@rundir,@runspec)
+      logd_flush
+      logd "* Output from run:"
       stdout=lib_run_job(@rundir,@runspec,@activeruns)
       die "FAILED -- see #{@ilog.file}" if stdout.nil?
       jobcheck(stdout)
@@ -347,16 +360,21 @@ class Run
     # Compare this run's output files to its baseline.
 
     if @bline=='none'
-      logd "Baseline comparison for #{@r} disabled, skipping."
+      logd "Baseline comparison for #{@r} disabled, skipping"
     else
-      blinepath="#{@topdir}/baseline/#{@suite}/#{@bline}"
-      if File.directory?(blinepath)
-        logi "Comparing to baseline #{@bline}"
-        blinepair=OpenStruct.new
-        blinepair.name='baseline'
-        blinepair.files=lib_outfiles(blinepath)
-        comp([@runs[@r],blinepair])
-        logi "Baseline comparison OK"
+      suitebase=File.join(@topdir,'baseline',@suite)
+      if File.directory?(suitebase)
+        blinepath=File.join(suitebase,@bline)
+        if File.directory?(blinepath)
+          logi "Comparing to baseline #{@bline}"
+          blinepair=OpenStruct.new
+          blinepair.name='baseline'
+          blinepair.files=lib_outfiles(blinepath)
+          comp([@runs[@r],blinepair])
+          logi "Baseline comparison OK"
+        else
+          logw "No baseline '#{@bline}' found, continuing..."
+        end
       end
     end
   end
@@ -368,7 +386,7 @@ class Run
     # run of the set performs this operation, due to the mutex.
 
     if @bline=='none'
-      logd "Baseline registration for #{@r} disabled, skipping."
+      logd "Baseline registration for #{@r} disabled, skipping"
     else
       @baselinemaster.synchronize do
         @baselinesrcs[@bline]=@runs[@r] unless @baselinesrcs.has_key?(@bline)
@@ -386,19 +404,21 @@ class Run
     # path to the directory containing the build's run scripts.
 
     b=@runspec['build']
+    buildspec=parse("#{buildsdir}/#{b}")
+    buildspec['buildroot']=File.join(FileUtils.pwd,"builds")
+    buildspec['retainbuilds']=@retainbuilds
+    @runspec['buildspec']=buildspec
     @buildmaster.synchronize do
       @buildlocks[b]=Mutex.new unless @buildlocks.has_key?(b)
     end
     @buildlocks[b].synchronize do
       break if @builds.has_key?(b)
-      @builds[b]=""
       logi "Build #{b} started"
-      logd "* Collected (delayed) build output:"
-      buildspec=parse("#{buildsdir}/#{b}")
-      buildspec['buildroot']=FileUtils.pwd+'/builds'
-      buildspec['skipbuild']=@skipbuild
+      logd "* Output from build #{b} prep:"
       lib_build_prep(buildspec)
-      cmd=lib_build_cmd(buildspec)+" 2>&1"
+      logd_flush
+      cmd="#{lib_build_cmd(buildspec)} 2>&1"
+      logd "* Output from build #{b}:"
       logd "Executing build command: #{cmd}"
       output=[]
       IO.popen(cmd) { |io| io.readlines.each { |e| output << e } }
@@ -425,13 +445,12 @@ class Run
       logd "Getting data: #{cmd}"
       IO.popen(cmd) { |io| io.readlines.each { |e| logd "#{e}" } }
       stat=$?.exitstatus
-      logd_flush
-      die "FAILED to get data." unless stat==0
+      die "Failed to get data" unless stat==0
       unless hash_matches(f,md5)
-        die "Data archive #{f} has incorrect md5 hash."
+        die "Data archive #{f} has incorrect md5 hash"
       end
     end
-    logd "Data archive #{f} ready."
+    logd "Data archive #{f} ready"
     f
   end
 
@@ -461,6 +480,7 @@ class Run
 
     @runmaster.synchronize do
       return if @ts.havedata
+      logd "* Preparing data for all test-suite runs..."
       f=get_data
       cmd="tar xvzf #{f} 2>&1"
       logd "Extracting data: #{cmd}"
@@ -481,7 +501,7 @@ class TS
 
   attr_accessor :activeruns,:baselinemaster,:baselinesrcs,:buildlocks,
   :buildmaster,:builds,:dlog,:genbaseline,:havedata,:ilog,:loglock,:pre,
-  :runlocks,:runmaster,:runs,:skipbuild,:suite,:topdir,:uniq
+  :retainbuilds,:runlocks,:runmaster,:runs,:suite,:topdir,:uniq
 
   def initialize(cmd,rest)
 
@@ -501,7 +521,7 @@ class TS
     @runlocks={}
     @runmaster=Mutex.new
     @runs={}
-    @skipbuild=false # use builds from last test-suite run (generally unsound)
+    @retainbuilds=false # use builds from last test-suite run (generally unsound)
     @topdir=FileUtils.pwd
     @uniq=Time.now.to_i
     (cmd.nil?)?(dosuite):(dispatch(cmd,rest))
@@ -515,7 +535,7 @@ class TS
 
     suite=args[0]||'standard'
     d="baseline/#{suite}"
-    die "Directory '#{d}' for suite '#{suite}' exists." if File.exists?(d)
+    die "Directory '#{d}' for suite '#{suite}' exists" if File.exists?(d)
     @genbaseline=true
     dosuite(suite)
   end
@@ -572,7 +592,7 @@ class TS
     # usage info and exit with error.
 
     okargs=['baseline','clean','cleaner','help','show']
-    suites=Dir.glob(suitesdir+"/*").map { |e| File.basename(e) }
+    suites=Dir.glob(File.join(suitesdir,"*")).map { |e| File.basename(e) }
     if okargs.include?(cmd)
       send(cmd,args)
     elsif suites.include?(cmd)
@@ -603,17 +623,18 @@ class TS
     @suite=suite||'standard'
     f="#{suitesdir}/#{@suite}"
     unless File.exists?(f)
-      die "Suite '#{@suite}' not found."
+      die "Suite '#{@suite}' not found"
     end
     logi "Running test suite '#{@suite}'"
-    mkbuilds unless @skipbuild
+    mkbuilds unless @retainbuilds
     threads=[]
     trap('INT') do
-      logi "Interrupted."
+      logi "Interrupted"
       raise Interrupt
     end
     begin
-      suitespec=parse(f)
+      suitespec=specget(f)
+      suitespec.delete('extends')
       suitespec.each do |k,v|
         threads << Thread.new { Comparison.new(v.sort.uniq,self) }
       end
@@ -633,7 +654,9 @@ class TS
     end
     baseline_gen if @genbaseline
     logd_flush
-    logi "ALL TESTS PASSED"
+    msg="ALL TESTS PASSED"
+    msg+=" -- but note WARNING(s) above!" if @ilog.warned
+    logi msg
   end
 
   def help(args=nil,status=0)
@@ -666,10 +689,10 @@ class TS
     type=args[0]
     help(args,1) unless ['run','suite'].include?(type)
     name=args[1]
-    die "No #{type} specified." unless name
+    die "No #{type} specified" unless name
     dir=(type=='run')?(runsdir):(suitesdir)
     file=File.join(dir,name)
-    die "'#{name}' not found in #{dir}." unless File.exist?(file)
+    die "'#{name}' not found in #{dir}" unless File.exist?(file)
     spec=specget(file)
     puts
     puts "# #{ancestry(file).join(' < ')}"
@@ -711,6 +734,7 @@ class Xlog
   # blocks. NB: method_missing() should be a prime suspect in any runtime
   # mischief traceable to this class: Analyze its arguments carefully.
 
+  attr_accessor :warned
   attr_reader :file
 
   def initialize(uniq,lock)
@@ -728,6 +752,7 @@ class Xlog
     @slog=Logger.new(STDOUT)
     @slog.level=Logger::INFO
     @slog.formatter=proc { |s,t,p,m| "#{m}\n" }
+    @warned=false
   end
 
   def method_missing(m,*a)
