@@ -7,6 +7,7 @@ Quick Start
   ts baseline [suite]    : do the standard or named suite & store a baseline
   ts clean               : remove most objects created by the test suite
   ts cleaner             : ts clean + removes 'baseline' & data archive
+  ts run name            : perform the single named run
   ts show run|suite name : show configuration of the named run or suite
 
   Any other argument to 'ts' is interpreted as a suite name.

@@ -337,7 +337,7 @@ class Run
       runpair.name=@r
       runpair.files=lib_outfiles(@rundir)
       @runs[@r]=runpair
-      (@genbaseline)?(baseline_reg):(baseline_comp)
+      (@genbaseline)?(baseline_reg):(baseline_comp) unless @suite.nil?
       logd_flush
       logi "Completed"
     end
@@ -592,7 +592,7 @@ class TS
     # the given arguments. If it is a suite name, run the suite. Otherwise, show
     # usage info and exit with error.
 
-    okargs=['baseline','clean','cleaner','help','show']
+    okargs=['baseline','clean','cleaner','help','run','show']
     suites=Dir.glob(File.join(suitesdir,"*")).map { |e| File.basename(e) }
     if okargs.include?(cmd)
       send(cmd,args)
@@ -619,45 +619,45 @@ class TS
     # ctrl-c, commands can be issued to abort any queued jobs. A baseline is
     # generated if one was requested.
 
-    @ilog=Xlog.new(@uniq,@loglock)
-    @dlog=XlogBuffer.new(@ilog)
+    setup
     @suite=suite||'standard'
     f="#{suitesdir}/#{@suite}"
     unless File.exists?(f)
       die "Suite '#{@suite}' not found"
     end
     logi "Running test suite '#{@suite}'"
-    mkbuilds unless @retainbuilds
     threads=[]
-    trap('INT') do
-      logi "Interrupted"
-      raise Interrupt
-    end
     begin
       suitespec=specget(f)
       suitespec.delete('extends')
+      mkbuilds
       suitespec.each do |k,v|
         threads << Thread.new { Comparison.new(v.sort.uniq,self) }
       end
       threadmon(threads)
     rescue Interrupt,Exception=>x
       threads.each { |e| e.kill }
-      unless @activeruns.empty?
-        logi "Stopping runs..."
-        @activeruns.each { |e| e.jobdel }
-      end
-      logd x.message
-      logd "* Backtrace:"
-      x.backtrace.each { |e| logd e }
-      logd_flush
-      logi "Test suite '#{@suite}' FAILED"
-      exit 1
+      halt(x)
     end
     baseline_gen if @genbaseline
     logd_flush
     msg="ALL TESTS PASSED"
     msg+=" -- but note WARNING(s) above!" if @ilog.warned
     logi msg
+  end
+
+  def halt(x)
+    unless @activeruns.nil? or @activeruns.empty?
+      logi "Stopping runs..."
+      @activeruns.each { |e| e.jobdel if e.respond_to?(:jobdel) }
+    end
+    logd x.message
+    logd "* Backtrace:"
+    x.backtrace.each { |e| logd e }
+    logd_flush
+    pre=(@suite.nil?)?("Run"):("Test suite '#{@suite}'")
+    logi "#{pre} FAILED"
+    exit 1
   end
 
   def help(args=nil,status=0)
@@ -667,6 +667,7 @@ class TS
     puts "       #{@pre} clean"
     puts "       #{@pre} cleaner"
     puts "       #{@pre} help"
+    puts "       #{@pre} run <name>"
     puts "       #{@pre} show run|suite <name>"
     puts
     exit status
@@ -677,6 +678,7 @@ class TS
     # Create a 'builds' directory (potentially after removing an existing one)
     # to contain the objects created by the build-automation system.
 
+    return if @retainbuilds
     builds='builds'
     if File.directory?(builds)
       FileUtils.rm_rf(builds)
@@ -684,6 +686,26 @@ class TS
     end
     FileUtils.mkdir_p(builds)
     @ilog.debug("Created empty '#{builds}'")
+  end
+
+  def run(args=nil)
+    die "No run name specified" if args.empty?
+    setup
+    begin
+      mkbuilds
+      Run.new(args[0],self)
+    rescue Interrupt,Exception=>x
+      halt(x)
+    end
+  end
+
+  def setup
+    @ilog=Xlog.new(@uniq,@loglock)
+    @dlog=XlogBuffer.new(@ilog)
+    trap('INT') do
+      logi "Interrupted"
+      raise Interrupt
+    end
   end
 
   def show(args)
