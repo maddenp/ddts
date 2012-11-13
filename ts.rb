@@ -129,19 +129,20 @@ module Common
     # Instantiate a Ruby object from a YAML config file.
 
     file=File.expand_path(file)
-    o=begin
-        YAML.load(File.open(valid_file(file)))
-      rescue Exception=>x
-        logd x.message
-        logd "* Backtrace:"
-        x.backtrace.each { |e| logd e }
-        die 'Error parsing YAML from '+file
-      end
+    o=nil
+    begin
+      o=YAML.load(File.open(valid_file(file)))
+    rescue Exception=>x
+      logd x.message
+      logd "* Backtrace:"
+      x.backtrace.each { |e| logd e }
+      die 'Error parsing YAML from '+file
+    end
     unless @dlog.nil?
       c=File.basename(file)
-      logd "Read config #{c}:"
+      logd "Read config '#{c}':"
       die "Config '#{c}' is invalid" unless o
-      pp(o).each { |e| logd e }
+      pp(o).split("\n").each { |e| logd e }
       logd_flush
     end
     o
@@ -694,10 +695,11 @@ class TS
     file=File.join(dir,name)
     die "'#{name}' not found in #{dir}" unless File.exist?(file)
     spec=specget(file)
+    spec.delete("extends")
     puts
     puts "# #{ancestry(file).join(' < ')}"
     puts
-    puts pp(spec,1)
+    puts pp(spec)
     puts
   end
 
