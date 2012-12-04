@@ -1,2 +1,3 @@
 #!/bin/bash
-ulimit -Su 512 && RUBYLIB=. ruby ts.rb $*
+RUBY=ruby1.9
+ulimit -Su 512 && RUBYLIB=. $RUBY ts.rb $*
