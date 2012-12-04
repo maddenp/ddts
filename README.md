@@ -15,7 +15,7 @@ The system is adapted to a specific tested code and runtime platform by providin
 
 A simple example code (numerical integration using the trapezoid rule) is provided in the _ex_ directory, along with configuration files and a full set of definitions in _library.rb_ and _profiles.rb_. Run `ts` to run the example suite. Requirements: GNU `tar` and an MPI installation providing `mpif90` and `mpirun`.
 
-The Ruby code was last tested with MRI/CRuby v1.9.2. It may or may not work, without modifications, under earlier Ruby versions. It has run well under JRuby in the past.
+Ruby 1.9.x is required. It has mainly been used under JRuby.
 
 ### License
 
