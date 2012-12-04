@@ -43,13 +43,13 @@ module Common
     # as a master, and each other element in compared to it. Success means that
     # each set of output files is identical in name, number and content.
 
-    r1=runs.delete_at(0)
+    r1=runs.shift
     r1_name=r1.name
-    r1_files=r1.files.reverse
+    r1_files=r1.files
     r1_bases=r1_files.collect { |a,b| b }.sort
     runs.each do |r2|
       r2_name=r2.name
-      r2_files=r2.files.reverse
+      r2_files=r2.files
       r2_bases=r2_files.collect { |a,b| b }.sort
       logd "Comparing #{r1_name} to #{r2_name}"
       m="(#{r1_name} vs #{r2_name})"
@@ -59,13 +59,13 @@ module Common
         logd "#{r2_name} files: #{r2_bases.join(' ')}"
         die "File list matching FAILED #{m}"
       end
-      r1_stack=r1_files.sort { |a,b| a[1]<=>b[1] }.collect { |a,b| File.join(a,b) }
-      r2_stack=r2_files.sort { |a,b| a[1]<=>b[1] }.collect { |a,b| File.join(a,b) }
-      until r1_stack.empty?
-        f1=r1_stack.pop
-        f2=r2_stack.pop
+      s1=r1_files.sort { |a,b| a[1]<=>b[1] }.collect { |a,b| File.join(a,b) }
+      s2=r2_files.sort { |a,b| a[1]<=>b[1] }.collect { |a,b| File.join(a,b) }
+      until s1.empty?
+        f1=s1.shift
+        f2=s2.shift
         fb=File.basename(f1)
-        unless FileUtils.cmp(f1,f2)
+        unless FileUtils.compare_file(f1,f2)
           logd "Comparing #{fb}: FAILED #{m}"
           die "Comparison failed #{m}"
         end
@@ -84,13 +84,29 @@ module Common
     # that the test suite has died very early), simply print the message and
     # exit.
 
-    if @ilog.nil?
+    if @ts.ilog.nil?
       puts "\n#{msg}\n\n"
       exit 1
     end
     logd_flush
-    @ilog.fatal("#{@pre}: #{msg}") unless msg.nil?
+    @ts.ilog.fatal("#{@pre}: #{msg}") unless msg.nil?
     ($!)?(raise):(exit 1)
+  end
+
+  def ext(cmd,props={})
+
+    # Execute a system command in a subshell, collecting a merged stdout and
+    # stderr. If property :die is true, die on a nonzero subshell exit status,
+    # printing the message keyed by property :msg, if any. If property :out is
+    # true, write the collected stdout/stderr to the delayed log.
+
+    d=(props.has_key?(:die))?(props[:die]):(true)
+    m=(props.has_key?(:msg))?(props[:msg]):("")
+    o=(props.has_key?(:out))?(props[:out]):(true)
+    output=%x{#{cmd} 2>&1}.split("\n")
+    if o then output.each { |e| logd e } end
+    if d then die(m) unless $?==0 end
+    output
   end
 
   def logd(msg)
@@ -112,7 +128,7 @@ module Common
     # A convenience wrapper that logs INFO-level messages to the 'immediate'
     # logger, to appear both on stdout and in the log file.
 
-    @ilog.info "#{@pre}: #{msg}"
+    @ts.ilog.info "#{@pre}: #{msg}"
   end
 
   def logw(msg)
@@ -120,8 +136,8 @@ module Common
     # A convenience wrapper that logs WARN-level messages to the 'immediate'
     # logger, to appear both on stdout and in the log file.
 
-    @ilog.warn "#{@pre}: WARNING! #{msg}"
-    @ilog.warned=true
+    @ts.ilog.warn "#{@pre}: WARNING! #{msg}"
+    @ts.ilog.warned=true
   end
 
   def parse(file)
@@ -142,7 +158,7 @@ module Common
       c=File.basename(file)
       logd "Read config '#{c}':"
       die "Config '#{c}' is invalid" unless o
-      pp(o).split("\n").each { |e| logd e }
+      pp(o).each_line { |e| logd e }
       logd_flush
     end
     o
@@ -166,15 +182,11 @@ module Common
 
   def quote(s)
 
-    # Handle a tagged YAML value according to the rule(s) defined for its type
-    # id. If an untagged value instantiated as a Ruby String, wrap it in quotes.
+    # Wrap values instantiated as Ruby Strings in quotes, except for those
+    # tagged '!unquoted'.
 
-    if s.respond_to?(:type_id)
-      if (s.type_id=='unquoted')
-        s=s.value
-      else
-        die "Unhandled YAML tag: #{s.type_id}"
-      end
+    if s.is_a?(Unquoted)
+      s="#{s}"
     elsif s.is_a?(String)
       s="'#{s}'"
     end
@@ -192,7 +204,7 @@ module Common
     specs << file
     me=parse(file)
     ancestor=me['extends']
-    me=specget("#{File.dirname(file)}/#{ancestor}",me,specs) if ancestor
+    me=specget(File.join(File.dirname(file),ancestor),me,specs) if ancestor
     me=specmerge(me,descendant) unless descendant.nil?
     me
   end
@@ -225,13 +237,8 @@ module Common
     # object.
 
     until threads.empty?
-      threads.each do |e|
-        unless e.alive?
-          threads.delete(e)
-          e.join
-        end
-      end
-      sleep 1
+      threads.delete_if { |e| (e.alive?)?(false):(e.join;true) }
+      sleep 5
     end
   end
 
@@ -268,8 +275,7 @@ class Comparison
     # variables of this object.
 
     @ts=ts
-    @ts.instance_variables.each { |v| eval "#{v}=@ts.#{v[1..-1]}" }
-    @dlog=XlogBuffer.new(@ilog)
+    @dlog=XlogBuffer.new(ts.ilog)
     @pre="Comparison"
     threads=[]
     runs=[]
@@ -307,15 +313,14 @@ class Run
 
     @r=r
     @ts=ts
-    @ts.instance_variables.each { |v| eval "#{v}=@ts.#{v[1..-1]}" }
-    @dlog=XlogBuffer.new(@ilog)
+    @dlog=XlogBuffer.new(@ts.ilog)
     @pre="Run #{@r}"
-    @runmaster.synchronize do
-      @runlocks[@r]=Mutex.new unless @runlocks.has_key?(@r)
+    @ts.runmaster.synchronize do
+      @ts.runlocks[@r]=Mutex.new unless @ts.runlocks.has_key?(@r)
     end
-    @runlocks[@r].synchronize do
-      break if @runs.has_key?(@r)
-      @runspec=specget("#{runsdir}/#{@r}")
+    @ts.runlocks[@r].synchronize do
+      break if @ts.runs.has_key?(@r)
+      @runspec=specget(File.join(runsdir,@r))
       self.extend(Object.const_get(@runspec['profile']))
       @runspec['name']=@r
       unless @bline=@runspec['baseline'] # Yes: =, not ==
@@ -324,24 +329,24 @@ class Run
       buildrun=build
       prep_data
       logi "Started"
-      @rundir=File.join(Dir.pwd,"runs","#{@r}.#{@uniq}")
-      FileUtils.mkdir_p(@rundir)
+      @rundir=File.join(Dir.pwd,"runs","#{@r}.#{@ts.uniq}")
+      FileUtils.mkdir_p(@rundir) unless Dir.exist?(@rundir)
       logd "* Output from run prep:"
       @rundir=lib_prep_job(@rundir,@runspec)
       logd_flush
       logd "* Output from run:"
-      stdout=lib_run_job(@rundir,@runspec,@activeruns)
-      die "FAILED -- see #{@ilog.file}" if stdout.nil?
+      stdout=lib_run_job(@rundir,@runspec,@ts.activemaster,@ts.activeruns)
+      die "FAILED -- see #{@ts.ilog.file}" if stdout.nil?
       jobcheck(stdout)
       runpair=OpenStruct.new
       runpair.name=@r
       runpair.files=lib_outfiles(@rundir)
-      @runs[@r]=runpair
-      (@genbaseline)?(baseline_reg):(baseline_comp) unless @suite.nil?
+      @ts.runmaster.synchronize { @ts.runs[@r]=runpair }
+      (@ts.genbaseline)?(baseline_reg):(baseline_comp) unless @ts.suite.nil?
       logd_flush
       logi "Completed"
     end
-    @result=@runs[@r]
+    @ts.runmaster.synchronize { @result=@ts.runs[@r] }
   end
 
   def jobdel
@@ -349,8 +354,8 @@ class Run
     # Delete a run's job from the batch system.
 
     logd "Deleting job #{@runspec['jobid']}"
-    cmd="#{lib_queue_del_cmd(@runspec)} #{@runspec['jobid']} 2>&1"
-    IO.popen(cmd) { |io| io.readlines.each { |e| logd "#{e}" } }
+    cmd="#{lib_queue_del_cmd(@runspec)} #{@runspec['jobid']}"
+    ext(cmd,{:die=>false,:out=>false})
     logd_flush
   end
 
@@ -363,7 +368,7 @@ class Run
     if @bline=='none'
       logd "Baseline comparison for #{@r} disabled, skipping"
     else
-      suitebase=File.join(@topdir,'baseline',@suite)
+      suitebase=File.join(@ts.topdir,'baseline',@ts.suite)
       if File.directory?(suitebase)
         blinepath=File.join(suitebase,@bline)
         if File.directory?(blinepath)
@@ -371,7 +376,7 @@ class Run
           blinepair=OpenStruct.new
           blinepair.name='baseline'
           blinepair.files=lib_outfiles(blinepath)
-          comp([@runs[@r],blinepair])
+          comp([@ts.runs[@r],blinepair])
           logi "Baseline comparison OK"
         else
           logw "No baseline '#{@bline}' found, continuing..."
@@ -389,8 +394,10 @@ class Run
     if @bline=='none'
       logd "Baseline registration for #{@r} disabled, skipping"
     else
-      @baselinemaster.synchronize do
-        @baselinesrcs[@bline]=@runs[@r] unless @baselinesrcs.has_key?(@bline)
+      @ts.baselinemaster.synchronize do
+        unless @ts.baselinesrcs.has_key?(@bline)
+          @ts.baselinesrcs[@bline]=@ts.runs[@r]
+        end
       end
     end
   end
@@ -405,31 +412,31 @@ class Run
     # path to the directory containing the build's run scripts.
 
     b=@runspec['build']
-    buildspec=parse("#{buildsdir}/#{b}")
+    buildspec=parse(File.join(buildsdir,b))
     buildspec['buildroot']=File.join(FileUtils.pwd,"builds")
-    buildspec['retainbuilds']=@retainbuilds
+    buildspec['retainbuilds']=@ts.retainbuilds
     @runspec['buildspec']=buildspec
-    @buildmaster.synchronize do
-      @buildlocks[b]=Mutex.new unless @buildlocks.has_key?(b)
+    @ts.buildmaster.synchronize do
+      @ts.buildlocks[b]=Mutex.new unless @ts.buildlocks.has_key?(b)
     end
-    @buildlocks[b].synchronize do
-      break if @builds.has_key?(b)
-      logi "Build #{b} started"
-      logd "* Output from build #{b} prep:"
-      lib_build_prep(buildspec)
-      logd_flush
-      cmd="#{lib_build_cmd(buildspec)} 2>&1"
-      logd "* Output from build #{b}:"
-      logd "Executing build command: #{cmd}"
-      output=[]
-      IO.popen(cmd) { |io| io.readlines.each { |e| output << e } }
-      output.each { |e| logd "#{e}" }
-      die "FAILED -- see #{@ilog.file}" unless $?.exitstatus==0
-      @builds[b]=lib_build_post(buildspec,output)
-      logi "Build #{b} completed"
-      logd_flush
+    @ts.buildlocks[b].synchronize do
+      unless @ts.builds.has_key?(b)
+        logi "Build #{b} started"
+        logd "* Output from build #{b} prep:"
+        lib_build_prep(buildspec)
+        logd_flush
+        cmd=lib_build_cmd(buildspec)
+        logd "* Output from build #{b}:"
+        logd "Executing build command: #{cmd}"
+        output=ext(cmd,{:msg=>"Build #{b} failed"})
+        @ts.buildmaster.synchronize do
+          @ts.builds[b]=lib_build_post(buildspec,output)
+        end
+        logi "Build #{b} completed"
+        logd_flush
+      end
     end
-    @runspec['buildrun']=@builds[b]
+    @ts.buildmaster.synchronize { @runspec['buildrun']=@ts.builds[b] }
   end
 
   def get_data
@@ -441,15 +448,10 @@ class Run
 
     f='data.tgz'
     cmd,md5=lib_dataspecs
-    cmd+=" 2>&1"
     unless File.exists?(f) and hash_matches(f,md5)
       logd "Getting data: #{cmd}"
-      IO.popen(cmd) { |io| io.readlines.each { |e| logd "#{e}" } }
-      stat=$?.exitstatus
-      die "Failed to get data" unless stat==0
-      unless hash_matches(f,md5)
-        die "Data archive #{f} has incorrect md5 hash"
-      end
+      ext(cmd,{:msg=>"Failed to get data"})
+      die "Data archive #{f} has incorrect md5 hash" unless hash_matches(f,md5)
     end
     logd "Data archive #{f} ready"
     f
@@ -459,7 +461,7 @@ class Run
 
     # Do they match?
 
-    Digest::MD5.hexdigest(File.read(file))==hash
+    Digest::MD5.file(file)==hash
   end
 
   def jobcheck(stdout)
@@ -468,10 +470,26 @@ class Run
     # in the regular expression below is found in its stdout.
 
     re=Regexp.new(lib_re_str_success)
+    die "FAILED -- could not find #{stdout}" unless File.exist?(stdout)
     File.open(stdout,'r') do |io|
       io.readlines.each { |e| return if re.match(e) }
     end
     die "FAILED -- see #{stdout}"
+  end
+
+  def mod_namelist_file(nlfile,nlspec)
+
+    # Modify a namelist file with values supplied by a config.
+
+    nlh=NamelistHandler.new(nlfile)
+    nlspec.each do |nlk,nlv|
+      nlv.each do |k,v|
+        v=quote(v)
+        nlh.set!(nlk,k,v)
+        logd "Set namelist #{nlk}:#{k}=#{v}"
+      end
+    end
+    nlh.write
   end
 
   def prep_data
@@ -479,18 +497,17 @@ class Run
     # Extract the test suite's canned data set. A global mutex protects this
     # operation so that only one run may perform the export and extraction.
 
-    @runmaster.synchronize do
-      return if @ts.havedata
-      logd "* Preparing data for all test-suite runs..."
-      f=get_data
-      cmd="tar xvzf #{f} 2>&1"
-      logd "Extracting data: #{cmd}"
-      IO.popen(cmd) { |io| io.readlines.each { |e| logd "#{e}" } }
-      stat=$?.exitstatus
-      die "Data extract FAILED -- see #{@ilog.file}" unless stat==0
-      logd "Data extract complete"
-      logd_flush
-      @ts.havedata=true
+    @ts.runmaster.synchronize do
+      unless @ts.havedata
+        logd "* Preparing data for all test-suite runs..."
+        f=get_data
+        cmd="gtar xvzf #{f}"
+        logd "Extracting data: #{cmd}"
+        ext(cmd,{:msg=>"Data extract failed -- see #{@ts.ilog.file}"})
+        logd "Data extract complete"
+        logd_flush
+        @ts.havedata=true
+      end
     end
   end
 
@@ -500,8 +517,8 @@ class TS
 
   include Common
 
-  attr_accessor :activeruns,:baselinemaster,:baselinesrcs,:buildlocks,
-  :buildmaster,:builds,:dlog,:genbaseline,:havedata,:ilog,:loglock,:pre,
+  attr_accessor :activemaster,:activeruns,:baselinemaster,:baselinesrcs,
+  :buildlocks,:buildmaster,:builds,:dlog,:genbaseline,:havedata,:ilog,:pre,
   :retainbuilds,:runlocks,:runmaster,:runs,:suite,:topdir,:uniq
 
   def initialize(cmd,rest)
@@ -509,21 +526,25 @@ class TS
     # The test-suite class. Provide a number of instance variables used
     # throughout the test suite, then branch to the appropriate method.
 
+    @activemaster=Mutex.new
     @activeruns=[]
     @baselinemaster=Mutex.new
     @baselinesrcs={}
     @buildlocks={}
     @buildmaster=Mutex.new
     @builds={}
+    @dlog=nil
     @genbaseline=false
     @havedata=false
-    @loglock=Mutex.new
-    @pre='ts'
+    @ilog=nil
+    @pre='ddts'
     @runlocks={}
     @runmaster=Mutex.new
-    @runs={}
     @retainbuilds=false # use builds from last test-suite run (generally unsound)
+    @runs={}
+    @suite=nil
     @topdir=FileUtils.pwd
+    @ts=self
     @uniq=Time.now.to_i
     (cmd.nil?)?(dosuite):(dispatch(cmd,rest))
   end
@@ -535,7 +556,7 @@ class TS
     # dosuite() with the supplied suite name, or 'standard' by default.
 
     suite=args[0]||'standard'
-    d="baseline/#{suite}"
+    d=File.join('baseline',suite)
     die "Directory '#{d}' for suite '#{suite}' exists" if File.exists?(d)
     @genbaseline=true
     dosuite(suite)
@@ -550,13 +571,14 @@ class TS
 
     @baselinesrcs.each do |r,src|
       logi "Creating #{r} baseline..."
-      dst="#{@topdir}/baseline/#{@suite}/#{r}"
+      dst=File.join(@topdir,"baseline",@suite,r)
       src.files.each do |p1,p2|
         fullpath=File.join(p1,p2)
         minipath=p2
         logd "Copying #{fullpath} to baseline"
-        FileUtils.mkdir_p("#{dst}/#{File.dirname(minipath)}")
-        FileUtils.cp(fullpath,"#{dst}/#{minipath}")
+        dstdir=File.join(dst,File.dirname(minipath))
+        FileUtils.mkdir_p(dstdir) unless Dir.exist?(dstdir)
+        FileUtils.cp(fullpath,File.join(dst,minipath))
       end
       logi "Creating #{r} baseline: OK"
     end
@@ -621,7 +643,7 @@ class TS
 
     setup
     @suite=suite||'standard'
-    f="#{suitesdir}/#{@suite}"
+    f=File.join(suitesdir,@suite)
     unless File.exists?(f)
       die "Suite '#{@suite}' not found"
     end
@@ -649,7 +671,9 @@ class TS
   def halt(x)
     unless @activeruns.nil? or @activeruns.empty?
       logi "Stopping runs..."
-      @activeruns.each { |e| e.jobdel if e.respond_to?(:jobdel) }
+      @activemaster.synchronize do
+        @activeruns.each { |e| e.jobdel if e.respond_to?(:jobdel) }
+      end
     end
     logd x.message
     logd "* Backtrace:"
@@ -684,7 +708,7 @@ class TS
       FileUtils.rm_rf(builds)
       @ilog.debug("Deleted existing '#{builds}'")
     end
-    FileUtils.mkdir_p(builds)
+    FileUtils.mkdir_p(builds) unless Dir.exist?(builds)
     @ilog.debug("Created empty '#{builds}'")
   end
 
@@ -700,7 +724,7 @@ class TS
   end
 
   def setup
-    @ilog=Xlog.new(@uniq,@loglock)
+    @ilog=Xlog.new(@uniq)
     @dlog=XlogBuffer.new(@ilog)
     trap('INT') do
       logi "Interrupted"
@@ -729,19 +753,15 @@ end # class TS
 
 class Unquoted
 
-  # Emulate the behavior of the YAML object tagged !unquoted.
+  # An alternative to String for namelist values that must not be quoted.
 
-  attr_reader :value
-
-  def initialize(s)
-    @value=s
-  end
-
-  def type_id
-    'unquoted'
-  end
+  def initialize(v) @v=v end
+  def init_with(coder) @v=coder.scalar end
+  def to_s() @v end
 
 end # class Unquoted
+
+YAML.add_tag('!unquoted',Unquoted)
 
 class Xlog
 
@@ -761,8 +781,7 @@ class Xlog
   attr_accessor :warned
   attr_reader :file
 
-  def initialize(uniq,lock)
-    @lock=lock
+  def initialize(uniq)
     # File logger
     @file="log.#{uniq}"
     FileUtils.rm_f(@file)
@@ -780,17 +799,12 @@ class Xlog
   end
 
   def method_missing(m,*a)
-    @lock.synchronize do
       if m==:flush
-        a[0].each do |e|
-          @flog.send(e[0],e[1])
-          @slog.send(e[0],e[1])
-        end
+        @flog.debug("\n#{a.first}")
       else
-        @flog.send(m,a.first)
+        @flog.send(m,"\n\n  #{a.first}\n")
         @slog.send(m,a.first)
       end
-    end
   end
 
 end # class Xlog
@@ -803,16 +817,20 @@ class XlogBuffer
 
   def initialize(ilog)
     @ilog=ilog
-    @buffer=[]
+    reset
   end
 
   def flush
-    @ilog.send(:flush,@buffer)
-    @buffer=[]
+    @ilog.flush(@buffer)
+    reset
   end
 
   def method_missing(m,*a)
-    @buffer << [m,a[0].chomp]
+    @buffer+="  #{a[0].chomp}\n"
+  end
+
+  def reset
+    @buffer="\n"
   end
 
 end # class XlogBuffer

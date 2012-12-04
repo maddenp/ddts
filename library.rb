@@ -50,7 +50,7 @@ module Library
     'SUCCESS'
   end
 
-  def lib_run_job(rundir,runspec,activeruns)
+  def lib_run_job(rundir,runspec,lock,activeruns)
     bin=runspec['binname']
     run=runspec['runcmd']
     sleep=runspec['sleep']

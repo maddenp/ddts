@@ -69,7 +69,9 @@ Model/Platform Methods
     Returns the string expected to appear in the model binary's stdout to
     indicate that the run completed successfully.
 
-  lib_run_job(rundir,runspec,activeruns,[restart])
+  lib_run_job(rundir,runspec,lock,activeruns,[restart])
 
     Returns a string containing the path to the run's stdout. Performs a run.
+    The lock argument is a Mutex used to ensure serialized access to the
+    activeruns array.
 
