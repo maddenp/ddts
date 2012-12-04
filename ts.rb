@@ -501,7 +501,7 @@ class Run
       unless @ts.havedata
         logd "* Preparing data for all test-suite runs..."
         f=get_data
-        cmd="gtar xvzf #{f}"
+        cmd="tar xvzf #{f}"
         logd "Extracting data: #{cmd}"
         ext(cmd,{:msg=>"Data extract failed -- see #{@ts.ilog.file}"})
         logd "Data extract complete"
@@ -761,7 +761,7 @@ class Unquoted
 
 end # class Unquoted
 
-YAML.add_tag('!unquoted',Unquoted)
+YAML.add_tag('!unquoted',Unquoted) if YAML.respond_to?(:add_tag)
 
 class Xlog
 
