@@ -1,15 +1,16 @@
 module Library
 
-  def lib_build_cmd(buildspec)
+  def lib_build(buildspec,lock,activejobs)
     bindir=buildspec['bindir']
     binname=buildspec['binname']
     builddir=File.join(buildspec['buildroot'],buildspec['builddir'])
     compiler=buildspec['compiler']
     srcfile=buildspec['srcfile']
     cmd="cd #{builddir} && #{compiler} #{srcfile} -o #{bindir}/#{binname}"
+    ext(cmd,{:msg=>"Build failed"})
   end
 
-  def lib_build_post(buildspec,output)
+  def lib_build_post(buildspec,output=nil)
     File.join(buildspec['builddir'],buildspec['bindir'])
   end
 
@@ -50,7 +51,7 @@ module Library
     'SUCCESS'
   end
 
-  def lib_run_job(rundir,runspec,lock,activeruns)
+  def lib_run_job(rundir,runspec,lock,activejobs)
     bin=runspec['binname']
     run=runspec['runcmd']
     sleep=runspec['sleep']

@@ -15,7 +15,7 @@ The system is adapted to a specific tested code and runtime platform by providin
 
 A simple example code (numerical integration using the trapezoid rule) is provided in the _ex_ directory, along with configuration files and a full set of definitions in _library.rb_ and _profiles.rb_. Run `ts` to run the example suite. Requirements: GNU `tar` and an MPI installation providing `mpif90` and `mpirun`.
 
-Ruby 1.9.x is required. It has mainly been used under JRuby.
+JRuby Complete 1.7.2 or later is required. Place _jruby-complete.jar_ in the test-suite directory before invoking _ddts_.
 
 ### License
 

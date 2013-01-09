@@ -1,3 +1,8 @@
 #!/bin/bash
-RUBY=ruby1.9
-ulimit -Su 512 && RUBYLIB=. $RUBY ts.rb $*
+jruby=./jruby-complete.jar
+if [[ ! -f "$jruby" ]]
+then
+  echo "Cannot find '$jruby'."
+  exit 1
+fi
+ulimit -Su 512 && java -jar $jruby  --1.9 -I. ts.rb $*

@@ -90,7 +90,7 @@ module Common
     end
     logd_flush
     @ts.ilog.fatal("#{@pre}: #{msg}") unless msg.nil?
-    ($!)?(raise):(exit 1)
+    raise
   end
 
   def ext(cmd,props={})
@@ -104,9 +104,16 @@ module Common
     m=(props.has_key?(:msg))?(props[:msg]):("")
     o=(props.has_key?(:out))?(props[:out]):(true)
     output=%x{#{cmd} 2>&1}.split("\n")
-    if o then output.each { |e| logd e } end
-    if d then die(m) unless $?==0 end
-    output
+    status=$?
+    if o
+      logd "* Output from: #{cmd}"
+      logd "* Status code: #{status}"
+      logd "--"
+      output.each { |e| logd e }
+      logd "--"
+    end
+    die(m) if d and status!=0
+    [output,status]
   end
 
   def logd(msg)
@@ -335,7 +342,7 @@ class Run
       @rundir=lib_prep_job(@rundir,@runspec)
       logd_flush
       logd "* Output from run:"
-      stdout=lib_run_job(@rundir,@runspec,@ts.activemaster,@ts.activeruns)
+      stdout=lib_run_job(@rundir,@runspec,@ts.activemaster,@ts.activejobs)
       die "FAILED -- see #{@ts.ilog.file}" if stdout.nil?
       jobcheck(stdout)
       runpair=OpenStruct.new
@@ -349,14 +356,13 @@ class Run
     @ts.runmaster.synchronize { @result=@ts.runs[@r] }
   end
 
-  def jobdel
+  def jobdel(jobid)
 
     # Delete a run's job from the batch system.
 
-    logd "Deleting job #{@runspec['jobid']}"
-    cmd="#{lib_queue_del_cmd(@runspec)} #{@runspec['jobid']}"
-    ext(cmd,{:die=>false,:out=>false})
-    logd_flush
+    logd "Deleting job #{jobid}"
+    cmd="#{lib_queue_del_cmd} #{jobid}"
+    ext(cmd,{:die=>false})
   end
 
   private
@@ -425,12 +431,11 @@ class Run
         logd "* Output from build #{b} prep:"
         lib_build_prep(buildspec)
         logd_flush
-        cmd=lib_build_cmd(buildspec)
-        logd "* Output from build #{b}:"
-        logd "Executing build command: #{cmd}"
-        output=ext(cmd,{:msg=>"Build #{b} failed"})
+        logd "* Output from build #{b} (also see #{buildspec['buildlog']}):"
+        lib_build(buildspec,@ts.activemaster,@ts.activejobs)
+        logd_flush
         @ts.buildmaster.synchronize do
-          @ts.builds[b]=lib_build_post(buildspec,output)
+          @ts.builds[b]=lib_build_post(buildspec)
         end
         logi "Build #{b} completed"
         logd_flush
@@ -517,7 +522,7 @@ class TS
 
   include Common
 
-  attr_accessor :activemaster,:activeruns,:baselinemaster,:baselinesrcs,
+  attr_accessor :activemaster,:activejobs,:baselinemaster,:baselinesrcs,
   :buildlocks,:buildmaster,:builds,:dlog,:genbaseline,:havedata,:ilog,:pre,
   :retainbuilds,:runlocks,:runmaster,:runs,:suite,:topdir,:uniq
 
@@ -527,7 +532,7 @@ class TS
     # throughout the test suite, then branch to the appropriate method.
 
     @activemaster=Mutex.new
-    @activeruns=[]
+    @activejobs={}
     @baselinemaster=Mutex.new
     @baselinesrcs={}
     @buildlocks={}
@@ -669,10 +674,12 @@ class TS
   end
 
   def halt(x)
-    unless @activeruns.nil? or @activeruns.empty?
+    unless @activejobs.nil? or @activejobs.empty?
       logi "Stopping runs..."
       @activemaster.synchronize do
-        @activeruns.each { |e| e.jobdel if e.respond_to?(:jobdel) }
+        @activejobs.each do |jobid,run|
+          run.jobdel(jobid) if run.respond_to?(:jobdel)
+        end
       end
     end
     logd x.message
@@ -761,7 +768,7 @@ class Unquoted
 
 end # class Unquoted
 
-YAML.add_tag('!unquoted',Unquoted) if YAML.respond_to?(:add_tag)
+YAML.add_tag('!unquoted',Unquoted)
 
 class Xlog
 

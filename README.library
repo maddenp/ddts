@@ -17,11 +17,12 @@ Overview
 
 Model/Platform Methods
 
-  lib_build_cmd(buildspec)
+  lib_build(buildspec,lock,activejobs)
 
-    Returns a string containing the shell command that must be issued, in the
-    top-level test-suite directory, to perform the model build described by the
-    'buildspec' Hash argument.
+    Returns nothing. Performs the build described by 'buildspec', or halts the
+    test suite if the build fails. The 'lock' argument is a Mutex used to ensure
+    serialized access to the 'activejobs' hash, which maps job IDs to Run
+    objects for jobs currently live in the batch system.
 
   lib_build_post(buildspec,output)
 
@@ -69,9 +70,9 @@ Model/Platform Methods
     Returns the string expected to appear in the model binary's stdout to
     indicate that the run completed successfully.
 
-  lib_run_job(rundir,runspec,lock,activeruns,[restart])
+  lib_run_job(rundir,runspec,lock,activejobs,[restart])
 
     Returns a string containing the path to the run's stdout. Performs a run.
     The lock argument is a Mutex used to ensure serialized access to the
-    activeruns array.
+    activejobs array.
 
