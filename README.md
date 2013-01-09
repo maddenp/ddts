@@ -5,7 +5,7 @@ A Ruby-Based Dependency-Driven Test Suite system
 
 ### Notes
 
-Please see _README_ for general test-suite driver usage (or run `ts help`); _README.conf_ for information on the build, run and suite configuration files; and _README.library_ for a description of the _library.rb_ and _profiles.rb_ files.
+Please see _README_ for general test-suite driver usage (or run `ddts help`); _README.conf_ for information on the build, run and suite configuration files; and _README.library_ for a description of the _library.rb_ and _profiles.rb_ files.
 
 This code provides a system for composing test suites whose overall activity is driven by simple configuration files (in the _conf_ directory). The most abstract configuration type is the _suite_, which defines one or more sets of runs whose output is expected to be identical. Each named run in these sets corresponds to a _run_ configuration defining runtime parameters for the tested code. Each run configuration depends in turn on a _build_ configuration specifying how binaries should be obtained. Run configurations are assumed to express different configurations of the tested code, e.g. running on different numbers of MPI tasks, or enabling different sets of optional features.
 
