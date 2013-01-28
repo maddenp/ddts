@@ -2,13 +2,12 @@
 Overview
 
   library.rb contains methods defining the interface between the test suite and
-  the model or platform.
-
-  profiles.rb contains modules used to extend individual test-suite Run objects
-  with the appropriate library methods. Each such module starts by including all
-  of the library methods as defaults, then defines aliases for any methods that
-  must be overridden. The section 'Model/Platform Methods', below, describes
-  each method that must be implemented, either by name or alias.
+  the model or platform. profiles.rb contains modules used to extend individual
+  test-suite Run objects with the appropriate library methods. Each such module
+  starts by including all of the library methods as defaults, then defines
+  aliases for any methods for which the default must be overridden. The section
+  'Model/Platform Methods', below, describes each method that must be
+  implemented, either by name or alias.
 
   Library methods should not use class or instance variables. Any communication
   with the test-suite driver or with other library methods should be done either
@@ -27,9 +26,9 @@ Model/Platform Methods
   lib_build_post(buildspec,output)
 
     Returns a string containing the path to a directory that should be copied
-    into the test suite's 'runs' directory to be used by a single run. An array
+    into the test suite's "runs" directory to be used by a single run. An array
     of lines representing the combined stdout and stderr streams of the build
-    command is provided in the 'output' argument.
+    command may be provided in the optional 'output' argument.
 
   lib_build_prep(buildspec)
 
@@ -47,8 +46,8 @@ Model/Platform Methods
     added to this run's baseline if one is being produced; (2) compared against
     an existing baseline, if baseline comparison is being performed; and (3)
     compared against comparable runs. The 'path' argument specifies the path to
-    a unique directory belonging to the given run, which contains the output
-    files in some subdirectory. Each entry in the returned array is in the form
+    the directory reported by the queue-submission script (see
+    lib_re_str_run_dir() docs). Each entry in the returned array is in the form
     [path1,path2], where path1+path2 forms the absolute path to  the file, and
     path2 is the suffix of the path that is (a) the same across runs in the
     comparison group; and (b) what should be stored in a baseline image.
@@ -73,6 +72,6 @@ Model/Platform Methods
   lib_run_job(rundir,runspec,lock,activejobs,[restart])
 
     Returns a string containing the path to the run's stdout. Performs a run.
-    The lock argument is a Mutex used to ensure serialized access to the
-    activejobs array.
+    The 'lock' argument is a Mutex used to ensure serialized access to the
+    'activejobs' array.
 
