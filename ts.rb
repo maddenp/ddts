@@ -418,7 +418,7 @@ class Run
     # path to the directory containing the build's run scripts.
 
     b=@runspec['build']
-    buildspec=parse(File.join(buildsdir,b))
+    buildspec=specget(File.join(buildsdir,b))
     buildspec['buildroot']=File.join(FileUtils.pwd,"builds")
     buildspec['retainbuilds']=@ts.retainbuilds
     @runspec['buildspec']=buildspec
