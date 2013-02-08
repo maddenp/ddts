@@ -2,76 +2,85 @@
 Overview
 
   library.rb contains methods defining the interface between the test suite and
-  the model or platform. profiles.rb contains modules used to extend individual
-  test-suite Run objects with the appropriate library methods. Each such module
+  the model and platform. profiles.rb contains modules used to extend individual
+  test-suite Run objects with appropriate library methods. Each such module
   starts by including all of the library methods as defaults, then defines
   aliases for any methods for which the default must be overridden. The section
   'Model/Platform Methods', below, describes each method that must be
   implemented, either by name or alias.
 
-  Library methods should not use class or instance variables. Any communication
-  with the test-suite driver or with other library methods should be done either
-  via method arguments, or via one of the 'spec' (e.g. buildspec, runspec)
-  config objects.
+  Library methods should not use instance variables. Any communication with the
+  test-suite driver or with other library methods should be done either via
+  method arguments, or via the passed-in 'env' environment object. (The 'env'
+  OpenStruct object has .build and .run members that expose the contents of the
+  build and run configs, respectively. New members can be added to env.build or
+  env.run, or to env itself, as needed.)
 
 Model/Platform Methods
 
-  lib_build(buildspec,lock,activejobs)
+  These methods are called directly by the test-suite core driver, and so must
+  be implemented. An environment object (see above) is passed as the first
+  argument to each required method; it may be inspected in each method to
+  determine what information is available to work with in each method.
 
-    Returns nothing. Performs the build described by 'buildspec', or halts the
-    test suite if the build fails. The 'lock' argument is a Mutex used to ensure
-    serialized access to the 'activejobs' hash, which maps job IDs to Run
-    objects for jobs currently live in the batch system.
+  Other methods useful to a specific model or platform may be implemented as
+  needed.
 
-  lib_build_post(buildspec,output)
+  lib_build(env)
+
+    Returns an array, potentially containing build output or other data, to be
+    passed to lib_build_post(); the actual contents should be determined by the
+    needs of that method. Performs the build described by env.build, or halts
+    the test suite if the build fails.
+
+  lib_build_post(env,output)
 
     Returns a string containing the path to a directory that should be copied
-    into the test suite's "runs" directory to be used by a single run. An array
-    of lines representing the combined stdout and stderr streams of the build
-    command may be provided in the optional 'output' argument.
+    into the test suite's 'runs' directory to be used by a single run. An array
+    of strings (possibly representing the output from the build) is provided via
+    the 'output' argument.
 
-  lib_build_prep(buildspec)
+  lib_build_prep(env)
 
-    Returns nothing. Takes any actions required prior to starting a build.
+    Return value is unused. Takes any actions required prior to performing the
+    build.
 
-  lib_dataspecs()
+  lib_dataspecs(env)
 
-    Returns an array containing: 1. the shell command that must be executed to
-    produce the data-archive file in the top-level test-suite directory; and
-    2. the expected MD5 checksum of the data-archive file.
+    Returns an array containing: 1. the shell command to be executed to produce
+    the data-archive file in the top-level test-suite directory; and 2. the
+    expected MD5 checksum of the data-archive file.
 
-  lib_outfiles(path)
+  lib_outfiles(env,path)
 
     Returns an array containing the pathnames of the files that will be (1)
     added to this run's baseline if one is being produced; (2) compared against
     an existing baseline, if baseline comparison is being performed; and (3)
-    compared against comparable runs. The 'path' argument specifies the path to
-    the directory reported by the queue-submission script (see
-    lib_re_str_run_dir() docs). Each entry in the returned array is in the form
-    [path1,path2], where path1+path2 forms the absolute path to  the file, and
-    path2 is the suffix of the path that is (a) the same across runs in the
-    comparison group; and (b) what should be stored in a baseline image.
+    compared against comparable runs. The 'path' argument specifies a directory
+    under which the run's unique output can be found. Each entry in the returned
+    array is in the form [path1,path2], where path1+path2 forms the absolute
+    path to an output file, and path2 is the suffix of the path that is (a) the
+    same across runs in the comparison group; and (b) what should be stored in a
+    baseline image.
 
-  lib_prep_job(rundir,runspec)
+  lib_prep_job(env,rundir)
 
-    Returns a string containing the path to the directory where the queue-
-    submission script should be executed. This may be the 'rundir' that was
-    passed in, or something else. Takes any actions required prior to submitting
-    a job to the queue system. The 'rundir' argument contains the name of a
-    unique directory to be used by this run. The 'runspec' argument is a hash-of
-    -hashes (perhaps containing still-deeper hashes) containing the merged run
-    configuration for this job. Additionally, it contains the name of the job,
-    under the top-level 'name' key, and may contain other unspecified items
-    useful for a given run.
+    Returns a string containing the path to the directory where the run should
+    be started (perhaps via queue submission). Takes any actions required prior
+    to starting the run. The 'rundir' argument contains the name of a unique
+    directory to be used by this run.
 
-  lib_re_str_success()
+  lib_queue_del_cmd(env)
+
+    Returns a string containing the name of the external program to run to
+    delete a job from the queue system, given its ID as an argument.
+
+  lib_re_str_success(env)
 
     Returns the string expected to appear in the model binary's stdout to
     indicate that the run completed successfully.
 
-  lib_run_job(rundir,runspec,lock,activejobs,[restart])
+  lib_run_job(env,rundir)
 
     Returns a string containing the path to the run's stdout. Performs a run.
-    The 'lock' argument is a Mutex used to ensure serialized access to the
-    'activejobs' array.
 

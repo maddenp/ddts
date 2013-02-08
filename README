@@ -1,34 +1,35 @@
 
-DDTS
+DDTS Test Suite
 
 Quick Start
 
-  ddts [suite]               : run standard or named suite
-  ddts baseline [suite]      : run standard or named suite & store a baseline
-  ddts clean                 : remove most objects created by the test suite
-  ddts cleaner               : ddts clean + removes 'baseline' & data archive
-  ddts help                  : shows this usage information
-  ddts run <name>            : perform the single named run
-  ddts show run|suite <name> : show configuration of the named run or suite
+  ddts <suite>                        : run the named suite
+  ddts baseline <suite>               : run the named suite & store a baseline
+  ddts clean                          : remove most test-suite created items
+  ddts cleaner                        : clean + remove baseline & data archive
+  ddts help                           : shows this usage information
+  ddts run <run>                      : perform the single specified run
+  ddts show run <run> | suite <suite> : show the named run or suite config
 
 Baseline Creation / Comparison
 
-  To create a baseline, run 'ddts baseline [suite]'. If [suite] is unspecified,
-  the 'standard' suite will be used. A directory named 'baseline' (which must
-  not already exist) will be created in the current directory, and the output of
-  the test-suite runs stored there.
+  Run 'ddts baseline <suite>' to create a baseline. Valid <suite> values are
+  the names of the files in the conf/suites directory. A directory named
+  'baseline' will be created in the current directory, if it does not already
+  exist, and one subdirectory will be created under it for each unique
+  'baseline' value specified in the configs of the suite's various runs. These
+  subdirectories must not already exist.
 
   The test suite will automatically compare its runs' output to the contents of
   the 'baseline' directory if one exists. You may copy or link a previously
-  generated baseline directory here, or make a new one with the 'baseline'
-  command (see above).
+  generated baseline directory here.
 
 A useful workflow might consist of these steps:
 
   1. Check out a fresh working copy.
-  2. Run 'ddts baseline [suite]' to generate a baseline.
+  2. Run 'ddts baseline <suite>' to generate a baseline.
   3. Make changes to the working copy as needed.
-  4. Run 'ddts [suite]' to verify your changes against the baseline.
+  4. Run 'ddts <suite>' to verify your changes against the baseline.
 
 Logging
 

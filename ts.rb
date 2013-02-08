@@ -2,6 +2,7 @@ require 'digest/md5'
 require 'fileutils'
 require 'find'
 require 'logger'
+require 'nl'
 require 'ostruct'
 require 'profiles'
 require 'thread'
@@ -10,9 +11,10 @@ require 'yaml'
 
 module Common
 
-  def buildsdir() "conf/builds" end
-  def runsdir()   "conf/runs"   end
-  def suitesdir() "conf/suites" end
+  def confdir()   'conf'                      end
+  def buildsdir() File.join(confdir,'builds') end
+  def runsdir()   File.join(confdir,'runs')   end
+  def suitesdir() File.join(confdir,'suites') end
 
   def ancestry(file,chain=nil)
 
@@ -76,6 +78,28 @@ module Common
     logd_flush
   end
 
+  def convert_h2o(h)
+
+    # Convert a (possibly nested) hash into an OpenStruct instance.
+
+    o=OpenStruct.new
+    h.each do |k,v|
+      eval("o.#{k}="+((v.is_a?(Hash))?("convert_h2o(v)"):("v")))
+    end
+    o
+  end
+
+  def convert_o2h(o)
+
+    # Convert a (possibly nested) OpenStruct instance into a hash.
+
+    h=Hash.new
+    o.marshal_dump.each do |k,v|
+      h[k.to_s]=((v.is_a?(OpenStruct))?(convert_o2h(v)):(v))
+    end
+    h
+  end
+
   def die(msg=nil)
 
     # Flush any messages accumulated in the 'delayed' logger, report a FATAL-
@@ -116,6 +140,48 @@ module Common
     [output,status]
   end
 
+  def getenv(env,member)
+
+    # Get an OpenStruct member's value.
+
+    eval("env.#{member}")
+  end
+
+  def job_activate(jobid,run)
+
+    # Add jobid:run to the active-jobs hash, so that the job can be killed if
+    # the test suite halts.
+
+    @activemaster.synchronize { @activejobs[jobid]=run }
+  end
+
+  def job_deactivate(jobid)
+
+    # Remove jobid:run from the active-jobs hash.
+
+    @activemaster.synchronize { @activejobs.delete(jobid) }
+  end
+
+  def loadenv(file,descendant=nil,specs=nil)
+    convert_h2o(loadspec(file))
+  end
+
+  def loadspec(file,descendant=nil,specs=nil)
+
+    # Parse YAML spec from file, potentially using recursion to merge the
+    # current spec onto a specified ancestor. Keep track of spec files already
+    # processed to avoid graph cycles.
+
+    specs=[] if specs.nil?
+    die "Circular dependency detected for #{file}" if specs.include?(file)
+    specs << file
+    me=parse(file)
+    ancestor=me['extends']
+    me=loadspec(File.join(File.dirname(file),ancestor),me,specs) if ancestor
+    me=mergespec(me,descendant) unless descendant.nil?
+    me
+  end
+
   def logd(msg)
 
     # A convenience wrapper that logs DEBUG-level messages to the 'delayed'
@@ -145,6 +211,26 @@ module Common
 
     @ts.ilog.warn "#{@pre}: WARNING! #{msg}"
     @ts.ilog.warned=true
+  end
+
+  def mergespec(me,descendant)
+
+    # Merge two specs together, allowing descendant's settings to take
+    # precedence. Top-level key-value pairs are set directly; arrays are
+    # appended; nested hashes are handled via recursion.
+
+    me={} if me.nil?
+    descendant={} if descendant.nil?
+    descendant.each do |k,v|
+      if v.is_a?(Hash)
+        me[k]=mergespec(me[k],v)
+      elsif v.is_a?(Array)
+        me[k]=(me[k].nil?)?(v):(me[k]+v)
+      else
+        me[k]=v
+      end
+    end
+    me
   end
 
   def parse(file)
@@ -200,40 +286,11 @@ module Common
     s
   end
 
-  def specget(file,descendant=nil,specs=nil)
+  def setenv(env,member,val)
 
-    # Parse YAML spec from file, potentially using recursion to merge the
-    # current spec onto a specified ancestor. Keep track of spec files already
-    # processed to avoid graph cycles.
+    # Set an OpenStruct member's value.
 
-    specs=[] if specs.nil?
-    die "Circular dependency detected for #{file}" if specs.include?(file)
-    specs << file
-    me=parse(file)
-    ancestor=me['extends']
-    me=specget(File.join(File.dirname(file),ancestor),me,specs) if ancestor
-    me=specmerge(me,descendant) unless descendant.nil?
-    me
-  end
-
-  def specmerge(me,descendant)
-
-    # Merge two specs together, allowing descendant's settings to take
-    # precedence. Top-level key-value pairs are set directly; arrays are
-    # appended; nested hashes are handled via recursion.
-
-    me={} if me.nil?
-    descendant={} if descendant.nil?
-    descendant.each do |k,v|
-      if v.is_a?(Hash)
-        me[k]=specmerge(me[k],v)
-      elsif v.is_a?(Array)
-        me[k]=(me[k].nil?)?(v):(me[k]+v)
-      else
-        me[k]=v
-      end
-    end
-    me
+    eval("env.#{member}='#{val}'")
   end
 
   def threadmon(threads)
@@ -320,6 +377,8 @@ class Run
 
     @r=r
     @ts=ts
+    @activejobs=@ts.activejobs
+    @activemaster=@ts.activemaster
     @dlog=XlogBuffer.new(@ts.ilog)
     @pre="Run #{@r}"
     @ts.runmaster.synchronize do
@@ -327,29 +386,29 @@ class Run
     end
     @ts.runlocks[@r].synchronize do
       break if @ts.runs.has_key?(@r)
-      @runspec=specget(File.join(runsdir,@r))
-      self.extend(Object.const_get(@runspec['profile']))
-      @runspec['name']=@r
-      unless @bline=@runspec['baseline'] # Yes: =, not ==
+      @env=OpenStruct.new({:run=>loadenv(File.join(runsdir,@r))})
+      self.extend(Object.const_get(@env.run.profile))
+      @env.run.name=@r
+      unless (@bline=@env.run.baseline)
         die "Config incomplete: No baseline name specified"
       end
-      buildrun=build
+      build
       prep_data
       logi "Started"
       @rundir=File.join(Dir.pwd,"runs","#{@r}.#{@ts.uniq}")
       FileUtils.mkdir_p(@rundir) unless Dir.exist?(@rundir)
       logd "* Output from run prep:"
-      @rundir=lib_prep_job(@rundir,@runspec)
+      @rundir=lib_prep_job(@env,@rundir)
       logd_flush
       logd "* Output from run:"
-      stdout=lib_run_job(@rundir,@runspec,@ts.activemaster,@ts.activejobs)
+      stdout=lib_run_job(@env,@rundir)
       die "FAILED -- see #{@ts.ilog.file}" if stdout.nil?
       jobcheck(stdout)
       runpair=OpenStruct.new
       runpair.name=@r
-      runpair.files=lib_outfiles(@rundir)
+      runpair.files=lib_outfiles(@env,@rundir)
       @ts.runmaster.synchronize { @ts.runs[@r]=runpair }
-      (@ts.genbaseline)?(baseline_reg):(baseline_comp) unless @ts.suite.nil?
+      (@ts.genbaseline)?(baseline_reg):(baseline_comp)
       logd_flush
       logi "Completed"
     end
@@ -361,8 +420,8 @@ class Run
     # Delete a run's job from the batch system.
 
     logd "Deleting job #{jobid}"
-    cmd="#{lib_queue_del_cmd} #{jobid}"
-    ext(cmd,{:die=>false})
+    cmd="#{lib_queue_del_cmd(@env)} #{jobid}"
+    output,status=ext(cmd,{:die=>false})
   end
 
   private
@@ -374,17 +433,17 @@ class Run
     if @bline=='none'
       logd "Baseline comparison for #{@r} disabled, skipping"
     else
-      suitebase=File.join(@ts.topdir,'baseline',@ts.suite)
-      if File.directory?(suitebase)
-        blinepath=File.join(suitebase,@bline)
-        if File.directory?(blinepath)
-          logi "Comparing to baseline #{@bline}"
-          blinepair=OpenStruct.new
-          blinepair.name='baseline'
-          blinepair.files=lib_outfiles(blinepath)
-          comp([@ts.runs[@r],blinepair])
-          logi "Baseline comparison OK"
-        else
+      blinetop=File.join(@ts.topdir,'baseline')
+      blinepath=File.join(blinetop,@bline)
+      if Dir.exist?(blinepath)
+        logi "Comparing to baseline #{@bline}"
+        blinepair=OpenStruct.new
+        blinepair.name="baseline #{@bline}"
+        blinepair.files=lib_outfiles(@env,blinepath)
+        comp([@ts.runs[@r],blinepair])
+        logi "Baseline comparison OK"
+      else
+        if Dir.exist?(blinetop)
           logw "No baseline '#{@bline}' found, continuing..."
         end
       end
@@ -417,11 +476,9 @@ class Run
     # shell after obtaining its build spec. It stores into a global hash the
     # path to the directory containing the build's run scripts.
 
-    b=@runspec['build']
-    buildspec=specget(File.join(buildsdir,b))
-    buildspec['buildroot']=File.join(FileUtils.pwd,"builds")
-    buildspec['retainbuilds']=@ts.retainbuilds
-    @runspec['buildspec']=buildspec
+    b=@env.run.build
+    @env.build=loadenv(File.join(buildsdir,b))
+    @env.build.root=File.join(FileUtils.pwd,"builds")
     @ts.buildmaster.synchronize do
       @ts.buildlocks[b]=Mutex.new unless @ts.buildlocks.has_key?(b)
     end
@@ -429,19 +486,19 @@ class Run
       unless @ts.builds.has_key?(b)
         logi "Build #{b} started"
         logd "* Output from build #{b} prep:"
-        lib_build_prep(buildspec)
+        lib_build_prep(@env)
         logd_flush
-        logd "* Output from build #{b} (also see #{buildspec['buildlog']}):"
-        lib_build(buildspec,@ts.activemaster,@ts.activejobs)
+        logd "* Output from build #{b}:"
+        build_output=lib_build(@env)
         logd_flush
         @ts.buildmaster.synchronize do
-          @ts.builds[b]=lib_build_post(buildspec)
+          @ts.builds[b]=lib_build_post(@env,build_output)
         end
         logi "Build #{b} completed"
         logd_flush
       end
     end
-    @ts.buildmaster.synchronize { @runspec['buildrun']=@ts.builds[b] }
+    @ts.buildmaster.synchronize { @env.build.runfiles=@ts.builds[b] }
   end
 
   def get_data
@@ -452,10 +509,10 @@ class Run
     # expected value, we're done.
 
     f='data.tgz'
-    cmd,md5=lib_dataspecs
+    cmd,md5=lib_dataspecs(@env)
     unless File.exists?(f) and hash_matches(f,md5)
       logd "Getting data: #{cmd}"
-      ext(cmd,{:msg=>"Failed to get data"})
+      output,status=ext(cmd,{:msg=>"Failed to get data"})
       die "Data archive #{f} has incorrect md5 hash" unless hash_matches(f,md5)
     end
     logd "Data archive #{f} ready"
@@ -474,7 +531,7 @@ class Run
     # The job is assumed to have completed successfully if the string specified
     # in the regular expression below is found in its stdout.
 
-    re=Regexp.new(lib_re_str_success)
+    re=Regexp.new(lib_re_str_success(@env))
     die "FAILED -- could not find #{stdout}" unless File.exist?(stdout)
     File.open(stdout,'r') do |io|
       io.readlines.each { |e| return if re.match(e) }
@@ -482,10 +539,11 @@ class Run
     die "FAILED -- see #{stdout}"
   end
 
-  def mod_namelist_file(nlfile,nlspec)
+  def mod_namelist_file(nlfile,nlenv)
 
     # Modify a namelist file with values supplied by a config.
 
+    nlspec=convert_o2h(nlenv)
     nlh=NamelistHandler.new(nlfile)
     nlspec.each do |nlk,nlv|
       nlv.each do |k,v|
@@ -508,7 +566,8 @@ class Run
         f=get_data
         cmd="tar xvzf #{f}"
         logd "Extracting data: #{cmd}"
-        ext(cmd,{:msg=>"Data extract failed -- see #{@ts.ilog.file}"})
+        msg="Data extract failed: See #{@ts.ilog.file}"
+        output,status=ext(cmd,{:msg=>msg})
         logd "Data extract complete"
         logd_flush
         @ts.havedata=true
@@ -524,9 +583,9 @@ class TS
 
   attr_accessor :activemaster,:activejobs,:baselinemaster,:baselinesrcs,
   :buildlocks,:buildmaster,:builds,:dlog,:genbaseline,:havedata,:ilog,:pre,
-  :retainbuilds,:runlocks,:runmaster,:runs,:suite,:topdir,:uniq
+  :runlocks,:runmaster,:runs,:suite,:topdir,:uniq
 
-  def initialize(cmd,rest)
+  def initialize(tsname,cmd,rest)
 
     # The test-suite class. Provide a number of instance variables used
     # throughout the test suite, then branch to the appropriate method.
@@ -542,29 +601,51 @@ class TS
     @genbaseline=false
     @havedata=false
     @ilog=nil
-    @pre='ddts'
+    @pre=tsname
     @runlocks={}
     @runmaster=Mutex.new
-    @retainbuilds=false # use builds from last test-suite run (generally unsound)
+    @retainbuilds=false # use existing builds (generally unsound)
     @runs={}
     @suite=nil
     @topdir=FileUtils.pwd
     @ts=self
     @uniq=Time.now.to_i
-    (cmd.nil?)?(dosuite):(dispatch(cmd,rest))
+    dispatch(cmd,rest)
+  end
+
+  def avoid_baseline_conflicts(suitespec)
+
+    # Examine each run the suite plans to execute, report any pre-existing
+    # baseline-image directories that would potentially be clobbered if we
+    # continue, then die.
+
+    conflicts=[]
+    suitespec.each do |group,runs|
+      runs.each do |run|
+        if (b=loadspec(File.join(runsdir,run))['baseline'])
+          unless b=='none'
+            d=File.join(@ts.topdir,'baseline',b)
+            conflicts.push(b) if Dir.exist?(d)
+          end
+        end
+      end
+    end
+    unless conflicts.empty?
+      logi "Baseline conflicts:"
+      conflicts.sort.uniq.each { |e| logi "  #{e} already exists" }
+      die "Aborting..."
+    end
   end
 
   def baseline(args=nil)
 
-    # If 'baseline' was supplied as the command-line argument, make sure no
-    # baseline already exists; set the baseline-generation flag; and call
-    # dosuite() with the supplied suite name, or 'standard' by default.
+    # If 'baseline' was supplied as the command-line argument, record the fact
+    # that baseline generation has been requested, then call dosuite() with the
+    # supplied suite name.
 
-    suite=args[0]||'standard'
-    d=File.join('baseline',suite)
-    die "Directory '#{d}' for suite '#{suite}' exists" if File.exists?(d)
+    help(args,1) if args.empty?
     @genbaseline=true
-    dosuite(suite)
+    dosuite(args[0])
   end
 
   def baseline_gen
@@ -576,7 +657,7 @@ class TS
 
     @baselinesrcs.each do |r,src|
       logi "Creating #{r} baseline..."
-      dst=File.join(@topdir,"baseline",@suite,r)
+      dst=File.join(@topdir,"baseline",r)
       src.files.each do |p1,p2|
         fullpath=File.join(p1,p2)
         minipath=p2
@@ -630,24 +711,23 @@ class TS
     end
   end
 
-  def dosuite(suite=nil)
+  def dosuite(suite)
 
-    # Perform a test suite. Essentially, this involves comparing against each
-    # other the output of sets of runs declared in the suite definition to be
-    # comparable. Use the optional suite name, if supplied, or the default name.
-    # The bottom-level arrays in the YAML suite definition specify the names of
-    # runs to compare together. Comparison objects are instantiated to perform
-    # the necessary runs and compare their output. Each Comparison is run in a
-    # thread, and the set of threads is monitored for completion. This program's
-    # main thread of execution blocks on the call to threadmon() until all
-    # Comparisons are complete, or until a thread aborts and raises and
-    # exception, which is caught and handled here. A list of active Run objects
-    # is collected so that, in the event of suite failure or interruption via
-    # ctrl-c, commands can be issued to abort any queued jobs. A baseline is
-    # generated if one was requested.
+    # Perform the requsted test suite. Essentially, this involves comparing
+    # against each other the output of sets of runs declared in the suite
+    # definition to be comparable. The top-level arrays in the YAML suite
+    # definition specify the names of runs to compare together. Comparison
+    # objects are instantiated to perform the necessary runs and compare their
+    # output. Each Comparison is run in a thread, and the set of threads is
+    # monitored for completion. This program's main thread of execution blocks
+    # on the call to threadmon() until all Comparisons are complete, or until a
+    # thread aborts and raises an exception, which is caught and handled here. A
+    # list of active jobs is maintained so that, in the event of suite failure
+    # or interruption via ctrl-c, commands can be issued to abort them. A
+    # baseline is generated if one was requested.
 
     setup
-    @suite=suite||'standard'
+    @suite=suite
     f=File.join(suitesdir,@suite)
     unless File.exists?(f)
       die "Suite '#{@suite}' not found"
@@ -655,11 +735,16 @@ class TS
     logi "Running test suite '#{@suite}'"
     threads=[]
     begin
-      suitespec=specget(f)
+      suitespec=loadspec(f)
       suitespec.delete('extends')
+      avoid_baseline_conflicts(suitespec) if @genbaseline
       mkbuilds
-      suitespec.each do |k,v|
-        threads << Thread.new { Comparison.new(v.sort.uniq,self) }
+      suitespec.each do |group,runs|
+        if runs
+          threads << Thread.new { Comparison.new(runs.sort.uniq,self) }
+        else
+          logi "Suite group #{group} empty, ignoring..."
+        end
       end
       threadmon(threads)
     rescue Interrupt,Exception=>x
@@ -674,11 +759,16 @@ class TS
   end
 
   def halt(x)
+
+    # Terminate the test-suite run. First try to kill any submitted batch jobs
+    # that are still active. Print some (hopefully helpful) diagnostic messages
+    # and then exit.
+
     unless @activejobs.nil? or @activejobs.empty?
       logi "Stopping runs..."
       @activemaster.synchronize do
-        @activejobs.each do |jobid,run|
-          run.jobdel(jobid) if run.respond_to?(:jobdel)
+        @activejobs.each do |jobid,job|
+          job.jobdel(jobid) if job.respond_to?(:jobdel)
         end
       end
     end
@@ -693,13 +783,13 @@ class TS
 
   def help(args=nil,status=0)
     puts
-    puts "usage: #{@pre} [suite]"
-    puts "       #{@pre} baseline [suite]"
+    puts "usage: #{@pre} <suite>"
+    puts "       #{@pre} baseline <suite>"
     puts "       #{@pre} clean"
     puts "       #{@pre} cleaner"
     puts "       #{@pre} help"
-    puts "       #{@pre} run <name>"
-    puts "       #{@pre} show run|suite <name>"
+    puts "       #{@pre} run <run>"
+    puts "       #{@pre} show run <run> | suite <suite>"
     puts
     exit status
   end
@@ -709,17 +799,21 @@ class TS
     # Create a 'builds' directory (potentially after removing an existing one)
     # to contain the objects created by the build-automation system.
 
-    return if @retainbuilds
     builds='builds'
-    if File.directory?(builds)
+    if Dir.exist?(builds) and not @retainbuilds
       FileUtils.rm_rf(builds)
       @ilog.debug("Deleted existing '#{builds}'")
     end
-    FileUtils.mkdir_p(builds) unless Dir.exist?(builds)
-    @ilog.debug("Created empty '#{builds}'")
+    unless Dir.exist?(builds)
+      FileUtils.mkdir_p(builds)
+      @ilog.debug("Created empty '#{builds}'")
+    end
   end
 
   def run(args=nil)
+
+    # Handle the command-line "run" argument, to perform a single named run.
+
     die "No run name specified" if args.empty?
     setup
     begin
@@ -731,6 +825,10 @@ class TS
   end
 
   def setup
+
+    # Perform common tasks needed for either full-suite or single-run
+    # invocations.
+
     @ilog=Xlog.new(@uniq)
     @dlog=XlogBuffer.new(@ilog)
     trap('INT') do
@@ -740,6 +838,9 @@ class TS
   end
 
   def show(args)
+
+    # Pretty-print a fully composed run or suite configuration.
+
     type=args[0]
     help(args,1) unless ['run','suite'].include?(type)
     name=args[1]
@@ -747,7 +848,7 @@ class TS
     dir=(type=='run')?(runsdir):(suitesdir)
     file=File.join(dir,name)
     die "'#{name}' not found in #{dir}" unless File.exist?(file)
-    spec=specget(file)
+    spec=loadspec(file)
     spec.delete("extends")
     puts
     puts "# #{ancestry(file).join(' < ')}"
@@ -845,7 +946,7 @@ end # class XlogBuffer
 # Command-line invocation:
 
 if __FILE__==$0
-  TS.new(ARGV[0],ARGV[1..-1])
+  TS.new(ARGV[0],ARGV[1],ARGV[2..-1])
 end
 
 # paul.a.madden@noaa.gov

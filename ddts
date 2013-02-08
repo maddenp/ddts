@@ -5,4 +5,4 @@ then
   echo "Cannot find '$jruby'."
   exit 1
 fi
-ulimit -Su 512 && java -jar $jruby  --1.9 -I. ts.rb $*
+ulimit -Su 512 && java -jar $jruby --1.9 -I. ts.rb $(basename $0) $*

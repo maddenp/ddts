@@ -13,7 +13,7 @@ The system ensures the minimum necessary activity. For example, only one build i
 
 The system is adapted to a specific tested code and runtime platform by providing implementations of a set of required methods in _library.rb_. Modules in _profiles.rb_ allow one to override default method names for platform portability: While the test-suite driver code will always call the default method names, these may be aliased to alternatives.
 
-A simple example code (numerical integration using the trapezoid rule) is provided in the _ex_ directory, along with configuration files and a full set of definitions in _library.rb_ and _profiles.rb_. Run `ddts` to run the example suite. Requirements: GNU `tar` and an MPI installation providing `mpif90` and `mpirun`.
+A simple example code (numerical integration using the trapezoid rule) is provided in the _ex_ directory, along with configuration files and a full set of definitions in _library.rb_ and _profiles.rb_. Run `ddts ex_suite` to run the example suite. Requirements: GNU `tar` and an MPI installation providing `mpif90` and `mpirun`.
 
 JRuby Complete 1.7.2 or later is required. Place _jruby-complete.jar_ in the test-suite directory before invoking `ddts`.
 
