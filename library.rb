@@ -23,16 +23,28 @@ module Library
     FileUtils.mkdir(File.join(dir,env.build.bindir))
   end
 
-  def lib_dataspecs(env)
-    ['cp ex/data.tgz .','d49037f1ef796b8a7ca3906e713fc33b']
-  end
-
   def lib_outfiles(env,path)
     nil
   end
 
   def lib_outfiles_ex(env,path)
     [[path,'out']]
+  end
+
+  def lib_prep_data(env)
+    f="data.tgz"
+    cmd="cp ex/data.tgz ."
+    md5='d49037f1ef796b8a7ca3906e713fc33b'
+    unless File.exists?(f) and hash_matches(f,md5)
+      logd "Getting data: #{cmd}"
+      output,status=ext(cmd,{:msg=>"Failed to get data"})
+      die "Data archive #{f} has incorrect md5 hash" unless hash_matches(f,md5)
+    end
+    logd "Data archive #{f} ready"
+    cmd="tar xvzf #{f}"
+    logd "Extracting data: #{cmd}"
+    output,status=ext(cmd,{:msg=>"Data extract failed: See #{@ts.ilog.file}"})
+    logd "Data extract complete"
   end
 
   def lib_prep_job(env,rundir)

@@ -45,12 +45,6 @@ Model/Platform Methods
     Return value is unused. Takes any actions required prior to performing the
     build.
 
-  lib_dataspecs(env)
-
-    Returns an array containing: 1. the shell command to be executed to produce
-    the data-archive file in the top-level test-suite directory; and 2. the
-    expected MD5 checksum of the data-archive file.
-
   lib_outfiles(env,path)
 
     Returns an array containing the pathnames of the files that will be (1)
@@ -62,6 +56,15 @@ Model/Platform Methods
     path to an output file, and path2 is the suffix of the path that is (a) the
     same across runs in the comparison group; and (b) what should be stored in a
     baseline image.
+
+  lib_prep_data(env)
+
+    Return value is unused. Takes actions necessary to create, populate, verify,
+    etc., in the top-level test-suite directory, a 'data' directory containing
+    data files to be used by the test-suite runs. To allow for automated clean-
+    up, if this method places a data-archive file in the top-level test-suite
+    directory, it should be named 'data.tgz'; if a data directory is created, it
+    should be named 'data'.
 
   lib_prep_job(env,rundir)
 

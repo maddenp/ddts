@@ -132,9 +132,9 @@ module Common
     if o
       logd "* Output from: #{cmd}"
       logd "* Status code: #{status}"
-      logd "--"
+      logd "---- 8< ----"
       output.each { |e| logd e }
-      logd "--"
+      logd "---- >8 ----"
     end
     die(m) if d and status!=0
     [output,status]
@@ -308,7 +308,7 @@ module Common
 
   def valid_dir(dir)
 
-    # Return the supplied dir if it exists -- otherwise die.
+    # Return the supplied dir if it exists (otherwise die).
 
     dir=File.expand_path(dir)
     die "Directory #{dir} not found" unless File.directory?(dir)
@@ -317,7 +317,7 @@ module Common
 
   def valid_file(file)
 
-    # Return the supplied file if it exists -- otherwise die.
+    # Return the supplied file if it exists (otherwise die).
 
     file=File.expand_path(file)
     die "File #{file} not found" unless File.exists?(file)
@@ -393,7 +393,14 @@ class Run
         die "Config incomplete: No baseline name specified"
       end
       build
-      prep_data
+      @ts.runmaster.synchronize do
+        unless @ts.havedata
+          logd "* Preparing data for all test-suite runs..."
+          lib_prep_data(@env)
+          logd_flush
+          @ts.havedata=true
+        end
+      end
       logi "Started"
       @rundir=File.join(Dir.pwd,"runs","#{@r}.#{@ts.uniq}")
       FileUtils.mkdir_p(@rundir) unless Dir.exist?(@rundir)
@@ -402,7 +409,7 @@ class Run
       logd_flush
       logd "* Output from run:"
       stdout=lib_run_job(@env,@rundir)
-      die "FAILED -- see #{@ts.ilog.file}" if stdout.nil?
+      die "FAILED: See #{@ts.ilog.file}" if stdout.nil?
       jobcheck(stdout)
       runpair=OpenStruct.new
       runpair.name=@r
@@ -501,24 +508,6 @@ class Run
     @ts.buildmaster.synchronize { @env.build.runfiles=@ts.builds[b] }
   end
 
-  def get_data
-
-    # Obtain the test suite's canned data set, whose md5 checksum has previously
-    # been computed via the system 'md5sum' utility and recorded as the 'md5'
-    # variable here. If a data archive file is already present and hashes to the
-    # expected value, we're done.
-
-    f='data.tgz'
-    cmd,md5=lib_dataspecs(@env)
-    unless File.exists?(f) and hash_matches(f,md5)
-      logd "Getting data: #{cmd}"
-      output,status=ext(cmd,{:msg=>"Failed to get data"})
-      die "Data archive #{f} has incorrect md5 hash" unless hash_matches(f,md5)
-    end
-    logd "Data archive #{f} ready"
-    f
-  end
-
   def hash_matches(file,hash)
 
     # Do they match?
@@ -532,11 +521,11 @@ class Run
     # in the regular expression below is found in its stdout.
 
     re=Regexp.new(lib_re_str_success(@env))
-    die "FAILED -- could not find #{stdout}" unless File.exist?(stdout)
+    die "FAILED: Could not find #{stdout}" unless File.exist?(stdout)
     File.open(stdout,'r') do |io|
       io.readlines.each { |e| return if re.match(e) }
     end
-    die "FAILED -- see #{stdout}"
+    die "FAILED: See #{stdout}"
   end
 
   def mod_namelist_file(nlfile,nlenv)
@@ -553,26 +542,6 @@ class Run
       end
     end
     nlh.write
-  end
-
-  def prep_data
-
-    # Extract the test suite's canned data set. A global mutex protects this
-    # operation so that only one run may perform the export and extraction.
-
-    @ts.runmaster.synchronize do
-      unless @ts.havedata
-        logd "* Preparing data for all test-suite runs..."
-        f=get_data
-        cmd="tar xvzf #{f}"
-        logd "Extracting data: #{cmd}"
-        msg="Data extract failed: See #{@ts.ilog.file}"
-        output,status=ext(cmd,{:msg=>msg})
-        logd "Data extract complete"
-        logd_flush
-        @ts.havedata=true
-      end
-    end
   end
 
 end # class Run
