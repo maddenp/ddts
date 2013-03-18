@@ -834,7 +834,7 @@ class TS
       puts
       puts "Available #{type}:"
       puts
-      Dir.glob("#{dir}/*").each { |item| puts "  #{File.basename(item)}" }
+      Dir.glob("#{dir}/*").sort.each { |item| puts "  #{File.basename(item)}" }
       puts
     else
       help(args,1)
