@@ -10,21 +10,20 @@ Quick Start
   ddts help               : shows this usage information
   ddts run <run>          : perform the single run named <run>
   ddts show run <run>     : show details of the run named <run>
-  ddts show runs          : list names of available runs
+  ddts show runs          : show valid run names
   ddts show suite <suite> : show details for the suite named <suite>
-  ddts show suites        : list names of available suites
+  ddts show suites        : show valid suite names
 
 Baseline Creation / Comparison
 
-  Run 'ddts baseline <suite>' to create a baseline. Valid <suite> values are
-  the names of the files in the conf/suites directory. A directory named
-  'baseline' will be created in the current directory, if it does not already
-  exist, and one subdirectory will be created under it for each unique
-  'baseline' value specified in the configs of the suite's various runs. These
-  subdirectories must not already exist.
+  Run 'ddts baseline <suite>' to create a baseline image of the named suite
+  ('ddts show suites' lists valid names). A directory named 'baseline' will be
+  created in the current directory, and one subdirectory will be created under
+  it for each unique 'baseline' value specified in the configs of the suite's
+  various runs. These subdirectories must not already exist.
 
   The test suite will automatically compare its runs' output to the contents of
-  the 'baseline' directory if one exists. You may copy or link a previously
+  the 'baseline' directory if it exists. You may copy or link a previously
   generated baseline directory here.
 
 A useful workflow might consist of these steps:
