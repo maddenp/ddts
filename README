@@ -3,13 +3,16 @@ DDTS Test Suite
 
 Quick Start
 
-  ddts <suite>                        : run the named suite
-  ddts baseline <suite>               : run the named suite & store a baseline
-  ddts clean                          : remove most test-suite created items
-  ddts cleaner                        : clean + remove baseline & data archive
-  ddts help                           : shows this usage information
-  ddts run <run>                      : perform the single specified run
-  ddts show run <run> | suite <suite> : show the named run or suite config
+  ddts <suite>            : run the suite named <suite>
+  ddts baseline <suite>   : run the suite named <suite> & create baseline image
+  ddts clean              : remove most test-suite created items
+  ddts cleaner            : clean + remove baseline & data archive
+  ddts help               : shows this usage information
+  ddts run <run>          : perform the single run named <run>
+  ddts show run <run>     : show details of the run named <run>
+  ddts show runs          : list names of available runs
+  ddts show suite <suite> : show details for the suite named <suite>
+  ddts show suites        : list names of available suites
 
 Baseline Creation / Comparison
 

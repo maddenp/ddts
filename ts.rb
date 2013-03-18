@@ -758,7 +758,12 @@ class TS
     puts "       #{@pre} cleaner"
     puts "       #{@pre} help"
     puts "       #{@pre} run <run>"
-    puts "       #{@pre} show run <run> | suite <suite>"
+    puts "       #{@pre} show run <run>"
+    puts "       #{@pre} show runs"
+    puts "       #{@pre} show suite <suite>"
+    puts "       #{@pre} show suites"
+    puts
+    puts "See the README for more information."
     puts
     exit status
   end
@@ -811,19 +816,29 @@ class TS
     # Pretty-print a fully composed run or suite configuration.
 
     type=args[0]
-    help(args,1) unless ['run','suite'].include?(type)
     name=args[1]
-    die "No #{type} specified" unless name
-    dir=(type=='run')?(runsdir):(suitesdir)
-    file=File.join(dir,name)
-    die "'#{name}' not found in #{dir}" unless File.exist?(file)
-    spec=loadspec(file)
-    spec.delete("extends")
-    puts
-    puts "# #{ancestry(file).join(' < ')}"
-    puts
-    puts pp(spec)
-    puts
+    if ['run','suite'].include?(type)
+      die "No #{type} specified" unless name
+      dir=(type=='run')?(runsdir):(suitesdir)
+      file=File.join(dir,name)
+      die "'#{name}' not found in #{dir}" unless File.exist?(file)
+      spec=loadspec(file)
+      spec.delete("extends")
+      puts
+      puts "# #{ancestry(file).join(' < ')}"
+      puts
+      puts pp(spec)
+      puts
+    elsif ['runs','suites'].include?(type)
+      dir=(type=='runs')?(runsdir):(suitesdir)
+      puts
+      puts "Available #{type}:"
+      puts
+      Dir.glob("#{dir}/*").each { |item| puts "  #{File.basename(item)}" }
+      puts
+    else
+      help(args,1)
+    end
   end
 
 end # class TS
