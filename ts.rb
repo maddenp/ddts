@@ -140,13 +140,6 @@ module Common
     [output,status]
   end
 
-  def getenv(env,member)
-
-    # Get an OpenStruct member's value.
-
-    eval("env.#{member}")
-  end
-
   def job_activate(jobid,run)
 
     # Add jobid:run to the active-jobs hash, so that the job can be killed if
@@ -194,6 +187,10 @@ module Common
 
   def logd_flush
     @dlog.flush if @dlog
+  end
+
+  def logfile
+    @ts.ilog.file
   end
 
   def logi(msg)
@@ -284,13 +281,6 @@ module Common
       s="'#{s}'"
     end
     s
-  end
-
-  def setenv(env,member,val)
-
-    # Set an OpenStruct member's value.
-
-    eval("env.#{member}='#{val}'")
   end
 
   def threadmon(threads)
@@ -409,7 +399,7 @@ class Run
       logd_flush
       logd "* Output from run:"
       stdout=lib_run_job(@env,@rundir)
-      die "FAILED: See #{@ts.ilog.file}" if stdout.nil?
+      die "FAILED: See #{logfile}" if stdout.nil?
       jobcheck(stdout)
       runpair=OpenStruct.new
       runpair.name=@r

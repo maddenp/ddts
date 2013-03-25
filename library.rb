@@ -9,7 +9,7 @@ module Library
     compiler=env.build.compiler
     srcfile=env.build.srcfile
     cmd="cd #{builddir} && #{compiler} #{srcfile} -o #{bindir}/#{binname}"
-    ext(cmd,{:msg=>"Build failed"})
+    ext(cmd,{:msg=>"Build failed, see #{logfile}"})
   end
 
   def lib_build_post(env,output)
@@ -37,13 +37,13 @@ module Library
     md5='d49037f1ef796b8a7ca3906e713fc33b'
     unless File.exists?(f) and hash_matches(f,md5)
       logd "Getting data: #{cmd}"
-      output,status=ext(cmd,{:msg=>"Failed to get data"})
+      output,status=ext(cmd,{:msg=>"Failed to get data, see #{logfile}"})
       die "Data archive #{f} has incorrect md5 hash" unless hash_matches(f,md5)
     end
     logd "Data archive #{f} ready"
     cmd="tar xvzf #{f}"
     logd "Extracting data: #{cmd}"
-    output,status=ext(cmd,{:msg=>"Data extract failed: See #{@ts.ilog.file}"})
+    output,status=ext(cmd,{:msg=>"Data extract failed, see #{logfile}"})
     logd "Data extract complete"
   end
 
