@@ -119,19 +119,19 @@ module Common
 
   def ext(cmd,props={})
 
-    # Execute a system command in a subshell, collecting a merged stdout and
-    # stderr. If property :die is true, die on a nonzero subshell exit status,
-    # printing the message keyed by property :msg, if any. If property :out is
-    # true, write the collected stdout/stderr to the delayed log.
+    # Execute a system command in a subshell, collecting stdout and stderr. If
+    # property :die is true, die on a nonzero subshell exit status,printing the
+    # message keyed by property :msg, if any. If property :out is true, write
+    # the collected stdout/stderr to the delayed log.
 
     d=(props.has_key?(:die))?(props[:die]):(true)
     m=(props.has_key?(:msg))?(props[:msg]):("")
     o=(props.has_key?(:out))?(props[:out]):(true)
-    output=%x{#{cmd} 2>&1}.split("\n")
-    status=$?
+    output=[]
+    IO.popen("#{cmd} 2>&1") { |io| io.read.each_line { |x| output.push(x) } }
+    status=$?.exitstatus
     if o
-      logd "* Output from: #{cmd}"
-      logd "* Status code: #{status}"
+      logd "* Output from #{cmd} (status code=#{status}):"
       logd "---- 8< ----"
       output.each { |e| logd e }
       logd "---- >8 ----"
