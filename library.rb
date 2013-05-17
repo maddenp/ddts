@@ -54,7 +54,7 @@ module Library
     FileUtils.chmod(0755,File.join(rundir,binname))
     a=env.run.a
     b=env.run.b
-    n=env.run.c
+    n=env.run.n
     confstr="&config a=#{a} b=#{b} n=#{n} /\n"
     conffile=File.join(rundir,env.run.conffile)
     File.open(conffile,'w') { |f| f.write(confstr) }
