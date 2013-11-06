@@ -336,7 +336,7 @@ class Comparison
     a.each { |e| threads << Thread.new { runs << Run.new(e,ts).result } }
     threadmon(threads)
     s=a.join(', ')
-    unless runs.size==1
+    unless @ts.build_only or runs.size==1
       logi "#{s}: Checking..."
       comp(runs.sort { |r1,r2| r1.name <=> r2.name })
       logi "#{s}: OK"
@@ -383,31 +383,33 @@ class Run
         die "Config incomplete: No baseline name specified"
       end
       build
-      @ts.runmaster.synchronize do
-        unless @ts.havedata
-          logd "* Preparing data for all test-suite runs..."
-          lib_prep_data(@env)
-          logd_flush
-          @ts.havedata=true
+      if @ts.build_only
+        @result=:build_only
+      else
+        @ts.runmaster.synchronize do
+          unless @ts.havedata
+            logd "* Preparing data for all test-suite runs..."
+            lib_prep_data(@env)
+            logd_flush
+            @ts.havedata=true
+          end
         end
+        logi "Started"
+        @rundir=File.join(Dir.pwd,"runs","#{@r}.#{@ts.uniq}")
+        FileUtils.mkdir_p(@rundir) unless Dir.exist?(@rundir)
+        logd "* Output from run prep:"
+        @rundir=lib_prep_job(@env,@rundir)
+        logd_flush
+        logd "* Output from run:"
+        stdout=lib_run_job(@env,@rundir)
+        die "FAILED: See #{logfile}" if stdout.nil?
+        jobcheck(stdout)
+        @result=OpenStruct.new({:name=>@r,:files=>lib_outfiles(@env,@rundir)})
+        (@ts.genbaseline)?(baseline_reg):(baseline_comp)
+        logd_flush
+        logi "Completed"
       end
-      logi "Started"
-      @rundir=File.join(Dir.pwd,"runs","#{@r}.#{@ts.uniq}")
-      FileUtils.mkdir_p(@rundir) unless Dir.exist?(@rundir)
-      logd "* Output from run prep:"
-      @rundir=lib_prep_job(@env,@rundir)
-      logd_flush
-      logd "* Output from run:"
-      stdout=lib_run_job(@env,@rundir)
-      die "FAILED: See #{logfile}" if stdout.nil?
-      jobcheck(stdout)
-      runpair=OpenStruct.new
-      runpair.name=@r
-      runpair.files=lib_outfiles(@env,@rundir)
-      @ts.runmaster.synchronize { @ts.runs[@r]=runpair }
-      (@ts.genbaseline)?(baseline_reg):(baseline_comp)
-      logd_flush
-      logi "Completed"
+      @ts.runmaster.synchronize { @ts.runs[@r]=@result }
     end
     @ts.runmaster.synchronize { @result=@ts.runs[@r] }
   end
@@ -541,8 +543,8 @@ class TS
   include Common
 
   attr_accessor :activemaster,:activejobs,:baselinemaster,:baselinesrcs,
-  :buildlocks,:buildmaster,:builds,:dlog,:genbaseline,:havedata,:ilog,:pre,
-  :runlocks,:runmaster,:runs,:suite,:topdir,:uniq
+  :build_only,:buildlocks,:buildmaster,:builds,:dlog,:genbaseline,:havedata,
+  :ilog,:pre,:runlocks,:runmaster,:runs,:suite,:topdir,:uniq
 
   def initialize(tsname,cmd,rest)
 
@@ -697,6 +699,7 @@ class TS
       suitespec.delete('extends')
       avoid_baseline_conflicts(suitespec) if @genbaseline
       @retain_builds=suitespec.delete('retain_builds')
+      @build_only=suitespec.delete('build_only')
       mkbuilds
       suitespec.each do |group,runs|
         if runs
