@@ -5,7 +5,7 @@ module Library
   def lib_build(env)
     bindir=env.build.bindir
     binname=env.run.binname
-    builddir=File.join(env.build.root,env.build.builddir)
+    builddir=File.join(env.build._root,env.build.builddir)
     compiler=env.build.compiler
     srcfile=env.build.srcfile
     cmd="cd #{builddir} && #{compiler} #{srcfile} -o #{bindir}/#{binname}"
@@ -17,7 +17,7 @@ module Library
   end
 
   def lib_build_prep(env)
-    dir=File.join(env.build.root,env.build.builddir)
+    dir=File.join(env.build._root,env.build.builddir)
     FileUtils.mkdir_p(dir)
     FileUtils.cp(File.join(env.build.srcdir,env.build.srcfile),dir)
     FileUtils.mkdir(File.join(dir,env.build.bindir))
@@ -50,7 +50,7 @@ module Library
   def lib_prep_job(env,rundir)
     binname=env.run.binname
     conffile=env.run.conffile
-    FileUtils.cp(File.join('builds',env.build.runfiles,binname),rundir)
+    FileUtils.cp(File.join('builds',env.build._result,binname),rundir)
     FileUtils.chmod(0755,File.join(rundir,binname))
     a=env.run.a
     b=env.run.b

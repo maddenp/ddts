@@ -378,7 +378,7 @@ class Run
       break if @ts.runs.has_key?(@r)
       @env=OpenStruct.new({:run=>loadenv(File.join(runsdir,@r))})
       self.extend(Object.const_get(@env.run.profile))
-      @env.run.name=@r
+      @env.run._name=@r
       unless (@bline=@env.run.baseline)
         die "Config incomplete: No baseline name specified"
       end
@@ -475,7 +475,7 @@ class Run
 
     b=@env.run.build
     @env.build=loadenv(File.join(buildsdir,b))
-    @env.build.root=File.join(FileUtils.pwd,"builds")
+    @env.build._root=File.join(FileUtils.pwd,"builds")
     @ts.buildmaster.synchronize do
       @ts.buildlocks[b]=Mutex.new unless @ts.buildlocks.has_key?(b)
     end
@@ -495,7 +495,7 @@ class Run
         logd_flush
       end
     end
-    @ts.buildmaster.synchronize { @env.build.runfiles=@ts.builds[b] }
+    @ts.buildmaster.synchronize { @env.build._result=@ts.builds[b] }
   end
 
   def hash_matches(file,hash)
