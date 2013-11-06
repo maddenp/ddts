@@ -20,7 +20,7 @@ module Library
     dir=File.join(env.build._root,env.build.builddir)
     FileUtils.mkdir_p(dir)
     FileUtils.cp(File.join(env.build.srcdir,env.build.srcfile),dir)
-    FileUtils.mkdir(File.join(dir,env.build.bindir))
+    FileUtils.mkdir_p(File.join(dir,env.build.bindir))
   end
 
   def lib_outfiles(env,path)

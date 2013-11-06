@@ -563,7 +563,6 @@ class TS
     @pre=tsname
     @runlocks={}
     @runmaster=Mutex.new
-    @retainbuilds=false # use existing builds (generally unsound)
     @runs={}
     @suite=nil
     @topdir=FileUtils.pwd
@@ -697,6 +696,7 @@ class TS
       suitespec=loadspec(f)
       suitespec.delete('extends')
       avoid_baseline_conflicts(suitespec) if @genbaseline
+      @retain_builds=suitespec.delete('retain_builds')
       mkbuilds
       suitespec.each do |group,runs|
         if runs
@@ -764,7 +764,7 @@ class TS
     # to contain the objects created by the build-automation system.
 
     builds='builds'
-    if Dir.exist?(builds) and not @retainbuilds
+    if Dir.exist?(builds) and not @retain_builds
       FileUtils.rm_rf(builds)
       @ilog.debug("Deleted existing '#{builds}'")
     end
