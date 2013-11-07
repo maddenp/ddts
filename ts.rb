@@ -384,7 +384,7 @@ class Run
       end
       build
       if @ts.build_only
-        @result=:build_only
+        @ts.runmaster.synchronize { @ts.runs[@r]=:build_only }
       else
         @ts.runmaster.synchronize do
           unless @ts.havedata
@@ -404,12 +404,12 @@ class Run
         stdout=lib_run_job(@env,@rundir)
         die "FAILED: See #{logfile}" if stdout.nil?
         jobcheck(stdout)
-        @result=OpenStruct.new({:name=>@r,:files=>lib_outfiles(@env,@rundir)})
+        result=OpenStruct.new({:name=>@r,:files=>lib_outfiles(@env,@rundir)})
+        @ts.runmaster.synchronize { @ts.runs[@r]=result }
         (@ts.genbaseline)?(baseline_reg):(baseline_comp)
         logd_flush
         logi "Completed"
       end
-      @ts.runmaster.synchronize { @ts.runs[@r]=@result }
     end
     @ts.runmaster.synchronize { @result=@ts.runs[@r] }
   end
