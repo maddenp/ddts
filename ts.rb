@@ -697,9 +697,9 @@ class TS
     begin
       suitespec=loadspec(f)
       suitespec.delete('extends')
-      avoid_baseline_conflicts(suitespec) if @genbaseline
       @retain_builds=suitespec.delete('retain_builds')
       @build_only=suitespec.delete('build_only')
+      avoid_baseline_conflicts(suitespec) if @genbaseline
       mkbuilds
       suitespec.each do |group,runs|
         if runs
