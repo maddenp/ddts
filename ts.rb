@@ -390,7 +390,7 @@ class Run
         @ts.runmaster.synchronize do
           unless @ts.havedata
             logd "* Preparing data for all test-suite runs..."
-            lib_prep_data(@env)
+            lib_data(@env)
             logd_flush
             @ts.havedata=true
           end
@@ -399,12 +399,13 @@ class Run
         @rundir=File.join(Dir.pwd,"runs","#{@r}.#{@ts.uniq}")
         FileUtils.mkdir_p(@rundir) unless Dir.exist?(@rundir)
         logd "* Output from run prep:"
-        @rundir=lib_prep_job(@env,@rundir)
+        @rundir=lib_run_prep(@env,@rundir)
         logd_flush
         logd "* Output from run:"
-        stdout=lib_run_job(@env,@rundir)
+        stdout=lib_run(@env,@rundir)
         die "FAILED: See #{logfile}" if stdout.nil?
         jobcheck(stdout)
+        lib_run_post(@env)
         result=OpenStruct.new({:name=>@r,:files=>lib_outfiles(@env,@rundir)})
         @ts.runmaster.synchronize { @ts.runs[@r]=result }
         (@ts.genbaseline)?(baseline_reg):(baseline_comp)

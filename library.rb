@@ -31,7 +31,7 @@ module Library
     [[path,'out']]
   end
 
-  def lib_prep_data(env)
+  def lib_data(env)
     f="data.tgz"
     cmd="cp ex/data.tgz ."
     md5='d49037f1ef796b8a7ca3906e713fc33b'
@@ -47,7 +47,21 @@ module Library
     logd "Data extract complete"
   end
 
-  def lib_prep_job(env,rundir)
+  def lib_run(env,rundir)
+    bin=env.run.binname
+    run=env.run.runcmd
+    sleep=env.run.sleep
+    tasks=env.run.tasks
+    cmd="cd #{rundir} && #{run} #{tasks} #{bin} >stdout 2>&1 && sleep #{sleep}"
+    IO.popen(cmd) { |io| io.readlines.each { |e| logd "#{e}" } }
+    File.join(rundir,'stdout')
+  end
+
+  def lib_run_post(env)
+    nil
+  end
+
+  def lib_run_prep(env,rundir)
     binname=env.run.binname
     conffile=env.run.conffile
     FileUtils.cp(File.join('builds',env.build._result,binname),rundir)
@@ -67,16 +81,6 @@ module Library
 
   def lib_re_str_success(env)
     'SUCCESS'
-  end
-
-  def lib_run_job(env,rundir)
-    bin=env.run.binname
-    run=env.run.runcmd
-    sleep=env.run.sleep
-    tasks=env.run.tasks
-    cmd="cd #{rundir} && #{run} #{tasks} #{bin} >stdout 2>&1 && sleep #{sleep}"
-    IO.popen(cmd) { |io| io.readlines.each { |e| logd "#{e}" } }
-    File.join(rundir,'stdout')
   end
 
   # CUSTOM METHODS (NOT CALLED BY DRIVER)

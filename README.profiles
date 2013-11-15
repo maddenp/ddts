@@ -6,27 +6,26 @@ Overview
   test-suite Run objects with appropriate library methods. Each such module
   starts by including all of the library methods as defaults, then defines
   aliases for any methods for which the default must be overridden. The section
-  'Model/Platform Methods', below, describes each method that must be
-  implemented, either by name or alias.
+  'Model/Platform Methods', below, describes the methods called by the core
+  driver. Each must be implemented.
 
-  Library methods should not use instance variables. Any communication with the
-  test-suite driver or with other library methods should be done either via
-  method arguments, or via the passed-in 'env' environment object. (The 'env'
-  OpenStruct object has .build and .run members that expose the contents of the
-  build and run configs, respectively. New members can be added to env.build or
-  env.run, or to env itself, as needed.)
+  Library methods should not use instance variables. Communication with the core
+  driver or with other library methods may be done either via method arguments,
+  or via the passed-in 'env' environment object. (The 'env' OpenStruct object
+  has .build, .run and .suite members that expose the contents of the respective
+  configs) New members may be added to env.[build|run|suite], or to env itself,
+  as needed.)
 
 Model/Platform Methods
 
-  These methods are called directly by the test-suite core driver, and so must
-  be implemented. An environment object (see above) is passed as the first
-  argument to each required method; it may be inspected in each method to
-  determine what information is available to work with in each method.
+  These methods are called directly by the core driver. An environment object
+  (see above) is passed in as the first argument to each method; it may be
+  inspected in each method to determine what information it contains.
 
   Other methods useful to a specific model or platform may be implemented as
   needed.
 
-  lib_build(env)
+  lib_build(env) 
 
     Returns an array, potentially containing build output or other data, to be
     passed to lib_build_post(); the actual contents should be determined by the
@@ -45,6 +44,15 @@ Model/Platform Methods
     Return value is unused. Takes any actions required prior to performing the
     build.
 
+  lib_data(env)
+
+    Return value is unused. Takes actions necessary to create, populate, verify,
+    etc., in the top-level test-suite directory, a 'data' directory containing
+    data files to be used by the test-suite runs. To allow for automated clean-
+    up, if this method places a data-archive file in the top-level test-suite
+    directory, it should be named 'data.tgz'; if a data directory is created, it
+    should be named 'data'.
+
   lib_outfiles(env,path)
 
     Returns an array containing the pathnames of the files that will be (1)
@@ -57,22 +65,6 @@ Model/Platform Methods
     same across runs in the comparison group; and (b) what should be stored in a
     baseline image.
 
-  lib_prep_data(env)
-
-    Return value is unused. Takes actions necessary to create, populate, verify,
-    etc., in the top-level test-suite directory, a 'data' directory containing
-    data files to be used by the test-suite runs. To allow for automated clean-
-    up, if this method places a data-archive file in the top-level test-suite
-    directory, it should be named 'data.tgz'; if a data directory is created, it
-    should be named 'data'.
-
-  lib_prep_job(env,rundir)
-
-    Returns a string containing the path to the directory where the run should
-    be started (perhaps via queue submission). Takes any actions required prior
-    to starting the run. The 'rundir' argument contains the name of a unique
-    directory to be used by this run.
-
   lib_queue_del_cmd(env)
 
     Returns a string containing the name of the external program to run to
@@ -83,7 +75,19 @@ Model/Platform Methods
     Returns the string expected to appear in the model binary's stdout to
     indicate that the run completed successfully.
 
-  lib_run_job(env,rundir)
+  lib_run(env,rundir)
 
     Returns a string containing the path to the run's stdout. Performs a run.
+
+  lib_run_post(env)
+
+    Return value is unused. Take any actions necessary following a successful
+    run, before the test suite proceeds to output comparision.
+
+  lib_run_prep(env,rundir)
+
+    Returns a string containing the path to the directory where the run should
+    be started (perhaps via queue submission). Takes any actions required prior
+    to starting the run. The 'rundir' argument contains the name of a unique
+    directory to be used by this run.
 
