@@ -336,7 +336,7 @@ class Comparison
     a.each { |e| threads << Thread.new { runs << Run.new(e,ts).result } }
     threadmon(threads)
     s=a.join(', ')
-    unless @ts.build_only or runs.size==1
+    unless @ts.env.build_only or runs.size==1
       logi "#{s}: Checking..."
       comp(runs.sort { |r1,r2| r1.name <=> r2.name })
       logi "#{s}: OK"
@@ -377,13 +377,14 @@ class Run
     @ts.runlocks[@r].synchronize do
       break if @ts.runs.has_key?(@r)
       @env=OpenStruct.new({:run=>loadenv(File.join(runsdir,@r))})
+      @env.suite=@ts.env
       self.extend(Object.const_get(@env.run.profile))
       @env.run._name=@r
       unless (@bline=@env.run.baseline)
         die "Config incomplete: No baseline name specified"
       end
       build
-      if @ts.build_only
+      if @env.suite.build_only
         @ts.runmaster.synchronize { @ts.runs[@r]=:build_only }
       else
         @ts.runmaster.synchronize do
@@ -543,8 +544,8 @@ class TS
   include Common
 
   attr_accessor :activemaster,:activejobs,:baselinemaster,:baselinesrcs,
-  :build_only,:buildlocks,:buildmaster,:builds,:dlog,:genbaseline,:havedata,
-  :ilog,:pre,:runlocks,:runmaster,:runs,:suite,:topdir,:uniq
+  :buildlocks,:buildmaster,:builds,:dlog,:genbaseline,:havedata,:ilog,:pre,
+  :runlocks,:runmaster,:runs,:suite,:topdir,:uniq
 
   def initialize(tsname,cmd,rest)
 
@@ -559,6 +560,7 @@ class TS
     @buildmaster=Mutex.new
     @builds={}
     @dlog=nil
+    @env={}
     @genbaseline=false
     @havedata=false
     @ilog=nil
@@ -696,9 +698,12 @@ class TS
     threads=[]
     begin
       suitespec=loadspec(f)
-      suitespec.delete('extends')
-      @retain_builds=suitespec.delete('retain_builds')
-      @build_only=suitespec.delete('build_only')
+      suitespec.each do |k,v|
+        # Assume that array value are run groups and move all scalar values
+        # into env, assuming that these are either reserved or user-defined
+        # suite-level settings.
+        @env[k]=suitespec.delete(k) unless v.is_a?(Array)
+      end
       avoid_baseline_conflicts(suitespec) if @genbaseline
       mkbuilds
       suitespec.each do |group,runs|
@@ -720,6 +725,12 @@ class TS
     logi msg
   end
 
+  def env
+    return @env_ostruct if defined? @env_ostruct
+    @env.freeze
+    @env_ostruct=OpenStruct.new(@env)
+  end
+
   def halt(x)
 
     # Terminate the test-suite run. First try to kill any submitted batch jobs
@@ -729,9 +740,7 @@ class TS
     unless @activejobs.nil? or @activejobs.empty?
       logi "Stopping runs..."
       @activemaster.synchronize do
-        @activejobs.each do |jobid,job|
-          job.jobdel(jobid) if job.respond_to?(:jobdel)
-        end
+        @activejobs.each { |jobid,job| job.jobdel(jobid) }
       end
     end
     logd x.message
@@ -767,7 +776,7 @@ class TS
     # to contain the objects created by the build-automation system.
 
     builds='builds'
-    if Dir.exist?(builds) and not @retain_builds
+    if Dir.exist?(builds) and not @env["retain_builds"]
       FileUtils.rm_rf(builds)
       @ilog.debug("Deleted existing '#{builds}'")
     end
