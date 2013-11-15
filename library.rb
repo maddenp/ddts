@@ -83,16 +83,6 @@ module Library
     'SUCCESS'
   end
 
-  def lib_suite_post(env)
-    $stderr.puts "### lib_suite_post #{env}"
-    nil
-  end
-
-  def lib_suite_prep(env)
-    $stderr.puts "### lib_suite_prep #{env}"
-    nil
-  end
-
   # CUSTOM METHODS (NOT CALLED BY DRIVER)
 
 end

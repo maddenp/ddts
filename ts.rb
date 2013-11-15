@@ -708,7 +708,6 @@ class TS
         @env[k]=suitespec.delete(k) unless v.is_a?(Array)
       end
       avoid_baseline_conflicts(suitespec) if @genbaseline
-      lib_suite_prep(env)
       mkbuilds
       suitespec.each do |group,runs|
         if runs
@@ -727,7 +726,6 @@ class TS
     msg="ALL TESTS PASSED"
     msg+=" -- but note WARNING(s) above!" if @ilog.warned
     logi msg
-    lib_suite_post(env)
   end
 
   def env
