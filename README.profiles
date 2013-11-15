@@ -91,3 +91,16 @@ Model/Platform Methods
     to starting the run. The 'rundir' argument contains the name of a unique
     directory to be used by this run.
 
+  lib_suite_post(env)
+
+    Return value is unused. Takes any actions necessary after a successful suite
+    execution. NOTE that env here containly ony the suite-level config items.
+    It does not have .build/.run/.suite sub-containers.
+
+  lib_suite_prep(env)
+
+    Return value is unused. Takes any actions necessary before starting test-
+    suite runs, but after the suite configuration has been read and verified.
+    NOTE that env here containly ony the suite-level config items. It does not
+    have .build/.run/.suite sub-containers.
+
