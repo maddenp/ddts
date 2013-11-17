@@ -378,7 +378,7 @@ class Run
       break if @ts.runs.has_key?(@r)
       @env=OpenStruct.new({:run=>loadenv(File.join(runsdir,@r))})
       @env.suite=@ts.env
-      self.extend(Object.const_get(@env.run.profile))
+      self.extend((p=@env.run.profile)?(Object.const_get(p)):(Library))
       @env.run._name=@r
       unless (@bline=@env.run.baseline)
         die "Config incomplete: No baseline name specified"
@@ -696,8 +696,6 @@ class TS
       die "Suite '#{@suite}' not found"
     end
     logi "Running test suite '#{@suite}'"
-    @env["_dlog"]=@dlog
-    @env["_ilog"]=@ilog
     threads=[]
     begin
       suitespec=loadspec(f)
@@ -707,6 +705,10 @@ class TS
         # suite-level settings.
         @env[k]=suitespec.delete(k) unless v.is_a?(Array)
       end
+      @env["_dlog"]=@dlog
+      @env["_ilog"]=@ilog
+      self.extend((p=@env["profile"])?(Object.const_get(p)):(Library))
+      lib_suite_prep(env)
       avoid_baseline_conflicts(suitespec) if @genbaseline
       mkbuilds
       suitespec.each do |group,runs|
@@ -726,6 +728,7 @@ class TS
     msg="ALL TESTS PASSED"
     msg+=" -- but note WARNING(s) above!" if @ilog.warned
     logi msg
+    lib_suite_post(env)
   end
 
   def env

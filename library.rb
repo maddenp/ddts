@@ -83,6 +83,22 @@ module Library
     'SUCCESS'
   end
 
+  def lib_suite_post(env)
+    logi "THIS WILL NEVER BE PRINTED"
+  end
+
+  def lib_suite_post_ex(env)
+    logi "[ lib_suite_post custom action ]"
+  end
+
+  def lib_suite_prep(env)
+    logi "THIS WILL NEVER BE PRINTED"
+  end
+
+  def lib_suite_prep_ex(env)
+    logi "[ lib_suite_prep custom action ]"
+  end
+
   # CUSTOM METHODS (NOT CALLED BY DRIVER)
 
 end

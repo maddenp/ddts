@@ -5,5 +5,5 @@ binname: 'integrate'
 build: 'ex_build'
 conffile: 'tr.nl'
 n: 10000
-profile: Ex
+profile: Ex_Run
 runcmd: 'mpirun -np'
