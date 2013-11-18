@@ -94,10 +94,12 @@ Model/Platform Methods
   lib_suite_post(env)
 
     Return value is unused. Take any actions necessary after a successful test-
-    suite execution.
+    suite execution. The passed-in env object has no .build or .run members,
+    only .suite.
 
   lib_suite_prep(env)
 
     Return value is unused. Take any actions necessary prior to performing the
-    builds, runs and comparisons defined by the test suite.
+    builds, runs and comparisons defined by the test suite. The passed-in env
+    object has no .build or .run members, only .suite.
 
