@@ -25,7 +25,7 @@ Model/Platform Methods
   Other methods useful to a specific model or platform may be implemented as
   needed.
 
-  lib_build(env) 
+  lib_build(env)
 
     Returns an array, potentially containing build output or other data, to be
     passed to lib_build_post(); the actual contents should be determined by the
