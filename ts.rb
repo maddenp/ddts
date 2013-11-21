@@ -56,10 +56,10 @@ module Common
       logd "Comparing #{r1_name} to #{r2_name}"
       m="(#{r1_name} vs #{r2_name})"
       unless r1_bases==r2_bases
-        logd "File list matching FAILED #{m}, lists are:"
+        logd "File list matching failed #{m}, lists are:"
         logd "#{r1_name} files: #{r1_bases.join(' ')}"
         logd "#{r2_name} files: #{r2_bases.join(' ')}"
-        die "File list matching FAILED #{m}"
+        die "File list matching failed #{m}"
       end
       s1=r1_files.sort { |a,b| a[1]<=>b[1] }.collect { |a,b| File.join(a,b) }
       s2=r2_files.sort { |a,b| a[1]<=>b[1] }.collect { |a,b| File.join(a,b) }
@@ -68,7 +68,7 @@ module Common
         f2=s2.shift
         fb=File.basename(f1)
         unless FileUtils.compare_file(f1,f2)
-          logd "Comparing #{fb}: FAILED #{m}"
+          logd "Comparing #{fb}: failed #{m}"
           die "Comparison failed #{m}"
         end
         logd "Comparing #{fb}: OK #{m}"
@@ -403,7 +403,7 @@ class Run
         logd_flush
         logd "* Output from run:"
         stdout=lib_run(@env,@rundir)
-        die "FAILED: See #{logfile}" if stdout.nil?
+        die "Run failed: See #{logfile}" if stdout.nil?
         jobcheck(stdout)
         lib_run_post(@env)
         result=OpenStruct.new({:name=>@r,:files=>lib_outfiles(@env,@rundir)})
@@ -515,11 +515,11 @@ class Run
     # in the regular expression below is found in its stdout.
 
     re=Regexp.new(lib_re_str_success(@env))
-    die "FAILED: Could not find #{stdout}" unless File.exist?(stdout)
+    die "Run failed: Could not find #{stdout}" unless File.exist?(stdout)
     File.open(stdout,'r') do |io|
       io.readlines.each { |e| return if re.match(e) }
     end
-    die "FAILED: See #{stdout}"
+    die "Run failed: Cause unknown, see #{stdout}"
   end
 
   def mod_namelist_file(nlfile,nlenv)
