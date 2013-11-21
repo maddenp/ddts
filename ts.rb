@@ -283,17 +283,25 @@ module Common
     s
   end
 
-  def threadmon(threads)
+  def threadmon(threads,continue=false)
 
     # Loop over the supplied array of threads, removing each from the array and
     # joining it as it finishes. Sleep briefly between iterations. Joining each
     # thread allows exceptions to percolate up to be handled by the top-level TS
     # object.
 
+    runfail=false
     until threads.empty?
-      threads.delete_if { |e| (e.alive?)?(false):(e.join;true) }
-      sleep 5
+      threads.each do |e|
+        unless e.alive?
+          threads.delete(e)
+          runfail=true if e.status.nil?
+          e.join unless continue
+        end
+      end
+      sleep 1
     end
+    runfail
   end
 
   def valid_dir(dir)
@@ -331,16 +339,23 @@ class Comparison
     @ts=ts
     @dlog=XlogBuffer.new(ts.ilog)
     @pre="Comparison"
+    single_run=(a.size==1)
     threads=[]
     runs=[]
     a.each { |e| threads << Thread.new { runs << Run.new(e,ts).result } }
-    threadmon(threads)
-    s=a.join(', ')
-    unless @ts.env.build_only or runs.size==1
-      logi "#{s}: Checking..."
-      comp(runs.sort { |r1,r2| r1.name <=> r2.name })
-      logi "#{s}: OK"
+    runfail=threadmon(threads,@ts.env.suite.continue)
+    set=a.join(', ')
+    if runs.empty? or (runs.size==1 and not single_run)
+      logi "#{runs.size} of #{a.size} successful runs in set #{set}, skipping"
+    else
+      unless @ts.env.build_only or runs.size==1
+        set=runs.reduce([]) { |m,e| m.push(e.name) }.join(', ')
+        logi "#{set}: Checking..."
+        comp(runs.sort { |r1,r2| r1.name <=> r2.name })
+        logi "#{set}: OK"
+      end
     end
+    raise if runfail
   end
 
 end # class Comparison
@@ -475,7 +490,7 @@ class Run
     # critical region will break out of the synchronize block and return
     # immediately. The thread that performs the build does so in an external
     # shell after obtaining its build spec. It stores into a global hash the
-    # path to the directory containing the build's run scripts.
+    # information required by its dependent runs.
 
     b=@env.run.build
     @env.build=loadenv(File.join(buildsdir,b))
@@ -485,20 +500,24 @@ class Run
     end
     @ts.buildlocks[b].synchronize do
       unless @ts.builds.has_key?(b)
+        @ts.buildmaster.synchronize do
+          @ts.builds[b]=:build_failed # assume the worst
+        end
         logi "Build #{b} started"
         logd "* Output from build #{b} prep:"
         lib_build_prep(@env)
         logd_flush
         logd "* Output from build #{b}:"
-        build_output=lib_build(@env)
+        build_result=lib_build(@env)
         logd_flush
         @ts.buildmaster.synchronize do
-          @ts.builds[b]=lib_build_post(@env,build_output)
+          @ts.builds[b]=lib_build_post(@env,build_result)
         end
         logi "Build #{b} completed"
         logd_flush
       end
     end
+    die "Required build unavailable" if @ts.builds[b]==:build_failed
     @ts.buildmaster.synchronize { @env.build._result=@ts.builds[b] }
   end
 
@@ -698,6 +717,7 @@ class TS
     logi "Running test suite '#{@suite}'"
     threads=[]
     begin
+      msg="ALL TESTS PASSED" # hope for the best
       suitespec=loadspec(f)
       suitespec.each do |k,v|
         # Assume that array value are run groups and move all scalar values
@@ -718,14 +738,20 @@ class TS
           logi "Suite group #{group} empty, ignoring..."
         end
       end
-      threadmon(threads)
+      runfail=threadmon(threads,@env["continue"])
     rescue Interrupt,Exception=>x
       threads.each { |e| e.kill }
       halt(x)
     end
-    baseline_gen if @genbaseline
+    if @genbaseline
+      if runfail
+        logi "Skipping baseline generation due to run failure(s)"
+      else
+        baseline_gen
+      end
+    end
     logd_flush
-    msg="ALL TESTS PASSED"
+    msg="SOME TEST(S) FAILED" if runfail
     msg+=" -- but note WARNING(s) above!" if @ilog.warned
     logi msg
     lib_suite_post(env)
