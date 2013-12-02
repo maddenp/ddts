@@ -291,17 +291,21 @@ module Common
     # object.
 
     runfail=false
+    failcount=0
+    totalcount=0
     until threads.empty?
       threads.each do |e|
         unless e.alive?
           threads.delete(e)
           runfail=true if e.status.nil?
+          failcount+=1 if e.status.nil?
+          totalcount+=1
           e.join unless continue
         end
       end
       sleep 1
     end
-    runfail
+    [runfail,failcount,totalcount]
   end
 
   def valid_dir(dir)
@@ -343,12 +347,16 @@ class Comparison
     threads=[]
     runs=[]
     a.each { |e| threads << Thread.new { runs << Run.new(e,ts).result } }
-    runfail=threadmon(threads,@ts.env.suite.continue)
+    runfail,failcount,totalcount=threadmon(threads,@ts.env.suite.continue)
+    Thread.exclusive do 
+      @ts.env.suite._totalruns+=totalcount
+      @ts.env.suite._totalfailures+=failcount
+    end
     set=a.join(', ')
     if runs.empty? or (runs.size==1 and not single_run)
-      logi "#{runs.size} of #{a.size} successful runs in set #{set}, skipping"
+      logi "Group stats: #{failcount}/#{totalcount} failures. Skipping comparison for group #{set}."
     else
-      unless @ts.env.build_only or runs.size==1
+      unless @ts.env.suite.build_only or runs.size==1
         set=runs.reduce([]) { |m,e| m.push(e.name) }.join(', ')
         logi "#{set}: Checking..."
         comp(runs.sort { |r1,r2| r1.name <=> r2.name })
@@ -392,7 +400,7 @@ class Run
     @ts.runlocks[@r].synchronize do
       break if @ts.runs.has_key?(@r)
       @env=OpenStruct.new({:run=>loadenv(File.join(runsdir,@r))})
-      @env.suite=@ts.env
+      @env.suite=@ts.env.suite
       self.extend((p=@env.run.profile)?(Object.const_get(p)):(Library))
       @env.run._name=@r
       unless (@bline=@env.run.baseline)
@@ -418,14 +426,21 @@ class Run
         logd_flush
         logd "* Output from run:"
         stdout=lib_run(@env,@rundir)
-        die "Run failed: See #{logfile}" if stdout.nil?
-        jobcheck(stdout)
-        lib_run_post(@env)
-        result=OpenStruct.new({:name=>@r,:files=>lib_outfiles(@env,@rundir)})
-        @ts.runmaster.synchronize { @ts.runs[@r]=result }
-        (@ts.genbaseline)?(baseline_reg):(baseline_comp)
-        logd_flush
-        logi "Completed"
+        
+        #die "Run failed: See #{logfile}" if stdout.nil?
+
+        if stdout.nil? and @ts.env.suite.continue
+          @ts.runmaster.synchronize { @ts.runs[@r]=:run_failed }
+          die "Run failed: See #{logfile}"
+        else
+          jobcheck(stdout)
+          lib_run_post(@env)
+          result=OpenStruct.new({:name=>@r,:files=>lib_outfiles(@env,@rundir)})
+          @ts.runmaster.synchronize { @ts.runs[@r]=result }
+          (@ts.genbaseline)?(baseline_reg):(baseline_comp)
+          logd_flush
+          logi "Completed"
+        end
       end
     end
     @ts.runmaster.synchronize { @result=@ts.runs[@r] }
@@ -723,10 +738,14 @@ class TS
         # Assume that array value are run groups and move all scalar values
         # into env, assuming that these are either reserved or user-defined
         # suite-level settings.
+        # puts "k,v: #{k}, #{v}"
         @env[k]=suitespec.delete(k) unless v.is_a?(Array)
       end
       @env["_dlog"]=@dlog
       @env["_ilog"]=@ilog
+      @env["_totalruns"]=0
+      @env["_totalfailures"]=0
+      @env["_suitename"]=@suite
       self.extend((p=@env["profile"])?(Object.const_get(p)):(Library))
       lib_suite_prep(env)
       avoid_baseline_conflicts(suitespec) if @genbaseline
@@ -738,20 +757,21 @@ class TS
           logi "Suite group #{group} empty, ignoring..."
         end
       end
-      runfail=threadmon(threads,@env["continue"])
+      runfail,failcount,totalcount=threadmon(threads,@env["continue"])
+      logi "Suite stats: #{failcount}/#{totalcount} groups contained failures"
     rescue Interrupt,Exception=>x
       threads.each { |e| e.kill }
       halt(x)
     end
     if @genbaseline
       if runfail
-        logi "Skipping baseline generation due to run failure(s)"
+        logi "Skipping baseline generation due to #{failcount} run failure(s)"
       else
         baseline_gen
       end
     end
     logd_flush
-    msg="SOME TEST(S) FAILED" if runfail
+    msg="#{env.suite._totalfailures} TEST(S) OUT OF #{env.suite._totalruns} FAILED" if runfail
     msg+=" -- but note WARNING(s) above!" if @ilog.warned
     logi msg
     lib_suite_post(env)
