@@ -290,22 +290,19 @@ module Common
     # thread allows exceptions to percolate up to be handled by the top-level TS
     # object.
 
-    runfail=false
+    threadcount=threads.size
     failcount=0
-    totalcount=0
     until threads.empty?
       threads.each do |e|
         unless e.alive?
           threads.delete(e)
-          runfail=true if e.status.nil?
           failcount+=1 if e.status.nil?
-          totalcount+=1
           e.join unless continue
         end
       end
       sleep 1
     end
-    [runfail,failcount,totalcount]
+    [failcount,threadcount]
   end
 
   def valid_dir(dir)
@@ -347,7 +344,7 @@ class Comparison
     threads=[]
     runs=[]
     a.each { |e| threads << Thread.new { runs << Run.new(e,ts).result } }
-    runfail,failcount,totalcount=threadmon(threads,@ts.env.suite.continue)
+    failcount,totalcount=threadmon(threads,@ts.env.suite.continue)
     Thread.exclusive do 
       @ts.env.suite._totalruns+=totalcount
       @ts.env.suite._totalfailures+=failcount
@@ -363,7 +360,7 @@ class Comparison
         logi "#{set}: OK"
       end
     end
-    raise if runfail
+    raise if failcount>0
   end
 
 end # class Comparison
@@ -757,21 +754,23 @@ class TS
           logi "Suite group #{group} empty, ignoring..."
         end
       end
-      runfail,failcount,totalcount=threadmon(threads,@env["continue"])
+      failcount,totalcount=threadmon(threads,@env["continue"])
       logi "Suite stats: #{failcount}/#{totalcount} groups contained failures"
     rescue Interrupt,Exception=>x
       threads.each { |e| e.kill }
       halt(x)
     end
     if @genbaseline
-      if runfail
+      if failcount>0
         logi "Skipping baseline generation due to #{failcount} run failure(s)"
       else
         baseline_gen
       end
     end
     logd_flush
-    msg="#{env.suite._totalfailures} TEST(S) OUT OF #{env.suite._totalruns} FAILED" if runfail
+    if failcount>0
+      msg="#{env.suite._totalfailures}/#{env.suite._totalruns} TEST(S) FAILED"
+    end
     msg+=" -- but note WARNING(s) above!" if @ilog.warned
     logi msg
     lib_suite_post(env)
