@@ -41,6 +41,11 @@ program tr
   call mpi_bcast(a,1,mpi_real,   0,mpi_comm_world,mpistat)
   call mpi_bcast(b,1,mpi_real,   0,mpi_comm_world,mpistat)
   call mpi_bcast(n,1,mpi_integer,0,mpi_comm_world,mpistat)
+  if (n.lt.1) then
+    write (*,'(a)') "Configuration parameter 'n' must be > 0"
+    call mpi_finalize(mpistat)
+    stop
+  end if
   h=(b-a)/n;
   ln=n/p;
   la=a+me*ln*h
