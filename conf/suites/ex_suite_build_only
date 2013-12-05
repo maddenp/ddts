@@ -1,0 +1,2 @@
+extends: ex_suite
+build_only: true

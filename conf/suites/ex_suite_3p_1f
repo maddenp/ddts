@@ -1,0 +1,8 @@
+group_ex_a:
+  - ex_1
+  - ex_2
+group_ex_b:
+  - ex_4
+  - ex_fail
+profile: Ex_Suite
+continue: true
