@@ -114,7 +114,7 @@ module Common
     end
     logd_flush
     @ts.ilog.fatal("#{@pre}: #{msg}") unless msg.nil?
-    raise
+    raise DDTSException
   end
 
   def ext(cmd,props={})
@@ -240,7 +240,6 @@ module Common
       o=YAML.load(File.open(valid_file(file)))
     rescue Exception=>x
       logd x.message
-      logd "* Backtrace:"
       x.backtrace.each { |e| logd e }
       die 'Error parsing YAML from '+file
     end
@@ -285,24 +284,25 @@ module Common
 
   def threadmon(threads,continue=false)
 
-    # Loop over the supplied array of threads, removing each from the array and
-    # joining it as it finishes. Sleep briefly between iterations. Joining each
-    # thread allows exceptions to percolate up to be handled by the top-level TS
-    # object.
+    # Initially, each thread is assumed to be live. Loop over the live threads,
+    # discarding each as it finishes. Consider threads that raised exceptions
+    # (indicated by nil status) to be failures. Join each thread if either (a)
+    # it did not raise an exception, or (b) we are running in 'fail early' mode
+    # (i.e. 'continue' is false).
 
-    threadcount=threads.size
+    live=[].replace(threads)
     failcount=0
-    until threads.empty?
-      threads.each do |e|
+    until live.empty?
+      live.each do |e|
         unless e.alive?
-          threads.delete(e)
+          live.delete(e)
           failcount+=1 if e.status.nil?
-          e.join unless continue
+          e.join if e.status or not continue
         end
       end
       sleep 1
     end
-    [failcount,threadcount]
+    failcount
   end
 
   def valid_dir(dir)
@@ -329,6 +329,8 @@ class Comparison
 
   include Common
 
+  attr_reader :failruns,:totalruns
+
   def initialize(a,ts)
 
     # Receive an array of runs to be compared together, instantiate each in a
@@ -340,30 +342,31 @@ class Comparison
     @ts=ts
     @dlog=XlogBuffer.new(ts.ilog)
     @pre="Comparison"
-    single_run=(a.size==1)
-    threads=[]
+    @totalruns=a.size
     runs=[]
-    a.each { |e| threads << Thread.new { runs << Run.new(e,ts).result } }
-    failcount,totalcount=threadmon(threads,@ts.env.suite.continue)
-    Thread.exclusive do 
-      @ts.env.suite._totalruns+=totalcount
-      @ts.env.suite._totalfailures+=failcount
-    end
+    threads=[]
     set=a.join(', ')
-    if runs.empty? or (runs.size==1 and not single_run)
-      logi "Group stats: #{failcount}/#{totalcount} failures. Skipping comparison for group #{set}."
+    a.each { |e| threads << Thread.new { runs << Run.new(e,@ts).result } }
+    @failruns=threadmon(threads,@ts.env.suite.continue)
+    return if @ts.env.suite.build_only
+    if @totalruns-@failruns > 1
+      runs.delete_if { |e| e.result==:run_failed }
+      set=runs.reduce([]) { |m,e| m.push(e.name) }.join(', ')
+      logi "#{set}: Checking..."
+      comp(runs.sort { |r1,r2| r1.name <=> r2.name })
+      logi "#{set}: OK"
     else
-      unless @ts.env.suite.build_only or runs.size==1
-        set=runs.reduce([]) { |m,e| m.push(e.name) }.join(', ')
-        logi "#{set}: Checking..."
-        comp(runs.sort { |r1,r2| r1.name <=> r2.name })
-        logi "#{set}: OK"
+      unless @totalruns==1
+        logi "Group stats: #{@failruns} of #{@totalruns} runs failed, "+
+          "skipping comparison for group #{set}"
       end
     end
-    raise if failcount>0
   end
 
 end # class Comparison
+
+class DDTSException < Exception
+end
 
 class Run
 
@@ -729,13 +732,11 @@ class TS
     logi "Running test suite '#{@suite}'"
     threads=[]
     begin
-      msg="ALL TESTS PASSED" # hope for the best
       suitespec=loadspec(f)
       suitespec.each do |k,v|
-        # Assume that array value are run groups and move all scalar values
+        # Assume that array values are run groups and move all scalar values
         # into env, assuming that these are either reserved or user-defined
         # suite-level settings.
-        # puts "k,v: #{k}, #{v}"
         @env[k]=suitespec.delete(k) unless v.is_a?(Array)
       end
       @env["_dlog"]=@dlog
@@ -749,36 +750,50 @@ class TS
       mkbuilds
       suitespec.each do |group,runs|
         if runs
-          threads << Thread.new { Comparison.new(runs.sort.uniq,self) }
+          threads << Thread.new do
+            Thread.current[:comparison]=Comparison.new(runs.sort.uniq,self)
+            raise DDTSException if Thread.current[:comparison].failruns > 0
+          end
         else
           logi "Suite group #{group} empty, ignoring..."
         end
       end
-      failcount,totalcount=threadmon(threads,@env["continue"])
-      logi "Suite stats: #{failcount}/#{totalcount} groups contained failures"
-    rescue Interrupt,Exception=>x
-      threads.each { |e| e.kill }
+      failgroups=threadmon(threads,@env["continue"])
+      if @env["continue"]
+        threads.each do |e|
+          @env["_totalruns"]+=e[:comparison].totalruns
+          @env["_totalfailures"]+=e[:comparison].failruns
+        end
+        logi "Suite stats: Failure in #{failgroups} of #{threads.size} group(s)"
+      end
+    rescue Interrupt,DDTSException=>x
+      threads.each { |e| e.kill if e.alive? }
       halt(x)
+    rescue Exception=>x
+      logi x.message
+      x.backtrace.each { |e| logi e }
+      exit 1
     end
     if @genbaseline
-      if failcount>0
-        logi "Skipping baseline generation due to #{failcount} run failure(s)"
+      if failgroups>0
+        logi "Skipping baseline generation due to #{failgroups} run failure(s)"
       else
         baseline_gen
       end
     end
     logd_flush
-    if failcount>0
-      msg="#{env.suite._totalfailures}/#{env.suite._totalruns} TEST(S) FAILED"
+    if failgroups>0
+      msg="#{@env["_totalfailures"]} of #{@env["_totalruns"]} TEST(S) FAILED"
+    else
+      msg="ALL TESTS PASSED"
+      msg+=" -- but note WARNING(s) above!" if @ilog.warned
     end
-    msg+=" -- but note WARNING(s) above!" if @ilog.warned
     logi msg
     lib_suite_post(env)
   end
 
   def env
     return @env_ostruct if defined? @env_ostruct
-    @env.freeze
     @env_ostruct=OpenStruct.new({:suite=>OpenStruct.new(@env)})
   end
 
@@ -846,8 +861,12 @@ class TS
     begin
       mkbuilds
       Run.new(args[0],self)
-    rescue Interrupt,Exception=>x
+    rescue Interrupt,DDTSException=>x
       halt(x)
+    rescue Exception=>x
+      logi x.message
+      x.backtrace.each { |e| logi e }
+      exit 1
     end
   end
 
