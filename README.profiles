@@ -70,19 +70,18 @@ Model/Platform Methods
     Returns a string containing the name of the external program to run to
     delete a job from the queue system, given its ID as an argument.
 
-  lib_re_str_success(env)
-
-    Returns the string expected to appear in the model binary's stdout to
-    indicate that the run completed successfully.
-
   lib_run(env,rundir)
 
-    Returns a string containing the path to the run's stdout. Performs a run.
+    Returns a single object that will be passed to lib_run_post, which may use
+    it for any purpose, including determining whether the run succeeded or
+    failed. Performs a run.
 
-  lib_run_post(env)
+  lib_run_post(env,runkit)
 
-    Return value is unused. Take any actions necessary following a successful
-    run, before the test suite proceeds to output comparision.
+    Returns a true or false value indicating whether the run succeeded or failed.
+    The runkit argument contains the object returned by the lib_run method. Take
+    any actions necessary following a successful run, before the test suite
+    proceeds to output comparision, and determines run success/failure.
 
   lib_run_prep(env,rundir)
 

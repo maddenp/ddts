@@ -120,7 +120,7 @@ module Common
   def ext(cmd,props={})
 
     # Execute a system command in a subshell, collecting stdout and stderr. If
-    # property :die is true, die on a nonzero subshell exit status,printing the
+    # property :die is true, die on a nonzero subshell exit status, printing the
     # message keyed by property :msg, if any. If property :out is true, write
     # the collected stdout/stderr to the delayed log.
 
@@ -150,8 +150,8 @@ module Common
 
   def job_check(stdout,restr)
 
-    # The job is assumed to have completed successfully if the string specified
-    # in the regular expression below is found in its stdout.
+    # Report whether the job's stdout file contains a line matching the supplied
+    # string (converted to a regular expression).
 
     re=Regexp.new(restr)
     die "Run failed: Could not find #{stdout}" unless File.exist?(stdout)
@@ -347,10 +347,10 @@ class Comparison
   def initialize(a,ts)
 
     # Receive an array of runs to be compared together, instantiate each in a
-    # separate thread, then monitor the threads for completion. Perform pairwise
-    # comparison on the collected set of output specs (run names + file lists).
-    # Instance variables from passed-in TS object are converted into instance
-    # variables of this object.
+    # thread, then monitor threads for completion. Perform pairwise comparison
+    # on the collected set of output specs (run names + file lists). Instance
+    # variables from passed-in TS object are converted into instance variables
+    # of this object.
 
     @ts=ts
     @dlog=XlogBuffer.new(ts.ilog)
@@ -379,6 +379,10 @@ class Comparison
 end # class Comparison
 
 class DDTSException < Exception
+
+  # An exception to raise for internal purposes, and to allow real runtime
+  # errors to be handled separately.
+
 end
 
 class Run
@@ -389,17 +393,17 @@ class Run
 
   def initialize(r,ts)
 
-    # Set up instance variables, including instance references to the exposed
-    # instance variables of the passed-in TS object. Due to the pair of mutex
-    # locks, only one thread (the first to arrive) will perform the actual run;
-    # threads that gain subsequent access to the critical region will break out
-    # of the synchronize block and return immediately. The thread that performs
-    # the run obtains its run spec, the build it needs and the canned data set.
-    # It copies the run-material directory indicated by the build, modifies the
-    # queuetime and runtime configuration files, runs and checks for the success
-    # of the job, and either registers to create a baseline or (potentially) has
-    # its output compared against the baseline. It stores into a global hash a
-    # result value comprised of its name and its output files.
+    # Set up instance variables, including references to variables exposed by
+    # the passed-in TS object. Due to the pair of mutex locks, only one thread
+    # (the first to arrive) will perform the actual run; threads that gain
+    # subsequent access to the critical region will break out of the synchronize
+    # block and return immediately. The thread that performs the run obtains its
+    # run spec, the build it needs and the canned data set. It copies the run-
+    # material directory indicated by the build, modifies the queuetime and
+    # runtime model configuration files, runs and checks for the success of the
+    # job, and either registers to create a baseline or (potentially) has its
+    # output compared against the baseline. It provides a result value comprised
+    # of its name and its output files.
 
     @r=r
     @ts=ts
@@ -445,7 +449,7 @@ class Run
           (@ts.genbaseline)?(baseline_reg):(baseline_comp)
           logd_flush
           logi "Completed"
-        else # @ts.env.suite.continue
+        else
           @ts.runmaster.synchronize { @ts.runs[@r]=:run_failed }
           die "Run failed: See #{logfile}"
         end
@@ -508,7 +512,7 @@ class Run
 
   def build
 
-    # Due to the pair of mutex locks, only one Run thread (the first to arrive)
+    # Due to the pair of mutexes, only one Run thread (the first to arrive)
     # will perform the actual build; threads that gain subsequent access to the
     # critical region will break out of the synchronize block and return
     # immediately. The thread that performs the build does so in an external
