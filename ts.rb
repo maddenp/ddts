@@ -426,9 +426,6 @@ class Run
         logd_flush
         logd "* Output from run:"
         stdout=lib_run(@env,@rundir)
-        
-        #die "Run failed: See #{logfile}" if stdout.nil?
-
         if stdout.nil? and @ts.env.suite.continue
           @ts.runmaster.synchronize { @ts.runs[@r]=:run_failed }
           die "Run failed: See #{logfile}"
