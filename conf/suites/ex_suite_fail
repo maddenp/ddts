@@ -1,0 +1,4 @@
+group_ex:
+  - ex_1
+  - ex_fail
+profile: Ex_Suite

@@ -148,6 +148,19 @@ module Common
     @activemaster.synchronize { @activejobs[jobid]=run }
   end
 
+  def job_check(stdout,restr)
+
+    # The job is assumed to have completed successfully if the string specified
+    # in the regular expression below is found in its stdout.
+
+    re=Regexp.new(restr)
+    die "Run failed: Could not find #{stdout}" unless File.exist?(stdout)
+    File.open(stdout,'r') do |io|
+      io.readlines.each { |e| return true if re.match(e) }
+    end
+    false
+  end
+
   def job_deactivate(jobid)
 
     # Remove jobid:run from the active-jobs hash.
@@ -382,7 +395,7 @@ class Run
     # threads that gain subsequent access to the critical region will break out
     # of the synchronize block and return immediately. The thread that performs
     # the run obtains its run spec, the build it needs and the canned data set.
-    # It copies the run-scripts directory created by the build, modifies the
+    # It copies the run-material directory indicated by the build, modifies the
     # queuetime and runtime configuration files, runs and checks for the success
     # of the job, and either registers to create a baseline or (potentially) has
     # its output compared against the baseline. It stores into a global hash a
@@ -425,18 +438,16 @@ class Run
         @rundir=lib_run_prep(@env,@rundir)
         logd_flush
         logd "* Output from run:"
-        stdout=lib_run(@env,@rundir)
-        if stdout.nil? and @ts.env.suite.continue
-          @ts.runmaster.synchronize { @ts.runs[@r]=:run_failed }
-          die "Run failed: See #{logfile}"
-        else
-          jobcheck(stdout)
-          lib_run_post(@env)
+        runkit=lib_run(@env,@rundir)
+        if (success=lib_run_post(@env,runkit))
           result=OpenStruct.new({:name=>@r,:files=>lib_outfiles(@env,@rundir)})
           @ts.runmaster.synchronize { @ts.runs[@r]=result }
           (@ts.genbaseline)?(baseline_reg):(baseline_comp)
           logd_flush
           logi "Completed"
+        else # @ts.env.suite.continue
+          @ts.runmaster.synchronize { @ts.runs[@r]=:run_failed }
+          die "Run failed: See #{logfile}"
         end
       end
     end
@@ -538,19 +549,6 @@ class Run
     # Do they match?
 
     Digest::MD5.file(file)==hash
-  end
-
-  def jobcheck(stdout)
-
-    # The job is assumed to have completed successfully if the string specified
-    # in the regular expression below is found in its stdout.
-
-    re=Regexp.new(lib_re_str_success(@env))
-    die "Run failed: Could not find #{stdout}" unless File.exist?(stdout)
-    File.open(stdout,'r') do |io|
-      io.readlines.each { |e| return if re.match(e) }
-    end
-    die "Run failed: Cause unknown, see #{stdout}"
   end
 
   def mod_namelist_file(nlfile,nlenv)

@@ -57,8 +57,9 @@ module Library
     File.join(rundir,'stdout')
   end
 
-  def lib_run_post(env)
-    nil
+  def lib_run_post(env,runkit)
+    stdout=runkit
+    (job_check(stdout,"SUCCESS"))?(true):(false)
   end
 
   def lib_run_prep(env,rundir)
@@ -77,10 +78,6 @@ module Library
 
   def lib_queue_del_cmd(env)
     nil
-  end
-
-  def lib_re_str_success(env)
-    'SUCCESS'
   end
 
   def lib_suite_post(env)
