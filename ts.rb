@@ -738,6 +738,22 @@ class TS
         # suite-level settings.
         @env[k]=suitespec.delete(k) unless v.is_a?(Array)
       end
+
+      # Forbid duplicate runs
+      uniqueruns=[]
+      duplicate=false
+      suitespec.each do |group,runs|
+        runs.each do |run|
+          if uniqueruns.include?(run)
+            logi "Duplicate run detected: #{run}"
+            duplicate=true
+          else
+            uniqueruns.push(run)
+          end
+        end
+      end
+      die if duplicate
+
       @env["_dlog"]=@dlog
       @env["_ilog"]=@ilog
       @env["_totalruns"]=0
