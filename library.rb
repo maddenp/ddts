@@ -81,19 +81,19 @@ module Library
   end
 
   def lib_suite_post(env)
-    logi "THIS WILL NEVER BE PRINTED"
+    logi "[ default post action ]"
   end
 
   def lib_suite_post_ex(env)
-    logi "[ lib_suite_post custom action ]"
+    logi "[ custom post action ]"
   end
 
   def lib_suite_prep(env)
-    logi "THIS WILL NEVER BE PRINTED"
+    logi "[ default prep action ]"
   end
 
   def lib_suite_prep_ex(env)
-    logi "[ lib_suite_prep custom action ]"
+    logi "[ custom prep action ]"
   end
 
   # CUSTOM METHODS (NOT CALLED BY DRIVER)
