@@ -6,7 +6,6 @@ require 'nl'
 require 'ostruct'
 require 'profiles'
 require 'thread'
-require 'set'
 require 'time'
 require 'yaml'
 
@@ -743,17 +742,6 @@ class TS
         # suite-level settings.
         @env[k]=suitespec.delete(k) unless v.is_a?(Array)
       end
-
-      # Fail if a run appears mor than once in the suite config.
-      uniqueruns=Set.new
-      suitespec.each do |group,runs|
-        runs.each do |run|
-          unless uniqueruns.add?(run)
-            die "'#{run}' must appear only once in suite '#{@suite}'"
-          end
-        end
-      end
-
       @env["_dlog"]=@dlog
       @env["_ilog"]=@ilog
       @env["_totalruns"]=0
