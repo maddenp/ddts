@@ -808,8 +808,7 @@ class TS
   end
 
   def env
-    return @env_ostruct if defined? @env_ostruct
-    @env_ostruct=OpenStruct.new({:suite=>OpenStruct.new(@env)})
+    OpenStruct.new({:suite=>OpenStruct.new(@env)})
   end
 
   def halt(x)
