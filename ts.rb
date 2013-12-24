@@ -1,10 +1,11 @@
+$:.push(File.join(File.dirname($0),(d=ENV['DDTSCONF'])?(d):('conf')))
+
 require 'digest/md5'
 require 'fileutils'
 require 'find'
 require 'logger'
 require 'nl'
 require 'ostruct'
-require 'profiles'
 require 'thread'
 require 'time'
 require 'yaml'
@@ -702,9 +703,13 @@ class TS
 
     okargs=['baseline','clean','cleaner','help','run','show']
     suites=Dir.glob(File.join(suitesdir,"*")).map { |e| File.basename(e) }
+    unless Dir.exist?($:.last)
+      die "Configuration directory '#{$:.last}' not found"
+    end
     if okargs.include?(cmd)
       send(cmd,args)
     elsif suites.include?(cmd)
+      require 'profiles'
       dosuite(cmd)
     else
       help(args,1)
