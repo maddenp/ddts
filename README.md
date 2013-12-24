@@ -13,7 +13,7 @@ The system ensures the minimum necessary activity. For example, only one build i
 
 The system is adapted to a specific tested code and runtime platform by providing implementations of a set of required methods in _library.rb_. Modules in _profiles.rb_ may be used to alias default method names to preferred implementations, for platform portability: The core driver always calls the default method names, but these may be redirected to alternatives.
 
-A simple example implementation (numerical integration using the trapezoid rule) is provided in the _ex_ directory, along with configuration files and a full set of definitions in _library.rb_ and _profiles.rb_. Run `DDTSCONF=ex ddts ex_suite` to run the example suite. GNU `tar` and an MPI installation providing `mpif90` and `mpirun` are required.
+A simple example implementation (numerical integration using the trapezoid rule) is provided in the _ex_ directory, along with configuration files and a full set of definitions in _library.rb_ and _profiles.rb_. In a Bourne-family shell, run `DDTSCONF=ex ddts ex_suite` to run the example suite. GNU `tar` and an MPI installation providing `mpif90` and `mpirun` are required.
 
 JRuby Complete 1.7.2 or later is required. Place _jruby-complete.jar_ in the test-suite directory before invoking `ddts`.
 
