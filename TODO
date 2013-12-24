@@ -1,15 +1,8 @@
-- Move customizable items (conf/*, library.rb, profiles.rb) into a single
-  subdirectory and provide a mechanism (probably based on an environment
-  variable) for telling the core driver which set of customizations to use. This
-  will help with peaceful co-existence between different implementations. For
-  example, the versioned 'conf' directory will conflict with a user's
-  implementation when updating from the repository.
-
 - Factor methods (e.g. die, ext, job_activate, job_deactivate, logd, logd_flush,
   logi, etc.) likely to be needed by library implementors out into a module and
   document them.
 
-- Better documentation in general!
+- Better documentation in general.
 
 - Allow group names in suite configs to optionally associate with modules in
   profiles.rb, to allow customized behavior in Comparison objects. Initially,
