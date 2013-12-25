@@ -12,3 +12,5 @@
 
 - Provide a mechanism (with exactly-once semantics) for runs to associate with
   specific data sets.
+
+- Tests for ts.rb (can it test itself?)
