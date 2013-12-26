@@ -5,22 +5,20 @@ module Library
   def lib_build(env)
     bindir=env.build.bindir
     binname=env.run.binname
-    builddir=File.join(env.build._root,env.build.builddir)
     compiler=env.build.compiler
     srcfile=env.build.srcfile
-    cmd="cd #{builddir} && #{compiler} #{srcfile} -o #{bindir}/#{binname}"
+    cmd="cd #{env.build._root} && #{compiler} #{srcfile} -o #{bindir}/#{binname}"
     ext(cmd,{:msg=>"Build failed, see #{logfile}"})
   end
 
   def lib_build_post(env,output)
-    File.join(env.build.builddir,env.build.bindir)
+    File.join(env.run.build,env.build.bindir)
   end
 
   def lib_build_prep(env)
-    dir=File.join(env.build._root,env.build.builddir)
-    FileUtils.mkdir_p(dir)
-    FileUtils.cp(File.join(env.build.srcdir,env.build.srcfile),dir)
-    FileUtils.mkdir_p(File.join(dir,env.build.bindir))
+    FileUtils.mkdir_p(env.build._root)
+    FileUtils.cp(File.join(env.build.srcdir,env.build.srcfile),env.build._root)
+    FileUtils.mkdir_p(File.join(env.build._root,env.build.bindir))
   end
 
   def lib_outfiles(env,path)

@@ -3,7 +3,7 @@ unless Dir.exist?(confdir)
   puts "Configuration directory '#{confdir}' not found"
   exit(1)
 end
-$:.push(File.join(File.dirname($0),confdir))
+$:.push(confdir)
 
 require 'digest/md5'
 require 'fileutils'
@@ -12,6 +12,7 @@ require 'logger'
 require 'nl'
 require 'ostruct'
 require 'profiles'
+require 'set'
 require 'thread'
 require 'time'
 require 'yaml'
@@ -176,6 +177,7 @@ module Common
   end
 
   def loadenv(file,descendant=nil,specs=nil)
+    logd "Loading env from #{file}"
     convert_h2o(loadspec(file))
   end
 
@@ -263,12 +265,11 @@ module Common
       x.backtrace.each { |e| logd e }
       die 'Error parsing YAML from '+file
     end
-    unless @dlog.nil?
+    if @dlog
       c=File.basename(file)
       logd "Read config '#{c}':"
       die "Config '#{c}' is invalid" unless o
       pp(o).each_line { |e| logd e }
-      logd_flush
     end
     o
   end
@@ -428,6 +429,7 @@ class Run
     @ts.runlocks[@r].synchronize do
       break if @ts.runs.has_key?(@r)
       @env=OpenStruct.new({:run=>loadenv(File.join(runsdir,@r))})
+      logd_flush
       @env.suite=@ts.env.suite
       self.extend((p=@env.run.profile)?(Object.const_get(p)):(Library))
       @env.run._name=@r
@@ -532,7 +534,8 @@ class Run
 
     b=@env.run.build
     @env.build=loadenv(File.join(buildsdir,b))
-    @env.build._root=File.join(FileUtils.pwd,"builds")
+    logd_flush
+    @env.build._root=File.join(FileUtils.pwd,"builds",b)
     @ts.buildmaster.synchronize do
       @ts.buildlocks[b]=Mutex.new unless @ts.buildlocks.has_key?(b)
     end
@@ -552,7 +555,6 @@ class Run
           @ts.builds[b]=lib_build_post(@env,build_result)
         end
         logi "Build #{b} completed"
-        logd_flush
       end
     end
     die "Required build unavailable" if @ts.builds[b]==:build_failed
@@ -620,21 +622,17 @@ class TS
     dispatch(cmd,rest)
   end
 
-  def avoid_baseline_conflicts(suitespec)
+  def avoid_baseline_conflicts(runs)
 
     # Examine each run the suite plans to execute, report any pre-existing
     # baseline-image directories that would potentially be clobbered if we
     # continue, then die.
 
     conflicts=[]
-    suitespec.each do |group,runs|
-      runs.each do |run|
-        if (b=loadspec(File.join(runsdir,run))['baseline'])
-          unless b=='none'
-            d=File.join(@ts.topdir,'baseline',b)
-            conflicts.push(b) if Dir.exist?(d)
-          end
-        end
+    runs.each do |run|
+      unless (b=loadspec(File.join(runsdir,run))['baseline'])=="none"
+        d=File.join(@ts.topdir,'baseline',b)
+        conflicts.push(b) if Dir.exist?(d)
       end
     end
     unless conflicts.empty?
@@ -673,8 +671,41 @@ class TS
         FileUtils.mkdir_p(dstdir) unless Dir.exist?(dstdir)
         FileUtils.cp(fullpath,File.join(dst,minipath))
       end
+      logd_flush
       logi "Creating #{r} baseline: OK"
     end
+  end
+
+  def build_init(run_or_runs)
+
+    # If the builds directory does not exist, simply create it. Otherwise,
+    # exctract the set of unique 'build' keys from the supplied run config(s)
+    # and remove any build directories with the same names. NB: This assumes
+    # that build directories are named identically to build config names!
+
+    logd "build_init:"
+    logd "----"
+    dir="builds"
+    if Dir.exist?(dir)
+      if not @env["retain_builds"]
+        runs=(run_or_runs.respond_to?(:each))?(run_or_runs):([run_or_runs])
+        builds=runs.reduce(Set.new) do |m,e|
+          m.add(File.join(dir,loadspec(File.join(runsdir,e))['build']))
+          logd "----"
+          m
+        end
+        builds.each do |build|
+          if Dir.exist?(build)
+            FileUtils.rm_rf(build)
+            logd "Deleted build '#{build}'"
+          end
+        end
+      end
+    else
+      FileUtils.mkdir_p(dir)
+      logd "Created empty '#{dir}'"
+    end
+    logd_flush
   end
 
   def clean(extras=nil)
@@ -742,7 +773,9 @@ class TS
     logi "Running test suite '#{@suite}'"
     threads=[]
     begin
+      logd "Loading suite spec #{f}"
       suitespec=loadspec(f)
+      logd_flush
       suitespec.each do |k,v|
         # Assume that array values are run groups and move all scalar values
         # into env, assuming that these are either reserved or user-defined
@@ -756,8 +789,12 @@ class TS
       @env["_suitename"]=@suite
       self.extend((p=@env["profile"])?(Object.const_get(p)):(Library))
       lib_suite_prep(env)
-      avoid_baseline_conflicts(suitespec) if @genbaseline
-      mkbuilds
+      runset=suitespec.reduce(Set.new) do |m,(k,v)|
+        v.each { |x| m.add(x) }
+        m
+      end
+      avoid_baseline_conflicts(runset) if @genbaseline
+      build_init(runset)
       suitespec.each do |group,runs|
         if runs
           threads << Thread.new do
@@ -791,7 +828,6 @@ class TS
         baseline_gen
       end
     end
-    logd_flush
     if failgroups>0
       msg="#{@env["_totalfailures"]} of #{@env["_totalruns"]} TEST(S) FAILED"
     else
@@ -845,22 +881,6 @@ class TS
     exit status
   end
 
-  def mkbuilds
-
-    # Create a 'builds' directory (potentially after removing an existing one)
-    # to contain the objects created by the build-automation system.
-
-    builds='builds'
-    if Dir.exist?(builds) and not @env["retain_builds"]
-      FileUtils.rm_rf(builds)
-      @ilog.debug("Deleted existing '#{builds}'")
-    end
-    unless Dir.exist?(builds)
-      FileUtils.mkdir_p(builds)
-      @ilog.debug("Created empty '#{builds}'")
-    end
-  end
-
   def run(args=nil)
 
     # Handle the command-line "run" argument, to perform a single named run.
@@ -868,8 +888,9 @@ class TS
     die "No run name specified" if args.empty?
     setup
     begin
-      mkbuilds
-      Run.new(args[0],self)
+      run=args[0]
+      build_init(run)
+      Run.new(run,self)
     rescue Interrupt,DDTSException=>x
       halt(x)
     rescue Exception=>x
@@ -903,7 +924,9 @@ class TS
       dir=(type=='run')?(runsdir):(suitesdir)
       file=File.join(dir,name)
       die "'#{name}' not found in #{dir}" unless File.exist?(file)
+      logd "Loading spec #{file}"
       spec=loadspec(file)
+      logd_flush
       spec.delete("extends")
       puts
       puts "# #{ancestry(file).join(' < ')}"
@@ -972,12 +995,12 @@ class Xlog
   end
 
   def method_missing(m,*a)
-      if m==:flush
-        @flog.debug("\n#{a.first}")
-      else
-        @flog.send(m,"\n\n  #{a.first}\n")
-        @slog.send(m,a.first)
-      end
+    if m==:flush
+      @flog.debug("\n#{a.first}")
+    else
+      @flog.send(m,"\n\n  #{a.first}\n")
+      @slog.send(m,a.first)
+    end
   end
 
 end # class Xlog
