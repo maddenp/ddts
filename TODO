@@ -14,3 +14,13 @@
   specific data sets.
 
 - Tests for ts.rb (can it test itself?)
+
+- Place test-suite output in a subdirectory of 'conf' (or the directory named
+  by environment variable DDTSCONF), to avoid collisions between multiple
+  implementations. Allow this location to be overriden via another environment
+  variable, maybe DDTSOUT.
+
+- Switch to explicit gen-baseline= / use-baseline= command-line parameters, to
+  avoid collisions between multiple implementations.
+
+- Add a HISTORY file and versioned git tags.
