@@ -17,7 +17,130 @@ require 'thread'
 require 'time'
 require 'yaml'
 
+module Utility
+
+  def die(msg=nil)
+
+    # Flush any messages accumulated in the 'delayed' logger, report a FATAL-
+    # level message, and raise an Interrupt, to be caught by the top-level
+    # TS object. If the 'immediate' logger has not been initialized (indicating
+    # that the test suite has died very early), simply print the message and
+    # exit.
+
+    if @ts.ilog.nil?
+      puts "\n#{msg}\n\n"
+      exit 1
+    end
+    logd_flush
+    @ts.ilog.fatal("#{@pre}: #{msg}") unless msg.nil?
+    raise DDTSException
+  end
+
+  def ext(cmd,props={})
+
+    # Execute a system command in a subshell, collecting stdout and stderr. If
+    # property :die is true, die on a nonzero subshell exit status, printing the
+    # message keyed by property :msg, if any. If property :out is true, write
+    # the collected stdout/stderr to the delayed log.
+
+    d=(props.has_key?(:die))?(props[:die]):(true)
+    m=(props.has_key?(:msg))?(props[:msg]):("")
+    o=(props.has_key?(:out))?(props[:out]):(true)
+    output=[]
+    IO.popen("#{cmd} 2>&1") { |io| io.read.each_line { |x| output.push(x) } }
+    status=$?.exitstatus
+    if o
+      logd "* Output from #{cmd} (status code=#{status}):"
+      logd "---- 8< ----"
+      output.each { |e| logd e }
+      logd "---- >8 ----"
+    end
+    die(m) if d and status!=0
+    [output,status]
+  end
+
+  def job_activate(jobid,run)
+
+    # Add jobid:run to the active-jobs hash, so that the job can be killed if
+    # the test suite halts.
+
+    @activemaster.synchronize { @activejobs[jobid]=run }
+  end
+
+  def job_check(stdout,restr)
+
+    # Report whether the job's stdout file contains a line matching the supplied
+    # string (converted to a regular expression).
+
+    re=Regexp.new(restr)
+    die "Run failed: Could not find #{stdout}" unless File.exist?(stdout)
+    File.open(stdout,'r') do |io|
+      io.readlines.each { |e| return true if re.match(e) }
+    end
+    false
+  end
+
+  def job_deactivate(jobid)
+
+    # Remove jobid:run from the active-jobs hash.
+
+    @activemaster.synchronize { @activejobs.delete(jobid) }
+  end
+
+  def logd(msg)
+
+    # A convenience wrapper that logs DEBUG-level messages to the 'delayed'
+    # logger, to appear later in the log file in a contiguous block. If the
+    # delayed logger has not been initialized, write directly to stdout.
+
+    s="#{@pre}: #{msg}"
+    (@dlog)?(@dlog.debug s):(puts s)
+  end
+
+  def logfile
+    @ts.ilog.file
+  end
+
+  def logi(msg)
+
+    # A convenience wrapper that logs INFO-level messages to the 'immediate'
+    # logger, to appear both on stdout and in the log file.
+
+    @ts.ilog.info "#{@pre}: #{msg}"
+  end
+
+  def logw(msg)
+
+    # A convenience wrapper that logs WARN-level messages to the 'immediate'
+    # logger, to appear both on stdout and in the log file.
+
+    @ts.ilog.warn "#{@pre}: WARNING! #{msg}"
+    @ts.ilog.warned=true
+  end
+
+  def valid_dir(dir)
+
+    # Return the supplied dir if it exists (otherwise die).
+
+    dir=File.expand_path(dir)
+    die "Directory #{dir} not found" unless File.directory?(dir)
+    dir
+  end
+
+  def valid_file(file)
+
+    # Return the supplied file if it exists (otherwise die).
+
+    file=File.expand_path(file)
+    die "File #{file} not found" unless File.exists?(file)
+    file
+  end
+
+end # module Utility
+
 module Common
+
+  include Utility
 
   def confdir()   $:.last                     end
   def buildsdir() File.join(confdir,'builds') end
@@ -108,74 +231,6 @@ module Common
     h
   end
 
-  def die(msg=nil)
-
-    # Flush any messages accumulated in the 'delayed' logger, report a FATAL-
-    # level message, and raise an Interrupt, to be caught by the top-level
-    # TS object. If the 'immediate' logger has not been initialized (indicating
-    # that the test suite has died very early), simply print the message and
-    # exit.
-
-    if @ts.ilog.nil?
-      puts "\n#{msg}\n\n"
-      exit 1
-    end
-    logd_flush
-    @ts.ilog.fatal("#{@pre}: #{msg}") unless msg.nil?
-    raise DDTSException
-  end
-
-  def ext(cmd,props={})
-
-    # Execute a system command in a subshell, collecting stdout and stderr. If
-    # property :die is true, die on a nonzero subshell exit status, printing the
-    # message keyed by property :msg, if any. If property :out is true, write
-    # the collected stdout/stderr to the delayed log.
-
-    d=(props.has_key?(:die))?(props[:die]):(true)
-    m=(props.has_key?(:msg))?(props[:msg]):("")
-    o=(props.has_key?(:out))?(props[:out]):(true)
-    output=[]
-    IO.popen("#{cmd} 2>&1") { |io| io.read.each_line { |x| output.push(x) } }
-    status=$?.exitstatus
-    if o
-      logd "* Output from #{cmd} (status code=#{status}):"
-      logd "---- 8< ----"
-      output.each { |e| logd e }
-      logd "---- >8 ----"
-    end
-    die(m) if d and status!=0
-    [output,status]
-  end
-
-  def job_activate(jobid,run)
-
-    # Add jobid:run to the active-jobs hash, so that the job can be killed if
-    # the test suite halts.
-
-    @activemaster.synchronize { @activejobs[jobid]=run }
-  end
-
-  def job_check(stdout,restr)
-
-    # Report whether the job's stdout file contains a line matching the supplied
-    # string (converted to a regular expression).
-
-    re=Regexp.new(restr)
-    die "Run failed: Could not find #{stdout}" unless File.exist?(stdout)
-    File.open(stdout,'r') do |io|
-      io.readlines.each { |e| return true if re.match(e) }
-    end
-    false
-  end
-
-  def job_deactivate(jobid)
-
-    # Remove jobid:run from the active-jobs hash.
-
-    @activemaster.synchronize { @activejobs.delete(jobid) }
-  end
-
   def loadenv(file,descendant=nil,specs=nil)
     logd "Loading env from #{file}"
     convert_h2o(loadspec(file))
@@ -197,39 +252,8 @@ module Common
     me
   end
 
-  def logd(msg)
-
-    # A convenience wrapper that logs DEBUG-level messages to the 'delayed'
-    # logger, to appear later in the log file in a contiguous block. If the
-    # delayed logger has not been initialized, write directly to stdout.
-
-    s="#{@pre}: #{msg}"
-    (@dlog)?(@dlog.debug s):(puts s)
-  end
-
   def logd_flush
     @dlog.flush if @dlog
-  end
-
-  def logfile
-    @ts.ilog.file
-  end
-
-  def logi(msg)
-
-    # A convenience wrapper that logs INFO-level messages to the 'immediate'
-    # logger, to appear both on stdout and in the log file.
-
-    @ts.ilog.info "#{@pre}: #{msg}"
-  end
-
-  def logw(msg)
-
-    # A convenience wrapper that logs WARN-level messages to the 'immediate'
-    # logger, to appear both on stdout and in the log file.
-
-    @ts.ilog.warn "#{@pre}: WARNING! #{msg}"
-    @ts.ilog.warned=true
   end
 
   def mergespec(me,descendant)
@@ -328,24 +352,6 @@ module Common
       sleep 1
     end
     failcount
-  end
-
-  def valid_dir(dir)
-
-    # Return the supplied dir if it exists (otherwise die).
-
-    dir=File.expand_path(dir)
-    die "Directory #{dir} not found" unless File.directory?(dir)
-    dir
-  end
-
-  def valid_file(file)
-
-    # Return the supplied file if it exists (otherwise die).
-
-    file=File.expand_path(file)
-    die "File #{file} not found" unless File.exists?(file)
-    file
   end
 
 end # module Common

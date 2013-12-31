@@ -1,19 +1,8 @@
-- Factor methods (e.g. die, ext, job_activate, job_deactivate, logd, logd_flush,
-  logi, etc.) likely to be needed by library implementors out into a module and
-  document them.
-
-- Better documentation in general.
-
 - Allow group names in suite configs to optionally associate with modules in
   profiles.rb, to allow customized behavior in Comparison objects. Initially,
   it may be useful to provide alternatives to bit-for-bit comparisons between
   output files. Common#comp could call e.g. lib_comparator to compare two files,
   and the comparison mechanism could be controlled via profiles.rb modules.
-
-- Provide a mechanism (with exactly-once semantics) for runs to associate with
-  specific data sets.
-
-- Tests for ts.rb (can it test itself?)
 
 - Place test-suite output in a subdirectory of 'conf' (or the directory named
   by environment variable DDTSCONF), to avoid collisions between multiple
@@ -25,3 +14,9 @@
 
 - Add a HISTORY file and versioned git tags. Add 'ddts version' command.
 
+- Tests for ts.rb (can it test itself?)
+
+- Provide a mechanism (with exactly-once semantics) for runs to associate with
+  specific data sets.
+
+- Better documentation in general.

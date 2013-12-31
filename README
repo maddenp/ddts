@@ -299,3 +299,87 @@ Model/Platform Methods
     builds, runs and comparisons defined by the test suite. The passed-in env
     object has no .build or .run members, only .suite.
 
+Utility Methods
+
+  The core driver provides a number of utility methods that may be useful in the
+  implementation of library methods:
+
+  die(msg)
+
+    Attempts to delete any jobs queued to the batch system, and prints/logs the
+    (optional) 'msg' argument's String value. Terminates the test suite (unless
+    'continue' mode is active) by raising an exception, and so does not return.
+
+  ext(cmd,props)
+
+    Executes, in a subshell (/bin/sh under Linux), the command contained in the
+    String 'cmd'. Returns a two-element Array composed of (1) an Array of the
+    command's combined stdout and stderr streams, and (2) the command's integer
+    exit status.
+
+    The (optional) 'props' Hash may contain the following key/value pairs:
+
+      :die
+
+      Terminates the suite if the shell command sets a non-zero exit status.
+      True by default.
+
+      :msg
+
+      If :die is true, :msg's String value will be printed/logged before exit.
+
+      :out
+
+      If :out is true, the shell command's output (combined stdout/stderr)
+      will be logged to the verbose logfile (but not to the screen). True by
+      default.
+
+  job_activate(jobid,run)
+
+    Register's the given 'jobid' as having been submitted to the batch system
+    for the Run objet referenced by the 'run' argument. The list of registered
+    job IDs is used to delete jobs from the batch system when the test suite
+    fails. The supplied job ID should be the appropriate argument to the program
+    identified by the lib_queue_del_cmd library method.
+
+  job_check(stdout,restr)
+
+    Returns true if a regular expression instantiated from the 'restr' String
+    argument matches any line in the file identified by the 'stdout' argument,
+    and false otherwise.
+
+  job_deactivate(jobid)
+
+    De-registers the given 'jobid' from the list of batch-system jobs. See
+    job_activate(), above, for more information.
+
+  logd(msg)
+
+    Log the 'msg' argument's String value to the delayed (file) logger.
+
+  logfile
+
+    Returns the path to the logfile.
+
+  logi(msg)
+
+    Log the 'msg' argument's String value to the immediate (screen) logger, and
+    to the delayed (file) logger.
+    
+  logw(msg)
+
+    Like logi(), but prefixes 'msg' with the text "WARNING!" and, on successful
+    completion of the test suite, prints/logs a reminder about the warning. It
+    may be useful to warn users about issues not deemed serious enough to halt
+    the test suite.
+
+  valid_dir(dir)
+
+    A convenience wrapper to ensure that the directory named by argument 'dir'
+    actually exists. Calls die() with an appropriate message if the directory
+    does not exist. For example, 'd=valid_dir(File.join(a,b,c))' would set 'd'
+    if and only if the path constructed from 'a', 'b' and 'c' exists.
+
+  valid_file(file)
+
+    Same as valid_dir(), but for a file argument.

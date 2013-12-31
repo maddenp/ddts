@@ -6,8 +6,9 @@ module Library
     bindir=env.build.bindir
     binname=env.run.binname
     compiler=env.build.compiler
+    srcdir=env.build._root
     srcfile=env.build.srcfile
-    cmd="cd #{env.build._root} && #{compiler} #{srcfile} -o #{bindir}/#{binname}"
+    cmd="cd #{srcdir} && #{compiler} #{srcfile} -o #{bindir}/#{binname}"
     ext(cmd,{:msg=>"Build failed, see #{logfile}"})
   end
 
