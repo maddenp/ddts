@@ -30,6 +30,11 @@ module Library
     [[path,'out']]
   end
 
+  def lib_comp_alt(f1,f2)
+    logi "Comparing '#{f1}' to '#{f2}' with alternate comparator..."
+    FileUtils.compare_file(f1,f2)
+  end
+
   def lib_data(env)
     f="data.tgz"
     cmd="cp ex/data.tgz ."

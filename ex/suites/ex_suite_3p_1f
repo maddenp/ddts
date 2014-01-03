@@ -1,5 +1,6 @@
 group_ex_a:
   - ex_1
+  - lib_comp: lib_comp_alt
   - ex_2
 group_ex_b:
   - ex_4

@@ -162,7 +162,7 @@ module Common
     chain
   end
 
-  def comp(runs)
+  def comp(runs,comparator=nil)
 
     # Compare the output files for a set of runs (a 'run' may be a baseline
     # image). Each element in the passed-in array is an OpenStruct object with
@@ -198,7 +198,8 @@ module Common
         f1=s1.shift
         f2=s2.shift
         fb=File.basename(f1)
-        unless FileUtils.compare_file(f1,f2)
+        ok=(comparator)?(send(comparator,f1,f2)):(FileUtils.compare_file(f1,f2))
+        unless ok
           logd "Comparing #{fb}: failed #{m}"
           die "Comparison failed #{m}"
         end
@@ -298,23 +299,36 @@ module Common
     o
   end
 
-  def pp(o,d=0)
+  def pp(o,level=0,indent=true,quote=true)
 
-    # Pretty-print. Sorting provides diff-comparable output. Handles hashes or
-    # arrays. Hashes may contain hashes or arrays, but arrays are expected to
-    # contain scalars. (The latter limitation can be removed, but there's no
-    # need at present.)
+    # Pretty-print. Sorting provides diff-comparable output.
+
+    def a_or_h(o)
+      o.is_a?(Array)||o.is_a?(Hash)
+    end
+
+    def ppsort(o)
+      o.sort_by { |e| ((e.is_a?(Hash))?(e.keys.first):(e)) }
+    end
 
     s=""
-    o.sort.each do |k,v|
-      s+="  "*d+k
-      ha=v.is_a?(Hash)||v.is_a?(Array)
-      s+=(o.is_a?(Hash))?(": "+((ha)?("\n"+pp(v,d+1)):("#{quote(v)}\n"))):("\n")
+    if o.is_a?(Array)
+      ppsort(o).each do |e|
+        s+="  "*level+"- "
+        s+=pp(e,level,(a_or_h(e))?(false):(true),false)
+      end
+    elsif o.is_a?(Hash)
+      ppsort(o).each do |k,v|
+        s+="  "*level if indent
+        s+=k+((a_or_h(v))?(":\n"):(": "))+pp(v,level+1,true)
+      end
+    else
+      s+=(quote)?("#{quote_string(o)}\n"):("#{o}\n")
     end
     s
   end
 
-  def quote(s)
+  def quote_string(s)
 
     # Wrap values instantiated as Ruby Strings in quotes, except for those
     # tagged '!unquoted'.
@@ -362,7 +376,7 @@ class Comparison
 
   attr_reader :failruns,:totalruns
 
-  def initialize(a,ts)
+  def initialize(a,env,ts)
 
     # Receive an array of runs to be compared together, instantiate each in a
     # thread, then monitor threads for completion. Perform pairwise comparison
@@ -370,10 +384,12 @@ class Comparison
     # variables from passed-in TS object are converted into instance variables
     # of this object.
 
+    @env=env
     @ts=ts
     @dlog=XlogBuffer.new(ts.ilog)
     @pre="Comparison"
     @totalruns=a.size
+    self.extend((p=@env.profile)?(Object.const_get(p)):(Library))
     runs=[]
     threads=[]
     set=a.join(', ')
@@ -384,7 +400,9 @@ class Comparison
       runs.delete_if { |e| e.result==:run_failed }
       set=runs.reduce([]) { |m,e| m.push(e.name) }.join(', ')
       logi "#{set}: Checking..."
-      comp(runs.sort { |r1,r2| r1.name <=> r2.name })
+      sorted_runs=runs.sort { |r1,r2| r1.name <=> r2.name }
+      comparator=(c=@env.lib_comp)?(c.to_sym):(nil)
+      comp(sorted_runs,comparator)
       logi "#{set}: OK"
     else
       unless @totalruns==1
@@ -582,7 +600,7 @@ class Run
     nlh=NamelistHandler.new(nlfile)
     nlspec.each do |nlk,nlv|
       nlv.each do |k,v|
-        v=quote(v)
+        v=quote_string(v)
         nlh.set!(nlk,k,v)
         logd "Set namelist #{nlk}:#{k}=#{v}"
       end
@@ -796,15 +814,19 @@ class TS
       self.extend((p=@env["profile"])?(Object.const_get(p)):(Library))
       lib_suite_prep(env)
       runset=suitespec.reduce(Set.new) do |m,(k,v)|
-        v.each { |x| m.add(x) }
+        v.each { |x| m.add(x) if x.is_a?(String) }
         m
       end
       avoid_baseline_conflicts(runset) if @genbaseline
       build_init(runset)
       suitespec.each do |group,runs|
+        group_hash=runs.reduce({}) do |m,e|
+          (e.is_a?(Hash))?(m.merge(runs.delete(e))):(m)
+        end
+        group_env=OpenStruct.new(group_hash)
         if runs
           threads << Thread.new do
-            Thread.current[:comparison]=Comparison.new(runs.sort.uniq,self)
+            Thread.current[:comparison]=Comparison.new(runs.sort.uniq,group_env,self)
             raise DDTSException if Thread.current[:comparison].failruns > 0
           end
         else
@@ -930,9 +952,7 @@ class TS
       dir=(type=='run')?(runsdir):(suitesdir)
       file=File.join(dir,name)
       die "'#{name}' not found in #{dir}" unless File.exist?(file)
-      logd "Loading spec #{file}"
       spec=loadspec(file)
-      logd_flush
       spec.delete("extends")
       puts
       puts "# #{ancestry(file).join(' < ')}"
