@@ -162,7 +162,7 @@ module Common
     chain
   end
 
-  def comp(runs,comparator=nil)
+  def comp(runs,comparator=nil,continue=false)
 
     # Compare the output files for a set of runs (a 'run' may be a baseline
     # image). Each element in the passed-in array is an OpenStruct object with
@@ -176,6 +176,7 @@ module Common
     # as a master, and each other element in compared to it. Success means that
     # each set of output files is identical in name, number and content.
 
+    ok=true # hope for the best
     r1=runs.shift
     r1_name=r1.name
     r1_files=r1.files
@@ -190,7 +191,12 @@ module Common
         logd "File list matching failed #{m}, lists are:"
         logd "#{r1_name} files: #{r1_bases.join(' ')}"
         logd "#{r2_name} files: #{r2_bases.join(' ')}"
-        die "File list matching failed #{m}"
+        begin
+          ok=false
+          die "File list matching failed #{m}"
+        rescue Exception=>x
+          raise x unless x.is_a?(DDTSException) and continue
+        end
       end
       s1=r1_files.sort { |a,b| a[1]<=>b[1] }.collect { |a,b| File.join(a,b) }
       s2=r2_files.sort { |a,b| a[1]<=>b[1] }.collect { |a,b| File.join(a,b) }
@@ -198,16 +204,22 @@ module Common
         f1=s1.shift
         f2=s2.shift
         fb=File.basename(f1)
-        ok=(comparator)?(send(comparator,f1,f2)):(FileUtils.compare_file(f1,f2))
-        unless ok
+        match=(comparator)?(send(comparator,f1,f2)):(FileUtils.compare_file(f1,f2))
+        unless match
           logd "Comparing #{fb}: failed #{m}"
-          die "Comparison failed #{m}"
+          begin
+            ok=false
+            die "Comparison failed #{m}"
+          rescue Exception=>x
+            raise x unless x.is_a?(DDTSException) and continue
+          end
         end
         logd "Comparing #{fb}: OK #{m}"
       end
       logd "Comparing #{r1_name} to #{r2_name}: OK"
     end
     logd_flush
+    ok
   end
 
   def convert_h2o(h)
@@ -374,7 +386,7 @@ class Comparison
 
   include Common
 
-  attr_reader :failruns,:totalruns
+  attr_reader :failruns,:ok,:totalruns
 
   def initialize(a,env,ts)
 
@@ -395,17 +407,19 @@ class Comparison
     set=a.join(', ')
     a.each { |e| threads << Thread.new { runs << Run.new(e,@ts).result } }
     @failruns=threadmon(threads,@ts.env.suite.continue)
+    @ok=true
     return if @ts.env.suite.build_only
     if @totalruns-@failruns > 1
       runs.delete_if { |e| e.result==:run_failed }
       set=runs.reduce([]) { |m,e| m.push(e.name) }.join(', ')
       logi "#{set}: Checking..."
       sorted_runs=runs.sort { |r1,r2| r1.name <=> r2.name }
-      comparator=(c=@env.lib_comp)?(c.to_sym):(nil)
-      comp(sorted_runs,comparator)
+      alt_comparator=(c=@env.lib_comp)?(c.to_sym):(nil)
+      @ok=comp(sorted_runs,alt_comparator,@ts.env.suite.continue)
       logi "#{set}: OK"
     else
       unless @totalruns==1
+        @ok=false
         logi "Group stats: #{@failruns} of #{@totalruns} runs failed, "+
           "skipping comparison for group #{set}"
       end
@@ -838,6 +852,7 @@ class TS
         threads.each do |e|
           @env["_totalruns"]+=e[:comparison].totalruns
           @env["_totalfailures"]+=e[:comparison].failruns
+          failgroups+=1 unless e[:comparison].ok
         end
         logi "Suite stats: Failure in #{failgroups} of #{threads.size} group(s)"
       end
