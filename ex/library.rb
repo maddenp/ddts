@@ -27,7 +27,8 @@ module Library
   end
 
   def lib_outfiles_ex(env,path)
-    [[path,'out']]
+    expr=File.join(path,'out[0-9]')
+    Dir.glob(expr).map { |e| [path,File.basename(e)] }
   end
 
   def lib_comp_alt(f1,f2)

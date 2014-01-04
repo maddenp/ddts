@@ -22,7 +22,8 @@ program tr
   real    :: x        ! generic real temp
 
   character(len=5),parameter :: infile='tr.nl'
-  character(len=3),parameter :: outfile='out'
+  character(len=4),parameter :: outfile1='out1'
+  character(len=4),parameter :: outfile2='out2'
   integer,parameter          :: lun=77
 
   namelist /config/ a,b,n
@@ -30,13 +31,13 @@ program tr
   call mpi_comm_rank(mpi_comm_world,me,mpistat)
   call mpi_comm_size(mpi_comm_world,p,mpistat)
   if (me.eq.0) then
-    open(lun,file=infile,status='old',iostat=status)
+    open (lun,file=infile,status='old',iostat=status)
     if (status.ne.0) then
       write (*,'(a,a)') 'Error opening config file ',infile
       stop
     end if
-    read(lun,nml=config)
-    close(lun)
+    read (lun,nml=config)
+    close (lun)
   end if
   call mpi_bcast(a,1,mpi_real,   0,mpi_comm_world,mpistat)
   call mpi_bcast(b,1,mpi_real,   0,mpi_comm_world,mpistat)
@@ -61,13 +62,22 @@ program tr
     call mpi_send(integral,1,mpi_real,0,0,mpi_comm_world,mpistat)
   end if
   if (me.eq.0) then
-    open(lun,file=outfile,status='new',iostat=status)
+    ! output file containing integral
+    open (lun,file=outfile1,status='new',iostat=status)
     if (status.ne.0) then
-      write (*,'(a,a)') 'Error opening output file ',outfile
+      write (*,'(a,a)') 'Error opening output file ',outfile1
       stop
     end if
-    write(lun,'(f4.2)') total
-    close(lun)
+    write (lun,'(f4.2)') total
+    close (lun)
+    ! output file containing a constant
+    open (lun,file=outfile2,status='new',iostat=status)
+    if (status.ne.0) then
+      write (*,'(a,a)') 'Error opening output file ',outfile1
+      stop
+    end if
+    write (lun,'(i0)') 88
+    close (lun)
   end if
   call mpi_finalize(mpistat)
   write (*,'(a)') 'SUCCESS'
