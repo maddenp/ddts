@@ -20,3 +20,7 @@
   specific data sets.
 
 - Better documentation in general.
+
+- See if any other die() instances need special treatment in 'continue' mode.
+  Can we avoid begin/rescue blocks around multiple die() calls, maybe moving
+  that logic into die() itself?

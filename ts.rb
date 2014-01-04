@@ -195,7 +195,10 @@ module Common
           ok=false
           die "File list matching failed #{m}"
         rescue Exception=>x
-          raise x unless x.is_a?(DDTSException) and continue
+          unless x.is_a?(DDTSException) and continue
+            logd_flush
+            raise x
+          end
         end
       end
       s1=r1_files.sort { |a,b| a[1]<=>b[1] }.collect { |a,b| File.join(a,b) }
@@ -204,19 +207,25 @@ module Common
         f1=s1.shift
         f2=s2.shift
         fb=File.basename(f1)
-        match=(comparator)?(send(comparator,f1,f2)):(FileUtils.compare_file(f1,f2))
-        unless match
+        if (comparator)?(send(comparator,f1,f2)):(FileUtils.compare_file(f1,f2))
+          logd "Comparing #{fb}: OK #{m}"
+        else
           logd "Comparing #{fb}: failed #{m}"
-          begin
-            ok=false
-            die "Comparison failed #{m}"
-          rescue Exception=>x
-            raise x unless x.is_a?(DDTSException) and continue
+          ok=false
+        end
+      end
+      if ok
+        logd "Comparing #{r1_name} to #{r2_name}: OK"
+      else
+        begin
+          die "Comparison failed #{m}"
+        rescue Exception=>x
+          unless x.is_a?(DDTSException) and continue
+            logd_flush
+            raise x
           end
         end
-        logd "Comparing #{fb}: OK #{m}"
       end
-      logd "Comparing #{r1_name} to #{r2_name}: OK"
     end
     logd_flush
     ok
@@ -386,7 +395,7 @@ class Comparison
 
   include Common
 
-  attr_reader :failruns,:ok,:totalruns
+  attr_reader :comp_ok,:failruns,:totalruns
 
   def initialize(a,env,ts)
 
@@ -407,7 +416,7 @@ class Comparison
     set=a.join(', ')
     a.each { |e| threads << Thread.new { runs << Run.new(e,@ts).result } }
     @failruns=threadmon(threads,@ts.env.suite.continue)
-    @ok=true
+    @comp_ok=true # hope for the best
     return if @ts.env.suite.build_only
     if @totalruns-@failruns > 1
       runs.delete_if { |e| e.result==:run_failed }
@@ -415,11 +424,12 @@ class Comparison
       logi "#{set}: Checking..."
       sorted_runs=runs.sort { |r1,r2| r1.name <=> r2.name }
       alt_comparator=(c=@env.lib_comp)?(c.to_sym):(nil)
-      @ok=comp(sorted_runs,alt_comparator,@ts.env.suite.continue)
-      logi "#{set}: OK"
+      @comp_ok=comp(sorted_runs,alt_comparator,@ts.env.suite.continue)
+      logi "#{set}: OK" if @comp_ok
     else
       unless @totalruns==1
-        @ok=false
+        # Do not set @comp_ok to false here: The failure of this group will be
+        # reflected in threadmon()'s return value.
         logi "Group stats: #{@failruns} of #{@totalruns} runs failed, "+
           "skipping comparison for group #{set}"
       end
@@ -852,7 +862,7 @@ class TS
         threads.each do |e|
           @env["_totalruns"]+=e[:comparison].totalruns
           @env["_totalfailures"]+=e[:comparison].failruns
-          failgroups+=1 unless e[:comparison].ok
+          failgroups+=1 unless e[:comparison].comp_ok
         end
         logi "Suite stats: Failure in #{failgroups} of #{threads.size} group(s)"
       end
