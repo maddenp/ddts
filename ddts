@@ -1,8 +1,17 @@
 #!/bin/bash
-jruby=./jruby-complete.jar
+
+p=$(readlink $0) || p=$0
+d=$(dirname  $p)
+b=$(basename $p)
+
+jruby=$d/jruby-complete.jar
+
 if [[ ! -f "$jruby" ]]
 then
   echo "Cannot find '$jruby'."
   exit 1
 fi
-ulimit -Su 512 && java -jar $jruby --1.9 -I. ts.rb $(basename $0) $*
+
+export DDTSHOME=$d
+
+ulimit -Su 512 && java -jar $jruby --1.9 -I. $d/ts.rb $b $*

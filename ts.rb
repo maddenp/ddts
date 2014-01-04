@@ -1,21 +1,29 @@
-confdir=(d=ENV['DDTSCONF'])?(d):('conf')
-unless Dir.exist?(confdir)
-  puts "Configuration directory '#{confdir}' not found"
-  exit(1)
+unless $DDTSHOME=ENV["DDTSHOME"]
+  puts "DDTSHOME not found in environment."
+  exit 1
 end
-$:.push(confdir)
 
-require 'digest/md5'
-require 'fileutils'
-require 'find'
-require 'logger'
-require 'nl'
-require 'ostruct'
-require 'profiles'
-require 'set'
-require 'thread'
-require 'time'
-require 'yaml'
+$DDTSCONF=(d=ENV["DDTSCONF"])?(d):(File.join($DDTSHOME,"conf"))
+unless Dir.exist?($DDTSCONF)
+  puts "Configuration directory '#{$DDTSCONF}' not found"
+  exit 1
+end
+
+$:.push($DDTSHOME).push($DDTSCONF)
+
+$DDTSOUT=(d=ENV["DDTSOUT"])?(d):($DDTSCONF)
+
+require "digest/md5"
+require "fileutils"
+require "find"
+require "logger"
+require "nl"
+require "ostruct"
+require "profiles"
+require "set"
+require "thread"
+require "time"
+require "yaml"
 
 module Utility
 
@@ -74,7 +82,7 @@ module Utility
 
     re=Regexp.new(restr)
     die "Run failed: Could not find #{stdout}" unless File.exist?(stdout)
-    File.open(stdout,'r') do |io|
+    File.open(stdout,"r") do |io|
       io.readlines.each { |e| return true if re.match(e) }
     end
     false
@@ -142,10 +150,10 @@ module Common
 
   include Utility
 
-  def confdir()   $:.last                     end
-  def buildsdir() File.join(confdir,'builds') end
-  def runsdir()   File.join(confdir,'runs')   end
-  def suitesdir() File.join(confdir,'suites') end
+  def confdir()     $DDTSCONF                   end
+  def build_confs() File.join(confdir,"builds") end
+  def run_confs()   File.join(confdir,"runs")   end
+  def suite_confs() File.join(confdir,"suites") end
 
   def ancestry(file,chain=nil)
 
@@ -157,7 +165,7 @@ module Common
     chain=[] if chain.nil?
     chain << base
     me=parse(file)
-    ancestor=me['extends']
+    ancestor=me["extends"]
     ancestry(File.join(dir,ancestor),chain) if ancestor
     chain
   end
@@ -268,7 +276,7 @@ module Common
     die "Circular dependency detected for #{file}" if specs.include?(file)
     specs << file
     me=parse(file)
-    ancestor=me['extends']
+    ancestor=me["extends"]
     me=loadspec(File.join(File.dirname(file),ancestor),me,specs) if ancestor
     me=mergespec(me,descendant) unless descendant.nil?
     me
@@ -309,7 +317,7 @@ module Common
     rescue Exception=>x
       logd x.message
       x.backtrace.each { |e| logd e }
-      die 'Error parsing YAML from '+file
+      die "Error parsing YAML from "+file
     end
     if @dlog
       c=File.basename(file)
@@ -413,14 +421,14 @@ class Comparison
     self.extend((p=@env.profile)?(Object.const_get(p)):(Library))
     runs=[]
     threads=[]
-    set=a.join(', ')
+    set=a.join(", ")
     a.each { |e| threads << Thread.new { runs << Run.new(e,@ts).result } }
     @failruns=threadmon(threads,@ts.env.suite.continue)
     @comp_ok=true # hope for the best
     return if @ts.env.suite.build_only
     if @totalruns-@failruns > 1
       runs.delete_if { |e| e.result==:run_failed }
-      set=runs.reduce([]) { |m,e| m.push(e.name) }.join(', ')
+      set=runs.reduce([]) { |m,e| m.push(e.name) }.join(", ")
       logi "#{set}: Checking..."
       sorted_runs=runs.sort { |r1,r2| r1.name <=> r2.name }
       alt_comparator=(c=@env.lib_comp)?(c.to_sym):(nil)
@@ -476,7 +484,7 @@ class Run
     end
     @ts.runlocks[@r].synchronize do
       break if @ts.runs.has_key?(@r)
-      @env=OpenStruct.new({:run=>loadenv(File.join(runsdir,@r))})
+      @env=OpenStruct.new({:run=>loadenv(File.join(run_confs,@r))})
       logd_flush
       @env.suite=@ts.env.suite
       self.extend((p=@env.run.profile)?(Object.const_get(p)):(Library))
@@ -497,7 +505,7 @@ class Run
           end
         end
         logi "Started"
-        @rundir=File.join(Dir.pwd,"runs","#{@r}.#{@ts.uniq}")
+        @rundir=File.join($DDTSOUT,"runs","#{@r}.#{@ts.uniq}")
         FileUtils.mkdir_p(@rundir) unless Dir.exist?(@rundir)
         logd "* Output from run prep:"
         @rundir=lib_run_prep(@env,@rundir)
@@ -534,10 +542,10 @@ class Run
 
     # Compare this run's output files to its baseline.
 
-    if @bline=='none'
+    if @bline=="none"
       logd "Baseline comparison for #{@r} disabled, skipping"
     else
-      blinetop=File.join(@ts.topdir,'baseline')
+      blinetop=File.join(@ts.topdir,"baseline")
       blinepath=File.join(blinetop,@bline)
       if Dir.exist?(blinepath)
         logi "Comparing to baseline #{@bline}"
@@ -560,7 +568,7 @@ class Run
     # of runs sharing a common baseline name, this run's output files. Only one
     # run of the set performs this operation, due to the mutex.
 
-    if @bline=='none'
+    if @bline=="none"
       logd "Baseline registration for #{@r} disabled, skipping"
     else
       @ts.baselinemaster.synchronize do
@@ -581,9 +589,9 @@ class Run
     # information required by its dependent runs.
 
     b=@env.run.build
-    @env.build=loadenv(File.join(buildsdir,b))
+    @env.build=loadenv(File.join(build_confs,b))
     logd_flush
-    @env.build._root=File.join(FileUtils.pwd,"builds",b)
+    @env.build._root=File.join($DDTSOUT,"builds",b)
     @ts.buildmaster.synchronize do
       @ts.buildlocks[b]=Mutex.new unless @ts.buildlocks.has_key?(b)
     end
@@ -678,8 +686,8 @@ class TS
 
     conflicts=[]
     runs.each do |run|
-      unless (b=loadspec(File.join(runsdir,run))['baseline'])=="none"
-        d=File.join(@ts.topdir,'baseline',b)
+      unless (b=loadspec(File.join(run_confs,run))["baseline"])=="none"
+        d=File.join(@ts.topdir,"baseline",b)
         conflicts.push(b) if Dir.exist?(d)
       end
     end
@@ -733,12 +741,12 @@ class TS
 
     logd "build_init:"
     logd "----"
-    dir="builds"
+    dir=File.join($DDTSOUT,"builds")
     if Dir.exist?(dir)
       if not @env["retain_builds"]
         runs=(run_or_runs.respond_to?(:each))?(run_or_runs):([run_or_runs])
         builds=runs.reduce(Set.new) do |m,e|
-          m.add(File.join(dir,loadspec(File.join(runsdir,e))['build']))
+          m.add(File.join(dir,loadspec(File.join(run_confs,e))["build"]))
           logd "----"
           m
         end
@@ -761,12 +769,12 @@ class TS
     # Clean up items created by the test suite. As well as those defined here,
     # remove any items specified by the caller.
 
-    items=['builds','data','runs']
-    Dir.glob("log.*").each { |e| items << e }
+    items=["builds","data","runs"].map { |e| File.join($DDTSOUT,e) }
+    Dir.glob(File.join($DDTSOUT,"log.*")).each { |e| items << e }
     extras.each { |e| items << e } unless extras.nil?
     items.sort.each do |e|
       if File.exists?(e)
-        puts "Deleting #{e}"
+        puts "Deleting #{File.basename(e)}"
         FileUtils.rm_rf(e)
       end
     end
@@ -777,7 +785,7 @@ class TS
     # Cleaner than clean: Delete the items defined in 'clean', plus these.
     # 'args' is ignored.
 
-    clean(['baseline','data.tgz'])
+    clean(["baseline","data.tgz"])
   end
 
   def dispatch(cmd,args)
@@ -786,8 +794,8 @@ class TS
     # the given arguments. If it is a suite name, run the suite. Otherwise, show
     # usage info and exit with error.
 
-    okargs=['baseline','clean','cleaner','help','run','show']
-    suites=Dir.glob(File.join(suitesdir,"*")).map { |e| File.basename(e) }
+    okargs=["baseline","clean","cleaner","help","run","show"]
+    suites=Dir.glob(File.join(suite_confs,"*")).map { |e| File.basename(e) }
     if okargs.include?(cmd)
       send(cmd,args)
     elsif suites.include?(cmd)
@@ -814,7 +822,7 @@ class TS
 
     setup
     @suite=suite
-    f=File.join(suitesdir,@suite)
+    f=File.join(suite_confs,@suite)
     unless File.exists?(f)
       die "Suite '#{@suite}' not found"
     end
@@ -958,9 +966,9 @@ class TS
     # Perform common tasks needed for either full-suite or single-run
     # invocations.
 
-    @ilog=Xlog.new(@uniq)
+    @ilog=Xlog.new($DDTSOUT,@uniq)
     @dlog=XlogBuffer.new(@ilog)
-    trap('INT') do
+    trap("INT") do
       logi "Interrupted"
       raise Interrupt
     end
@@ -972,9 +980,9 @@ class TS
 
     type=args[0]
     name=args[1]
-    if ['run','suite'].include?(type)
+    if ["run","suite"].include?(type)
       die "No #{type} specified" unless name
-      dir=(type=='run')?(runsdir):(suitesdir)
+      dir=(type=="run")?(run_confs):(suite_confs)
       file=File.join(dir,name)
       die "'#{name}' not found in #{dir}" unless File.exist?(file)
       spec=loadspec(file)
@@ -984,8 +992,8 @@ class TS
       puts
       puts pp(spec)
       puts
-    elsif ['runs','suites'].include?(type)
-      dir=(type=='runs')?(runsdir):(suitesdir)
+    elsif ["runs","suites"].include?(type)
+      dir=(type=="runs")?(run_confs):(suite_confs)
       puts
       puts "Available #{type}:"
       puts
@@ -1008,7 +1016,7 @@ class Unquoted
 
 end # class Unquoted
 
-YAML.add_tag('!unquoted',Unquoted)
+YAML.add_tag("!unquoted",Unquoted)
 
 class Xlog
 
@@ -1028,9 +1036,9 @@ class Xlog
   attr_accessor :warned
   attr_reader :file
 
-  def initialize(uniq)
+  def initialize(dir,uniq)
     # File logger
-    @file="log.#{uniq}"
+    @file=File.join(dir,"log.#{uniq}")
     FileUtils.rm_f(@file)
     @flog=Logger.new(@file)
     @flog.level=Logger::DEBUG
