@@ -152,7 +152,10 @@ module Common
 
   def confdir()     File.join($DDTSAPP,"configs") end
   def build_confs() File.join(confdir,"builds")   end
+  def builds_dir()  File.join($DDTSOUT,"builds")  end
+  def logs_dir()    File.join($DDTSOUT,"logs")    end
   def run_confs()   File.join(confdir,"runs")     end
+  def runs_dir()    File.join($DDTSOUT,"runs")    end
   def suite_confs() File.join(confdir,"suites")   end
 
   def ancestry(file,chain=nil)
@@ -505,7 +508,7 @@ class Run
           end
         end
         logi "Started"
-        @rundir=File.join($DDTSOUT,"runs","#{@r}.#{@ts.uniq}")
+        @rundir=File.join(runs_dir,"#{@r}.#{@ts.uniq}")
         FileUtils.mkdir_p(@rundir) unless Dir.exist?(@rundir)
         logd "* Output from run prep:"
         @rundir=lib_run_prep(@env,@rundir)
@@ -591,7 +594,7 @@ class Run
     b=@env.run.build
     @env.build=loadenv(File.join(build_confs,b))
     logd_flush
-    @env.build._root=File.join($DDTSOUT,"builds",b)
+    @env.build._root=File.join(builds_dir,b)
     @ts.buildmaster.synchronize do
       @ts.buildlocks[b]=Mutex.new unless @ts.buildlocks.has_key?(b)
     end
@@ -741,12 +744,11 @@ class TS
 
     logd "build_init:"
     logd "----"
-    dir=File.join($DDTSOUT,"builds")
-    if Dir.exist?(dir)
+    if Dir.exist?(builds_dir)
       if not @env["retain_builds"]
         runs=(run_or_runs.respond_to?(:each))?(run_or_runs):([run_or_runs])
         builds=runs.reduce(Set.new) do |m,e|
-          m.add(File.join(dir,loadspec(File.join(run_confs,e))["build"]))
+          m.add(File.join(builds_dir,loadspec(File.join(run_confs,e))["build"]))
           logd "----"
           m
         end
@@ -758,8 +760,8 @@ class TS
         end
       end
     else
-      FileUtils.mkdir_p(dir)
-      logd "Created empty '#{dir}'"
+      FileUtils.mkdir_p(builds_dir)
+      logd "Created empty '#{builds_dir}'"
     end
     logd_flush
   end
@@ -769,7 +771,7 @@ class TS
     # Clean up items created by the test suite. As well as those defined here,
     # remove any items specified by the caller.
 
-    items=["builds","data","runs"].map { |e| File.join($DDTSOUT,e) }
+    items=[builds_dir,logs_dir,runs_dir]
     Dir.glob(File.join($DDTSOUT,"log.*")).each { |e| items << e }
     extras.each { |e| items << e } unless extras.nil?
     items.sort.each do |e|
@@ -966,7 +968,7 @@ class TS
     # Perform common tasks needed for either full-suite or single-run
     # invocations.
 
-    @ilog=Xlog.new($DDTSOUT,@uniq)
+    @ilog=Xlog.new(logs_dir,@uniq)
     @dlog=XlogBuffer.new(@ilog)
     trap("INT") do
       logi "Interrupted"
