@@ -304,6 +304,10 @@ Utility Methods
   The core driver provides a number of utility methods that may be useful in the
   implementation of library methods:
 
+  app_dir
+
+    Returns the root path of the current application.
+
   die(msg)
 
     Attempts to delete any jobs queued to the batch system, and prints/logs the
@@ -333,6 +337,11 @@ Utility Methods
       If :out is true, the shell command's output (combined stdout/stderr)
       will be logged to the verbose logfile (but not to the screen). True by
       default.
+
+  hash_matches(file,hash)
+
+    Returns true if the MD5 checksum of the file identified by the 'file' String
+    matches the MD5 checksum contained in String 'hash', and false otherwise.
 
   job_activate(jobid,run)
 
@@ -372,6 +381,11 @@ Utility Methods
     completion of the test suite, prints/logs a reminder about the warning. It
     may be useful to warn users about issues not deemed serious enough to halt
     the test suite.
+
+  tmp_dir(dir)
+
+    The path to a temporary directory, which will be removed by the 'clean' or
+    'cleaner' commands.
 
   valid_dir(dir)
 

@@ -38,15 +38,17 @@ module Library
 
   def lib_data(env)
     f="data.tgz"
-    cmd="cp ex/data.tgz ."
+    src=File.join(app_dir,f)
+    dst=File.join(tmp_dir,f)
+    cmd="cp #{src} #{dst}"
     md5='d49037f1ef796b8a7ca3906e713fc33b'
-    unless File.exists?(f) and hash_matches(f,md5)
+    unless File.exists?(dst) and hash_matches(dst,md5)
       logd "Getting data: #{cmd}"
       output,status=ext(cmd,{:msg=>"Failed to get data, see #{logfile}"})
-      die "Data archive #{f} has incorrect md5 hash" unless hash_matches(f,md5)
+      die "Data archive #{f} has incorrect md5 hash" unless hash_matches(dst,md5)
     end
     logd "Data archive #{f} ready"
-    cmd="tar xvzf #{f}"
+    cmd="cd #{tmp_dir} && tar xvzf #{f}"
     logd "Extracting data: #{cmd}"
     output,status=ext(cmd,{:msg=>"Data extract failed, see #{logfile}"})
     logd "Data extract complete"

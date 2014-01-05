@@ -2,6 +2,7 @@ unless $DDTSHOME=ENV["DDTSHOME"]
   puts "DDTSHOME not found in environment."
   exit 1
 end
+$DDTSHOME=File.expand_path($DDTSHOME)
 
 $DDTSAPP=(d=ENV["DDTSAPP"])?(d):(File.join($DDTSHOME,"app"))
 unless Dir.exist?($DDTSAPP)
@@ -9,9 +10,9 @@ unless Dir.exist?($DDTSAPP)
   exit 1
 end
 
-$:.push($DDTSHOME).push($DDTSAPP)
-
 $DDTSOUT=(d=ENV["DDTSOUT"])?(d):(File.join($DDTSAPP))
+
+$:.push($DDTSHOME).push($DDTSAPP)
 
 require "digest/md5"
 require "fileutils"
@@ -26,6 +27,10 @@ require "time"
 require "yaml"
 
 module Utility
+
+  def app_dir
+    $DDTSAPP
+  end
 
   def die(msg=nil)
 
@@ -65,6 +70,13 @@ module Utility
     end
     die(m) if d and status!=0
     [output,status]
+  end
+
+  def hash_matches(file,hash)
+
+    # Do they match?
+
+    Digest::MD5.file(file)==hash
   end
 
   def job_activate(jobid,run)
@@ -126,6 +138,14 @@ module Utility
     @ts.ilog.warned=true
   end
 
+  def tmp_dir
+
+    # The path to a temporary directory, which will be removed by the 'clean' or
+    # 'cleaner' commands.
+
+    File.join($DDTSOUT,"tmp")
+  end
+
   def valid_dir(dir)
 
     # Return the supplied dir if it exists (otherwise die).
@@ -150,13 +170,20 @@ module Common
 
   include Utility
 
+  # Config directories
+
   def confdir()     File.join($DDTSAPP,"configs") end
   def build_confs() File.join(confdir,"builds")   end
+  def run_confs()   File.join(confdir,"runs")     end
+  def suite_confs() File.join(confdir,"suites")   end
+
+  # Runtime directories
+
   def builds_dir()  File.join($DDTSOUT,"builds")  end
   def logs_dir()    File.join($DDTSOUT,"logs")    end
-  def run_confs()   File.join(confdir,"runs")     end
   def runs_dir()    File.join($DDTSOUT,"runs")    end
-  def suite_confs() File.join(confdir,"suites")   end
+
+  # Various methods
 
   def ancestry(file,chain=nil)
 
@@ -620,13 +647,6 @@ class Run
     @ts.buildmaster.synchronize { @env.build._result=@ts.builds[b] }
   end
 
-  def hash_matches(file,hash)
-
-    # Do they match?
-
-    Digest::MD5.file(file)==hash
-  end
-
   def mod_namelist_file(nlfile,nlenv)
 
     # Modify a namelist file with values supplied by a config.
@@ -771,7 +791,7 @@ class TS
     # Clean up items created by the test suite. As well as those defined here,
     # remove any items specified by the caller.
 
-    items=[builds_dir,logs_dir,runs_dir]
+    items=[builds_dir,logs_dir,runs_dir,tmp_dir]
     Dir.glob(File.join($DDTSOUT,"log.*")).each { |e| items << e }
     extras.each { |e| items << e } unless extras.nil?
     items.sort.each do |e|
@@ -846,6 +866,7 @@ class TS
       @env["_totalfailures"]=0
       @env["_suitename"]=@suite
       self.extend((p=@env["profile"])?(Object.const_get(p)):(Library))
+      FileUtils.mkdir_p(tmp_dir)
       lib_suite_prep(env)
       runset=suitespec.reduce(Set.new) do |m,(k,v)|
         v.each { |x| m.add(x) if x.is_a?(String) }
@@ -950,6 +971,7 @@ class TS
 
     die "No run name specified" if args.empty?
     setup
+    FileUtils.mkdir_p(tmp_dir)
     begin
       run=args[0]
       build_init(run)
