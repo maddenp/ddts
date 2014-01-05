@@ -13,7 +13,7 @@ module Library
   end
 
   def lib_build_post(env,output)
-    File.join(env.run.build,env.build.bindir)
+    File.join(env.build._root,env.build.bindir,env.build.binname)
   end
 
   def lib_build_prep(env)
@@ -70,7 +70,7 @@ module Library
   def lib_run_prep(env,rundir)
     binname=env.run.binname
     conffile=env.run.conffile
-    FileUtils.cp(File.join('builds',env.build._result,binname),rundir)
+    FileUtils.cp(env.build._result,rundir)
     FileUtils.chmod(0755,File.join(rundir,binname))
     a=env.run.a
     b=env.run.b

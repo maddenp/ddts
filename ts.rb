@@ -3,15 +3,15 @@ unless $DDTSHOME=ENV["DDTSHOME"]
   exit 1
 end
 
-$DDTSCONF=(d=ENV["DDTSCONF"])?(d):(File.join($DDTSHOME,"conf"))
-unless Dir.exist?($DDTSCONF)
-  puts "Configuration directory '#{$DDTSCONF}' not found"
+$DDTSAPP=(d=ENV["DDTSAPP"])?(d):(File.join($DDTSHOME,"app"))
+unless Dir.exist?($DDTSAPP)
+  puts "Configuration directory '#{$DDTSAPP}' not found"
   exit 1
 end
 
-$:.push($DDTSHOME).push($DDTSCONF)
+$:.push($DDTSHOME).push($DDTSAPP)
 
-$DDTSOUT=(d=ENV["DDTSOUT"])?(d):($DDTSCONF)
+$DDTSOUT=(d=ENV["DDTSOUT"])?(d):(File.join($DDTSAPP))
 
 require "digest/md5"
 require "fileutils"
@@ -150,10 +150,10 @@ module Common
 
   include Utility
 
-  def confdir()     $DDTSCONF                   end
-  def build_confs() File.join(confdir,"builds") end
-  def run_confs()   File.join(confdir,"runs")   end
-  def suite_confs() File.join(confdir,"suites") end
+  def confdir()     File.join($DDTSAPP,"configs") end
+  def build_confs() File.join(confdir,"builds")   end
+  def run_confs()   File.join(confdir,"runs")     end
+  def suite_confs() File.join(confdir,"suites")   end
 
   def ancestry(file,chain=nil)
 
@@ -1038,6 +1038,7 @@ class Xlog
 
   def initialize(dir,uniq)
     # File logger
+    FileUtils.mkdir_p(dir)
     @file=File.join(dir,"log.#{uniq}")
     FileUtils.rm_f(@file)
     @flog=Logger.new(@file)
