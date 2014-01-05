@@ -1,5 +1,4 @@
 bindir: 'bin'
 binname: 'integrate'
 compiler: 'mpif90'
-srcdir: 'ex'
 srcfile: 'tr.f90'
