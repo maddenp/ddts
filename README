@@ -8,7 +8,6 @@ Quick Start
   ddts <suite>            : run the suite named <suite>
   ddts baseline <suite>   : run the suite named <suite> & create baseline image
   ddts clean              : remove most test-suite created items
-  ddts cleaner            : clean + remove baseline & data archive
   ddts help               : shows this usage information
   ddts run <run>          : perform the single run named <run>
   ddts show run <run>     : show details of the run named <run>
@@ -384,8 +383,8 @@ Utility Methods
 
   tmp_dir(dir)
 
-    The path to a temporary directory, which will be removed by the 'clean' or
-    'cleaner' commands.
+    The path to a temporary directory, which will be removed by the 'clean'
+    command.
 
   valid_dir(dir)
 

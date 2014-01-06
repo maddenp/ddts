@@ -140,8 +140,8 @@ module Utility
 
   def tmp_dir
 
-    # The path to a temporary directory, which will be removed by the 'clean' or
-    # 'cleaner' commands.
+    # The path to a temporary directory, which will be removed by the 'clean'
+    # command.
 
     File.join($DDTSOUT,"tmp")
   end
@@ -179,9 +179,10 @@ module Common
 
   # Runtime directories
 
-  def builds_dir()  File.join($DDTSOUT,"builds")  end
-  def logs_dir()    File.join($DDTSOUT,"logs")    end
-  def runs_dir()    File.join($DDTSOUT,"runs")    end
+  def baseline_dir() File.join($DDTSOUT,"baseline") end
+  def builds_dir()    File.join($DDTSOUT,"builds")  end
+  def logs_dir()      File.join($DDTSOUT,"logs")    end
+  def runs_dir()      File.join($DDTSOUT,"runs")    end
 
   # Various methods
 
@@ -458,7 +459,7 @@ class Comparison
     return if @ts.env.suite.build_only
     if @totalruns-@failruns > 1
       runs.delete_if { |e| e.result==:run_failed }
-      set=runs.reduce([]) { |m,e| m.push(e.name) }.join(", ")
+      set=runs.reduce([]) { |m,e| m.push(e.name) }.sort.join(", ")
       logi "#{set}: Checking..."
       sorted_runs=runs.sort { |r1,r2| r1.name <=> r2.name }
       alt_comparator=(c=@env.lib_comp)?(c.to_sym):(nil)
@@ -575,7 +576,7 @@ class Run
     if @bline=="none"
       logd "Baseline comparison for #{@r} disabled, skipping"
     else
-      blinetop=File.join(@ts.topdir,"baseline")
+      blinetop=File.join(baseline_dir)
       blinepath=File.join(blinetop,@bline)
       if Dir.exist?(blinepath)
         logi "Comparing to baseline #{@bline}"
@@ -671,7 +672,7 @@ class TS
 
   attr_accessor :activemaster,:activejobs,:baselinemaster,:baselinesrcs,
   :buildlocks,:buildmaster,:builds,:dlog,:genbaseline,:havedata,:ilog,:pre,
-  :runlocks,:runmaster,:runs,:suite,:topdir,:uniq
+  :runlocks,:runmaster,:runs,:suite,:uniq
 
   def initialize(tsname,cmd,rest)
 
@@ -695,7 +696,6 @@ class TS
     @runmaster=Mutex.new
     @runs={}
     @suite=nil
-    @topdir=FileUtils.pwd
     @ts=self
     @uniq=Time.now.to_i
     dispatch(cmd,rest)
@@ -710,8 +710,7 @@ class TS
     conflicts=[]
     runs.each do |run|
       unless (b=loadspec(File.join(run_confs,run))["baseline"])=="none"
-        d=File.join(@ts.topdir,"baseline",b)
-        conflicts.push(b) if Dir.exist?(d)
+        conflicts.push(b) if Dir.exist?(File.join(baseline_dir,b))
       end
     end
     unless conflicts.empty?
@@ -741,7 +740,7 @@ class TS
 
     @baselinesrcs.each do |r,src|
       logi "Creating #{r} baseline..."
-      dst=File.join(@topdir,"baseline",r)
+      dst=File.join(baseline_dir,r)
       src.files.each do |p1,p2|
         fullpath=File.join(p1,p2)
         minipath=p2
@@ -802,21 +801,13 @@ class TS
     end
   end
 
-  def cleaner(args=nil)
-
-    # Cleaner than clean: Delete the items defined in 'clean', plus these.
-    # 'args' is ignored.
-
-    clean(["baseline","data.tgz"])
-  end
-
   def dispatch(cmd,args)
 
     # If the given method is approved as a command-line action, call it with
     # the given arguments. If it is a suite name, run the suite. Otherwise, show
     # usage info and exit with error.
 
-    okargs=["baseline","clean","cleaner","help","run","show"]
+    okargs=["baseline","clean","help","run","show"]
     suites=Dir.glob(File.join(suite_confs,"*")).map { |e| File.basename(e) }
     if okargs.include?(cmd)
       send(cmd,args)
@@ -952,7 +943,6 @@ class TS
     puts "usage: #{@pre} <suite>"
     puts "       #{@pre} baseline <suite>"
     puts "       #{@pre} clean"
-    puts "       #{@pre} cleaner"
     puts "       #{@pre} help"
     puts "       #{@pre} run <run>"
     puts "       #{@pre} show run <run>"
