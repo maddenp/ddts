@@ -16,29 +16,29 @@ Quick Start
   ddts show suite <suite>         : show details for the suite named <suite>
   ddts show suites                : show valid suite names
 
-* Note that a 'conf' directory must exist, or the environment variable DDTSCONF
-  defined (with the path to a directory containing the required configuration
-  files as its value) to run ddts. See the 'Configuration' section, below, for
-  details.
+* Note that either an 'app' directory must exist alongside the 'ddts' wrapper
+  script, or the environment variable DDTSAPP must be defined (with the path to
+  a directory containing the required configuration files as its value) to run
+  ddts. See the 'Configuration' section, below, for details.
 
 Baseline Creation / Comparison
 
-  Run 'ddts baseline <suite>' to create a baseline image of the named suite
-  ('ddts show suites' lists valid names). A directory named 'baseline' will be
-  created in the current directory, and one subdirectory will be created under
-  it for each unique 'baseline' value specified in the configs of the suite's
-  various runs. These subdirectories must not already exist.
+  Run 'ddts gen-baseline <dir> <suite>' to create a baseline image of the named
+  suite ('ddts show suites' lists valid names). A set of output from the suite's
+  runs will be written to the directory named by <dir>, which will be created if
+  necessary. One subdirectory will be created under <dir> for each unique
+  'baseline' value specified in the configs of the suite's various runs. These
+  subdirectories must not already exist.
 
-  The test suite will automatically compare its runs' output to the contents of
-  the 'baseline' directory if it exists. You may copy or link a previously
-  generated baseline directory here.
+  Run 'ddts use-baseline <dir> <suite>' to compare a new suite to the existing
+  baseline in <dir>.
 
 A useful workflow might consist of these steps:
 
   1. Check out a fresh working copy.
-  2. Run 'ddts baseline <suite>' to generate a baseline.
+  2. Run 'ddts gen-baseline <dir> <suite>' to generate a baseline.
   3. Make changes to the working copy as needed.
-  4. Run 'ddts <suite>' to verify your changes against the baseline.
+  4. Run 'ddts use-baseline <dir> <suite>' to verify your changes.
 
 Logging
 
@@ -52,8 +52,8 @@ Configuration
 
   A DDTS implementation requires, in addition to the core driver in ts.rb, the
   following, which must appear either in a (possibly symlinked) directory named
-  'conf', alongside ts.rb; or in a directory named by the environment variable
-  'DDTSCONF' (where the latter, if defined, takes precedence):
+  'app', alongside ts.rb; or in a directory named by the environment variable
+  'DDTSAPP' (where the latter, if defined, takes precedence):
 
   - An implementation of library.rb: See below, and the example implementation
     in the directory 'ex', for reference.
@@ -61,8 +61,9 @@ Configuration
   - An implementation of profiles.rb: See below, and the example implementation
     in the directory 'ex', for reference.
 
-  - YAML build, run and suite configuration files, in subdirectories 'builds',
-    'runs', and 'suites', respectively. See below for reference.
+  - YAML build, run and suite configuration files, in the 'builds', 'runs', and
+  'suites' subdirectories, respectively, of the $DDTSAPP/configs directory. See
+  below for reference.
 
   The configuration files in the 'builds', 'run's and 'suites' directories are
   are expressed in YAML. They are parsed by the core driver and instantiated as
@@ -397,3 +398,16 @@ Utility Methods
   valid_file(file)
 
     Same as valid_dir(), but for a file argument.
+
+--------------------------------------------------------------------------------
+Environment Variables
+--------------------------------------------------------------------------------
+
+In addition to DDTSAPP, discussed above, the following environment variables are
+used by ddts:
+
+DDTSHOME: Specifies the path to the root directory of the ddts installation. It
+is set automatically by the 'ddts' wrapper script.
+
+DDTSOUT: Specifies the directory into which all automatically-generated test-
+suite output should be written. If DDTSOUT is not set, DDTSAPP's value is used.
