@@ -1,4 +1,14 @@
-- Add a HISTORY file and versioned git tags. Add 'ddts version' command.
+HISTORY
+
+Version numbers are in major.minor form, where changes to the minor component
+indicate bugfixes and similar non-breaking enhanements, and changes to the major
+component indicate breaking changes.
+ 
+v1.0
+
+???
+
+TODO
 
 - Provide a mechanism (with exactly-once semantics) for runs to associate with
   specific data sets.
