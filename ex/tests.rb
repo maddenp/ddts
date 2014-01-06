@@ -9,22 +9,31 @@ def exe(desc,suite,*expected)
   expected.map! { |e| Regexp::escape(e) }
   print "Testing: #{desc}"+" "*(40-desc.length)
   ddts=File.join("..","ddts")
-  out=`DDTSOUT=#{$OUT} #{ddts} #{suite}`.split("\n")
+  cmd="DDTSOUT=#{$OUT} #{ddts} #{suite} 2>&1"
+  out=`#{cmd}`.split("\n")
   expected.each do |string|
-    die "FAILED" if out.grep(/.*#{string}.*/).empty? 
+    if out.grep(/.*#{string}.*/).empty? 
+      puts "FAILED"
+      puts "\nCommand was:\n\n#{cmd}"
+      die "\nOutput was:\n\n#{out.join("\n")}"
+    end
   end
   puts "ok"
 end
 
 # Set some variables.
 
-$OUT="./tests_out"
+$OUT="tests_out"
 baseline=File.join($OUT,"baseline")
 sentinel=File.join($OUT,"builds","ex_build","sentinel")
 
 # Create a directory for test detritus.
 
 FileUtils.mkdir_p($OUT)
+
+# Delete any existing baseline.
+
+FileUtils.rm_rf(baseline)
 
 # ex_suite_single executes the single ex_4 run, which is expected to pass.
 
@@ -118,7 +127,7 @@ exe("ex_suite_3p_1f","ex_suite_3p_1f",
 # baseline is used, so the suite fails on baseline comparison of the oddball
 # run.
 
-die "Cannot find 'baseline'" unless File.exist?("baseline")
+die "Cannot find 'baseline'" unless File.exist?(baseline)
 exe("ex_suite_mismatch_stop (with baseline)","use-baseline #{baseline} ex_suite_mismatch_stop",
   "Run ex_4_bad: Comparison failed (ex_4_bad vs baseline ex_baseline)",
   "Test suite 'ex_suite_mismatch_stop' FAILED"

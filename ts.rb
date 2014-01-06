@@ -713,7 +713,7 @@ class TS
     conflicts=[]
     runs.each do |run|
       unless (b=loadspec(File.join(run_confs,run))["baseline"])=="none"
-        conflicts.push(b) if Dir.exist?(File.join(@use_baseline_dir,b))
+        conflicts.push(b) if Dir.exist?(File.join(@gen_baseline_dir,b))
       end
     end
     unless conflicts.empty?
