@@ -5,15 +5,16 @@ DDTS
 
 Quick Start
 
-  ddts <suite>            : run the suite named <suite>
-  ddts baseline <suite>   : run the suite named <suite> & create baseline image
-  ddts clean              : remove most test-suite created items
-  ddts help               : shows this usage information
-  ddts run <run>          : perform the single run named <run>
-  ddts show run <run>     : show details of the run named <run>
-  ddts show runs          : show valid run names
-  ddts show suite <suite> : show details for the suite named <suite>
-  ddts show suites        : show valid suite names
+  ddts <suite>                    : run the suite named <suite>
+  ddts gen-baseline <dir> <suite> : run <suite> & generate baseline in <dir>
+  ddts use-baseline <dir> <suite> : run <suite> & compare to baseline in <dir>
+  ddts clean                      : remove most test-suite created items
+  ddts help                       : shows this usage information
+  ddts run <run>                  : perform the single run named <run>
+  ddts show run <run>             : show details of the run named <run>
+  ddts show runs                  : show valid run names
+  ddts show suite <suite>         : show details for the suite named <suite>
+  ddts show suites                : show valid suite names
 
 * Note that a 'conf' directory must exist, or the environment variable DDTSCONF
   defined (with the path to a directory containing the required configuration

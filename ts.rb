@@ -179,7 +179,6 @@ module Common
 
   # Runtime directories
 
-  def baseline_dir() File.join($DDTSOUT,"baseline") end
   def builds_dir()    File.join($DDTSOUT,"builds")  end
   def logs_dir()      File.join($DDTSOUT,"logs")    end
   def runs_dir()      File.join($DDTSOUT,"runs")    end
@@ -546,7 +545,11 @@ class Run
         if (success=lib_run_post(@env,runkit))
           result=OpenStruct.new({:name=>@r,:files=>lib_outfiles(@env,@rundir)})
           @ts.runmaster.synchronize { @ts.runs[@r]=result }
-          (@ts.genbaseline)?(baseline_reg):(baseline_comp)
+          if @ts.use_baseline_dir
+            baseline_comp
+          elsif @ts.gen_baseline_dir
+            baseline_reg
+          end
           logd_flush
           logi "Completed"
         else
@@ -576,8 +579,7 @@ class Run
     if @bline=="none"
       logd "Baseline comparison for #{@r} disabled, skipping"
     else
-      blinetop=File.join(baseline_dir)
-      blinepath=File.join(blinetop,@bline)
+      blinepath=File.join(@ts.use_baseline_dir,@bline)
       if Dir.exist?(blinepath)
         logi "Comparing to baseline #{@bline}"
         blinepair=OpenStruct.new
@@ -586,7 +588,7 @@ class Run
         comp([@ts.runs[@r],blinepair])
         logi "Baseline comparison OK"
       else
-        if Dir.exist?(blinetop)
+        if Dir.exist?(@ts.use_baseline_dir)
           logw "No baseline '#{@bline}' found, continuing..."
         end
       end
@@ -671,16 +673,16 @@ class TS
   include Common
 
   attr_accessor :activemaster,:activejobs,:baselinemaster,:baselinesrcs,
-  :buildlocks,:buildmaster,:builds,:dlog,:genbaseline,:havedata,:ilog,:pre,
-  :runlocks,:runmaster,:runs,:suite,:uniq
+  :buildlocks,:buildmaster,:builds,:dlog,:gen_baseline_dir,:havedata,:ilog,:pre,
+  :runlocks,:runmaster,:runs,:suite,:uniq,:use_baseline_dir
 
   def initialize(tsname,cmd,rest)
 
     # The test-suite class. Provide a number of instance variables used
     # throughout the test suite, then branch to the appropriate method.
 
-    @activemaster=Mutex.new
     @activejobs={}
+    @activemaster=Mutex.new
     @baselinemaster=Mutex.new
     @baselinesrcs={}
     @buildlocks={}
@@ -688,7 +690,7 @@ class TS
     @builds={}
     @dlog=nil
     @env={}
-    @genbaseline=false
+    @gen_baseline_dir=nil
     @havedata=false
     @ilog=nil
     @pre=tsname
@@ -698,6 +700,7 @@ class TS
     @suite=nil
     @ts=self
     @uniq=Time.now.to_i
+    @use_baseline_dir=nil
     dispatch(cmd,rest)
   end
 
@@ -710,7 +713,7 @@ class TS
     conflicts=[]
     runs.each do |run|
       unless (b=loadspec(File.join(run_confs,run))["baseline"])=="none"
-        conflicts.push(b) if Dir.exist?(File.join(baseline_dir,b))
+        conflicts.push(b) if Dir.exist?(File.join(use_baseline_dir,b))
       end
     end
     unless conflicts.empty?
@@ -718,17 +721,6 @@ class TS
       conflicts.sort.uniq.each { |e| logi "  #{e} already exists" }
       die "Aborting..."
     end
-  end
-
-  def baseline(args=nil)
-
-    # If 'baseline' was supplied as the command-line argument, record the fact
-    # that baseline generation has been requested, then call dosuite() with the
-    # supplied suite name.
-
-    help(args,1) if args.empty?
-    @genbaseline=true
-    dosuite(args[0])
   end
 
   def baseline_gen
@@ -740,7 +732,7 @@ class TS
 
     @baselinesrcs.each do |r,src|
       logi "Creating #{r} baseline..."
-      dst=File.join(baseline_dir,r)
+      dst=File.join(@gen_baseline_dir,r)
       src.files.each do |p1,p2|
         fullpath=File.join(p1,p2)
         minipath=p2
@@ -807,7 +799,9 @@ class TS
     # the given arguments. If it is a suite name, run the suite. Otherwise, show
     # usage info and exit with error.
 
-    okargs=["baseline","clean","help","run","show"]
+    cmd="gen_baseline" if cmd=="gen-baseline"
+    cmd="use_baseline" if cmd=="use-baseline"
+    okargs=["clean","gen_baseline","help","run","show","use_baseline"]
     suites=Dir.glob(File.join(suite_confs,"*")).map { |e| File.basename(e) }
     if okargs.include?(cmd)
       send(cmd,args)
@@ -863,7 +857,7 @@ class TS
         v.each { |x| m.add(x) if x.is_a?(String) }
         m
       end
-      avoid_baseline_conflicts(runset) if @genbaseline
+      avoid_baseline_conflicts(runset) if @gen_baseline_dir
       build_init(runset)
       suitespec.each do |group,runs|
         group_hash=runs.reduce({}) do |m,e|
@@ -896,7 +890,7 @@ class TS
       x.backtrace.each { |e| logi e }
       exit 1
     end
-    if @genbaseline
+    if @gen_baseline_dir
       if failgroups>0
         logi "Skipping baseline generation due to #{failgroups} run failure(s)"
       else
@@ -915,6 +909,18 @@ class TS
 
   def env
     OpenStruct.new({:suite=>OpenStruct.new(@env)})
+  end
+
+  def gen_baseline(args=nil)
+
+    # If 'gen-baseline' was supplied as the command-line argument, record the
+    # specified baseline directory, then call dosuite() with the supplied suite
+    # name.
+
+    help(args,1) if args.empty?
+    @gen_baseline_dir=args.shift
+    help(args,1) if args.empty?
+    dosuite(args[0])
   end
 
   def halt(x)
@@ -941,7 +947,8 @@ class TS
   def help(args=nil,status=0)
     puts
     puts "usage: #{@pre} <suite>"
-    puts "       #{@pre} baseline <suite>"
+    puts "       #{@pre} gen-baseline <directory> <suite>"
+    puts "       #{@pre} use-baseline <directory> <suite>"
     puts "       #{@pre} clean"
     puts "       #{@pre} help"
     puts "       #{@pre} run <run>"
@@ -1016,6 +1023,18 @@ class TS
     else
       help(args,1)
     end
+  end
+
+  def use_baseline(args=nil)
+
+    # If 'use-baseline' was supplied as the command-line argument, record the
+    # specified baseline directory, then call dosuite() with the supplied suite
+    # name.
+
+    help(args,1) if args.empty?
+    @use_baseline_dir=args.shift
+    help(args,1) if args.empty?
+    dosuite(args[0])
   end
 
 end # class TS
