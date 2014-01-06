@@ -1,6 +1,3 @@
-- Switch to explicit gen-baseline= / use-baseline= command-line parameters, to
-  avoid collisions between multiple implementations.
-
 - Add a HISTORY file and versioned git tags. Add 'ddts version' command.
 
 - Provide a mechanism (with exactly-once semantics) for runs to associate with
