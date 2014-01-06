@@ -6,6 +6,16 @@ def die(msg)
 end
 
 def exe(desc,suite,*expected)
+
+  # Arguments are:
+  #
+  #   1. desc, a short description of the test to print on the console
+  #   2. suite, the full set of arguments to ddts
+  #   3.-? One or more strings expected to be found in the suite's output
+  #
+  # The 'expected' strings are escaped, so regexp characters will be
+  # treated literally.
+
   expected.map! { |e| Regexp::escape(e) }
   print "Testing: #{desc}"+" "*(40-desc.length)
   ddts=File.join("..","ddts")
