@@ -15,3 +15,6 @@ TODO
 
 - Generalize alternate comparator mechanism and get rid of profiles.rb? Have
   defaults.rb overridden by library.rb overridden by configs.
+
+- Builds should honor 'extends:', and 'show builds' and 'show build <build>'
+  commands should exist.
