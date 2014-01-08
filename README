@@ -15,6 +15,7 @@ Quick Start
   ddts show runs                  : show valid run names
   ddts show suite <suite>         : show details for the suite named <suite>
   ddts show suites                : show valid suite names
+  ddts version                    : print version number and exit
 
 * Note that either an 'app' directory must exist alongside the 'ddts' wrapper
   script, or the environment variable DDTSAPP must be defined (with the path to

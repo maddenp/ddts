@@ -13,11 +13,8 @@ TODO
 - Provide a mechanism (with exactly-once semantics) for runs to associate with
   specific data sets.
 
-- Generalize alternate comparator mechanism and get rid of profiles.rb? Have
+- Generalize alternate comparator mechanism and get rid of profiles.rb. Have
   defaults.rb overridden by library.rb overridden by configs.
 
 - Builds should honor 'extends:', and 'show builds' and 'show build <build>'
   commands should exist. (It may already honor 'extends:'...)
-
-- Add 'ddts version' command.
-
