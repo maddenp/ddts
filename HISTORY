@@ -17,4 +17,7 @@ TODO
   defaults.rb overridden by library.rb overridden by configs.
 
 - Builds should honor 'extends:', and 'show builds' and 'show build <build>'
-  commands should exist.
+  commands should exist. (It may already honor 'extends:'...)
+
+- Add 'ddts version' command.
+
