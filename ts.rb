@@ -952,6 +952,8 @@ class TS
     puts "       #{@pre} clean"
     puts "       #{@pre} help"
     puts "       #{@pre} run <run>"
+    puts "       #{@pre} show build <build>"
+    puts "       #{@pre} show builds"
     puts "       #{@pre} show run <run>"
     puts "       #{@pre} show runs"
     puts "       #{@pre} show suite <suite>"
@@ -1000,11 +1002,24 @@ class TS
 
     # Pretty-print a fully composed run or suite configuration.
 
+    def get_dir(type)
+      case
+      when type=~/build(s?)/
+        build_confs
+      when type=~/run(s?)/
+        run_confs
+      when type=~/suite(s?)/
+        suite_confs
+      else
+        die "Unrecognized config type '#{type}'"
+      end
+    end
+
     type=args[0]
     name=args[1]
-    if ["run","suite"].include?(type)
+    if ["build","run","suite"].include?(type)
       die "No #{type} specified" unless name
-      dir=(type=="run")?(run_confs):(suite_confs)
+      dir=get_dir(type)
       file=File.join(dir,name)
       die "'#{name}' not found in #{dir}" unless File.exist?(file)
       spec=loadspec(file)
@@ -1014,8 +1029,8 @@ class TS
       puts
       puts pp(spec)
       puts
-    elsif ["runs","suites"].include?(type)
-      dir=(type=="runs")?(run_confs):(suite_confs)
+    elsif ["builds","runs","suites"].include?(type)
+      dir=get_dir(type)
       puts
       puts "Available #{type}:"
       puts

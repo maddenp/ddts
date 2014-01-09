@@ -1,4 +1,4 @@
+extends: 'ex_base'
 bindir: 'bin'
 binname: 'integrate'
 compiler: 'mpif90'
-srcfile: 'tr.f90'

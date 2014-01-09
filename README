@@ -11,9 +11,11 @@ Quick Start
   ddts clean                      : remove most test-suite created items
   ddts help                       : shows this usage information
   ddts run <run>                  : perform the single run named <run>
+  ddts show build <build>         : show details of the build named <build>
+  ddts show builds                : show valid build names
   ddts show run <run>             : show details of the run named <run>
   ddts show runs                  : show valid run names
-  ddts show suite <suite>         : show details for the suite named <suite>
+  ddts show suite <suite>         : show details of the suite named <suite>
   ddts show suites                : show valid suite names
   ddts version                    : print version number and exit
 
