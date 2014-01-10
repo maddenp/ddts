@@ -136,10 +136,10 @@ Configuration
     - env.build._result: The final value returned by the run thread that
       performs a build.
 
-    - env.build._root: The path to the directory under which the run should
-      perform its build. Composed of the top-level directory containing all
-      builds performed for the test suite, and a subdirectory with the same
-      name as the build config.
+    - env.build._root: The path to a unique directory reserved for this build.
+      It is recommended, but not required, that the build be performed under
+      this directory, which will be created automatically by the core drive for
+      use by library methods.
 
     - env.run._name: The name of the run, as reported e.g. in log entries.
 

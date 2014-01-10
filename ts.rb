@@ -749,14 +749,14 @@ class TS
 
     logd "build_init:"
     logd "----"
+    runs=(run_or_runs.respond_to?(:each))?(run_or_runs):([run_or_runs])
+    builds=runs.reduce(Set.new) do |m,e|
+      m.add(File.join(builds_dir,loadspec(File.join(run_confs,e))["build"]))
+      logd "----"
+      m
+    end
     if Dir.exist?(builds_dir)
       if not @env["retain_builds"]
-        runs=(run_or_runs.respond_to?(:each))?(run_or_runs):([run_or_runs])
-        builds=runs.reduce(Set.new) do |m,e|
-          m.add(File.join(builds_dir,loadspec(File.join(run_confs,e))["build"]))
-          logd "----"
-          m
-        end
         builds.each do |build|
           if Dir.exist?(build)
             FileUtils.rm_rf(build)
@@ -767,6 +767,10 @@ class TS
     else
       FileUtils.mkdir_p(builds_dir)
       logd "Created empty '#{builds_dir}'"
+    end
+    builds.each do |build|
+      FileUtils.mkdir_p(build)
+      logd "Created empty build directory '#{build}'"
     end
     logd_flush
   end

@@ -17,7 +17,6 @@ module Library
   end
 
   def lib_build_prep(env)
-    FileUtils.mkdir_p(env.build._root)
     FileUtils.cp(File.join(app_dir,env.build.srcfile),env.build._root)
     FileUtils.mkdir_p(File.join(env.build._root,env.build.bindir))
   end
