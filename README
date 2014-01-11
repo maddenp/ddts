@@ -11,10 +11,13 @@ Quick Start
   ddts clean                      : remove most test-suite created items
   ddts help                       : shows this usage information
   ddts run <run>                  : perform the single run named <run>
+  ddts show build <build>         : show details of the build named <build>
+  ddts show builds                : show valid build names
   ddts show run <run>             : show details of the run named <run>
   ddts show runs                  : show valid run names
-  ddts show suite <suite>         : show details for the suite named <suite>
+  ddts show suite <suite>         : show details of the suite named <suite>
   ddts show suites                : show valid suite names
+  ddts version                    : print version number and exit
 
 * Note that either an 'app' directory must exist alongside the 'ddts' wrapper
   script, or the environment variable DDTSAPP must be defined (with the path to
@@ -133,10 +136,10 @@ Configuration
     - env.build._result: The final value returned by the run thread that
       performs a build.
 
-    - env.build._root: The path to the directory under which the run should
-      perform its build. Composed of the top-level directory containing all
-      builds performed for the test suite, and a subdirectory with the same
-      name as the build config.
+    - env.build._root: The path to a unique directory reserved for this build.
+      It is recommended, but not required, that the build be performed under
+      this directory, which will be created automatically by the core drive for
+      use by library methods.
 
     - env.run._name: The name of the run, as reported e.g. in log entries.
 
