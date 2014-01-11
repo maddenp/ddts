@@ -200,7 +200,7 @@ module Common
     chain
   end
 
-  def comp(runs,comparator=nil,continue=false)
+  def comp(runs,comparator,continue=false)
 
     # Compare the output files for a set of runs (a 'run' may be a baseline
     # image). Each element in the passed-in array is an OpenStruct object with
@@ -245,7 +245,7 @@ module Common
         f1=s1.shift
         f2=s2.shift
         fb=File.basename(f1)
-        if (comparator)?(send(comparator,f1,f2)):(FileUtils.compare_file(f1,f2))
+        if comparator.call(f1,f2)
           logd "Comparing #{fb}: OK #{m}"
         else
           logd "Comparing #{fb}: failed #{m}"
@@ -289,6 +289,10 @@ module Common
       h[k.to_s]=((v.is_a?(OpenStruct))?(convert_o2h(v)):(v))
     end
     h
+  end
+
+  def invoke(s,*args)
+    method((x=args.first.marshal_dump[s])?(x):(s)).call(*args)
   end
 
   def loadenv(file,descendant=nil,specs=nil)
@@ -461,8 +465,8 @@ class Comparison
       set=runs.reduce([]) { |m,e| m.push(e.name) }.sort.join(", ")
       logi "#{set}: Checking..."
       sorted_runs=runs.sort { |r1,r2| r1.name <=> r2.name }
-      alt_comparator=(c=@env.lib_comp)?(c.to_sym):(nil)
-      @comp_ok=comp(sorted_runs,alt_comparator,@ts.env.suite.continue)
+      comparator=(x=@env.lib_comp)?(method(x)):(FileUtils.method("compare_file"))
+      @comp_ok=comp(sorted_runs,comparator,@ts.env.suite.continue)
       logi "#{set}: OK" if @comp_ok
     else
       unless @totalruns==1
@@ -529,7 +533,7 @@ class Run
         @ts.runmaster.synchronize do
           unless @ts.havedata
             logd "* Preparing data for all test-suite runs..."
-            lib_data(@env)
+            invoke("lib_data",@env)
             logd_flush
             @ts.havedata=true
           end
@@ -538,12 +542,12 @@ class Run
         @rundir=File.join(runs_dir,"#{@r}.#{@ts.uniq}")
         FileUtils.mkdir_p(@rundir) unless Dir.exist?(@rundir)
         logd "* Output from run prep:"
-        @rundir=lib_run_prep(@env,@rundir)
+        @rundir=invoke("lib_run_prep",@env,@rundir)
         logd_flush
         logd "* Output from run:"
-        runkit=lib_run(@env,@rundir)
-        if (success=lib_run_post(@env,runkit))
-          result=OpenStruct.new({:name=>@r,:files=>lib_outfiles(@env,@rundir)})
+        runkit=invoke("lib_run",@env,@rundir)
+        if (success=invoke("lib_run_post",@env,runkit))
+          result=OpenStruct.new({:name=>@r,:files=>invoke("lib_outfiles",@env,@rundir)})
           @ts.runmaster.synchronize { @ts.runs[@r]=result }
           if @ts.use_baseline_dir
             baseline_comp
@@ -566,7 +570,8 @@ class Run
     # Delete a run's job from the batch system.
 
     logd "Deleting job #{jobid}"
-    cmd="#{lib_queue_del_cmd(@env)} #{jobid}"
+    qdel=invoke("lib_queue_del_cmd",@nv)
+    cmd="#{qdel} #{jobid}"
     output,status=ext(cmd,{:die=>false})
   end
 
@@ -584,8 +589,9 @@ class Run
         logi "Comparing to baseline #{@bline}"
         blinepair=OpenStruct.new
         blinepair.name="baseline #{@bline}"
-        blinepair.files=lib_outfiles(@env,blinepath)
-        comp([@ts.runs[@r],blinepair])
+        blinepair.files=invoke("lib_outfiles",@env,blinepath)
+        comparator=FileUtils.method("compare_file")
+        comp([@ts.runs[@r],blinepair],comparator)
         logi "Baseline comparison OK"
       else
         if Dir.exist?(@ts.use_baseline_dir)
@@ -635,13 +641,13 @@ class Run
         end
         logi "Build #{b} started"
         logd "* Output from build #{b} prep:"
-        lib_build_prep(@env)
+        invoke("lib_build_prep",@env)
         logd_flush
         logd "* Output from build #{b}:"
-        build_result=lib_build(@env)
+        build_result=invoke("lib_build",@env)
         logd_flush
         @ts.buildmaster.synchronize do
-          @ts.builds[b]=lib_build_post(@env,build_result)
+          @ts.builds[b]=invoke("lib_build_post",@env,build_result)
         end
         logi "Build #{b} completed"
       end
@@ -852,7 +858,7 @@ class TS
       @env["_suitename"]=@suite
       self.extend((p=@env["profile"])?(Object.const_get(p)):(Library))
       FileUtils.mkdir_p(tmp_dir)
-      lib_suite_prep(env)
+      invoke("lib_suite_prep",env)
       runset=suitespec.reduce(Set.new) do |m,(k,v)|
         v.each { |x| m.add(x) if x.is_a?(String) }
         m
@@ -904,7 +910,7 @@ class TS
       msg+=" -- but note WARNING(s) above!" if @ilog.warned
     end
     logi msg
-    lib_suite_post(env)
+    invoke("lib_suite_post",env)
   end
 
   def env
