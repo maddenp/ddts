@@ -19,7 +19,7 @@ def exe(desc,suite,*expected)
   expected.map! { |e| Regexp::escape(e) }
   print "Testing: #{desc}"+" "*(40-desc.length)
   ddts=File.join("..","ddts")
-  cmd="DDTSOUT=#{$OUT} #{ddts} #{suite} 2>&1"
+  cmd="DDTSAPP=. DDTSOUT=#{$OUT} #{ddts} #{suite} 2>&1"
   out=`#{cmd}`.split("\n")
   expected.each do |string|
     if out.grep(/.*#{string}.*/).empty? 

@@ -4,6 +4,6 @@ baseline: 'ex_baseline'
 binname: 'integrate'
 build: 'ex_build'
 conffile: 'tr.nl'
+lib_outfiles: 'lib_outfiles_ex'
 n: 10000
-profile: Ex_Run
 runcmd: 'mpirun -np'

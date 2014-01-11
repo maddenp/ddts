@@ -21,10 +21,6 @@ module Library
     FileUtils.mkdir_p(File.join(env.build._root,env.build.bindir))
   end
 
-  def lib_outfiles(env,path)
-    nil
-  end
-
   def lib_outfiles_ex(env,path)
     expr=File.join(path,'out[0-9]')
     Dir.glob(expr).map { |e| [path,File.basename(e)] }
@@ -80,10 +76,6 @@ module Library
     conffile=File.join(rundir,env.run.conffile)
     File.open(conffile,'w') { |f| f.write(confstr) }
     rundir
-  end
-
-  def lib_queue_del_cmd(env)
-    nil
   end
 
   def lib_suite_post(env)

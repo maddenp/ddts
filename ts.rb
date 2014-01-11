@@ -9,6 +9,7 @@ $DDTSOUT=(d=ENV["DDTSOUT"])?(d):(File.join($DDTSAPP))
 
 $:.push($DDTSHOME).push($DDTSAPP)
 
+require "defaults"
 require "digest/md5"
 require "fileutils"
 require "find"
@@ -285,8 +286,11 @@ module Common
     h
   end
 
-  def invoke(s,*args)
-    method((x=args.first.marshal_dump[s])?(x):(s)).call(*args)
+  def invoke(std,key,*args)
+    env=args.first
+    section=env.marshal_dump[key]
+    alt=section.marshal_dump[std]
+    method(alt||std.to_s).call(*args)
   end
 
   def loadenv(file,descendant=nil,specs=nil)
@@ -446,7 +450,7 @@ class Comparison
     @dlog=XlogBuffer.new(ts.ilog)
     @pre="Comparison"
     @totalruns=a.size
-    self.extend((p=@env.profile)?(Object.const_get(p)):(Library))
+    self.extend(Library)
     runs=[]
     threads=[]
     set=a.join(", ")
@@ -515,7 +519,7 @@ class Run
       @env=OpenStruct.new({:run=>loadenv(File.join(run_confs,@r))})
       logd_flush
       @env.suite=@ts.env.suite
-      self.extend((p=@env.run.profile)?(Object.const_get(p)):(Library))
+      self.extend(Library)
       @env.run._name=@r
       unless (@bline=@env.run.baseline)
         die "Config incomplete: No baseline name specified"
@@ -527,7 +531,7 @@ class Run
         @ts.runmaster.synchronize do
           unless @ts.havedata
             logd "* Preparing data for all test-suite runs..."
-            invoke("lib_data",@env)
+            invoke(:lib_data,:run,@env)
             logd_flush
             @ts.havedata=true
           end
@@ -536,12 +540,12 @@ class Run
         @rundir=File.join(runs_dir,"#{@r}.#{@ts.uniq}")
         FileUtils.mkdir_p(@rundir) unless Dir.exist?(@rundir)
         logd "* Output from run prep:"
-        @rundir=invoke("lib_run_prep",@env,@rundir)
+        @rundir=invoke(:lib_run_prep,:run,@env,@rundir)
         logd_flush
         logd "* Output from run:"
-        runkit=invoke("lib_run",@env,@rundir)
-        if (success=invoke("lib_run_post",@env,runkit))
-          result=OpenStruct.new({:name=>@r,:files=>invoke("lib_outfiles",@env,@rundir)})
+        runkit=invoke(:lib_run,:run,@env,@rundir)
+        if (success=invoke(:lib_run_post,:run,@env,runkit))
+          result=OpenStruct.new({:name=>@r,:files=>invoke(:lib_outfiles,:run,@env,@rundir)})
           @ts.runmaster.synchronize { @ts.runs[@r]=result }
           if @ts.use_baseline_dir
             baseline_comp
@@ -564,7 +568,7 @@ class Run
     # Delete a run's job from the batch system.
 
     logd "Deleting job #{jobid}"
-    qdel=invoke("lib_queue_del_cmd",@nv)
+    qdel=invoke(:lib_queue_del_cmd,:run,@env)
     cmd="#{qdel} #{jobid}"
     output,status=ext(cmd,{:die=>false})
   end
@@ -583,7 +587,7 @@ class Run
         logi "Comparing to baseline #{@bline}"
         blinepair=OpenStruct.new
         blinepair.name="baseline #{@bline}"
-        blinepair.files=invoke("lib_outfiles",@env,blinepath)
+        blinepair.files=invoke(:lib_outfiles,:run,@env,blinepath)
         comparator=FileUtils.method("compare_file")
         comp([@ts.runs[@r],blinepair],comparator)
         logi "Baseline comparison OK"
@@ -635,13 +639,13 @@ class Run
         end
         logi "Build #{b} started"
         logd "* Output from build #{b} prep:"
-        invoke("lib_build_prep",@env)
+        invoke(:lib_build_prep,:run,@env)
         logd_flush
         logd "* Output from build #{b}:"
-        build_result=invoke("lib_build",@env)
+        build_result=invoke(:lib_build,:run,@env)
         logd_flush
         @ts.buildmaster.synchronize do
-          @ts.builds[b]=invoke("lib_build_post",@env,build_result)
+          @ts.builds[b]=invoke(:lib_build_post,:run,@env,build_result)
         end
         logi "Build #{b} completed"
       end
@@ -811,7 +815,11 @@ class TS
       unless Dir.exist?($DDTSAPP)
         die "Configuration directory '#{$DDTSAPP}' not found"
       end
-      require "profiles"
+      begin
+        require "library"
+      rescue LoadError=>ex
+        puts "NOTE: No library.rb found, using defaults.rb..."
+      end
     end
     if okargs.include?(cmd)
       send(cmd,args)
@@ -860,9 +868,9 @@ class TS
       @env["_totalruns"]=0
       @env["_totalfailures"]=0
       @env["_suitename"]=@suite
-      self.extend((p=@env["profile"])?(Object.const_get(p)):(Library))
+      self.extend(Library)
       FileUtils.mkdir_p(tmp_dir)
-      invoke("lib_suite_prep",env)
+      invoke(:lib_suite_prep,:suite,env)
       runset=suitespec.reduce(Set.new) do |m,(k,v)|
         v.each { |x| m.add(x) if x.is_a?(String) }
         m
@@ -914,7 +922,7 @@ class TS
       msg+=" -- but note WARNING(s) above!" if @ilog.warned
     end
     logi msg
-    invoke("lib_suite_post",env)
+    invoke(:lib_suite_post,:suite,env)
   end
 
   def env

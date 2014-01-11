@@ -1,7 +1,7 @@
+extends: ex_suite_base
 group_ex_a:
   - ex_1
   - ex_1_alt
 group_ex_b:
   - ex_2
   - ex_4_bad
-profile: Ex_Suite
