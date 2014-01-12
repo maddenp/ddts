@@ -12,6 +12,3 @@ TODO
 
 - Provide a mechanism (with exactly-once semantics) for runs to associate with
   specific data sets.
-
-- Generalize alternate comparator mechanism and get rid of profiles.rb. Have
-  defaults.rb overridden by library.rb overridden by configs.
