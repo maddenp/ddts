@@ -1,4 +1,3 @@
-
 --------------------------------------------------------------------------------
 DDTS
 --------------------------------------------------------------------------------
@@ -24,17 +23,19 @@ Quick Start
   a directory containing the required configuration files as its value) to run
   ddts. See the 'Configuration' section, below, for details.
 
-Baseline Creation / Comparison
+--------------------------------------------------------------------------------
+1. Baseline Creation / Comparison
+--------------------------------------------------------------------------------
 
-  Run 'ddts gen-baseline <dir> <suite>' to create a baseline image of the named
-  suite ('ddts show suites' lists valid names). A set of output from the suite's
-  runs will be written to the directory named by <dir>, which will be created if
-  necessary. One subdirectory will be created under <dir> for each unique
-  'baseline' value specified in the configs of the suite's various runs. These
-  subdirectories must not already exist.
+Run 'ddts gen-baseline <dir> <suite>' to create a baseline image of the named
+suite ('ddts show suites' lists valid names). A set of output from the suite's
+runs will be written to the directory named by <dir>, which will be created if
+necessary. One subdirectory will be created under <dir> for each unique
+'baseline' value specified in the configs of the suite's various runs. These
+subdirectories must not already exist.
 
-  Run 'ddts use-baseline <dir> <suite>' to compare a new suite to the existing
-  baseline in <dir>.
+Run 'ddts use-baseline <dir> <suite>' to compare a new suite to the existing
+baseline in <dir>.
 
 A useful workflow might consist of these steps:
 
@@ -43,364 +44,420 @@ A useful workflow might consist of these steps:
   3. Make changes to the working copy as needed.
   4. Run 'ddts use-baseline <dir> <suite>' to verify your changes.
 
-Logging
-
-  Each 'ddts' invocation that does not fail immediately generates a verbose
-  logfile named 'log.timestamp', where timestamp is the seconds-since-epoch
-  test-suite start time.
-
 --------------------------------------------------------------------------------
-Configuration
+2. Logging
 --------------------------------------------------------------------------------
 
-  A DDTS implementation requires, in addition to the core driver in ts.rb, the
-  following, which must appear either in a (possibly symlinked) directory named
-  'app', alongside ts.rb; or in a directory named by the environment variable
-  'DDTSAPP' (where the latter, if defined, takes precedence):
-
-  - An implementation of library.rb: See below, and the example implementation
-    in the directory 'ex', for reference.
-
-  - An implementation of profiles.rb: See below, and the example implementation
-    in the directory 'ex', for reference.
-
-  - YAML build, run and suite configuration files, in the 'builds', 'runs', and
-  'suites' subdirectories, respectively, of the $DDTSAPP/configs directory. See
-  below for reference.
-
-  The configuration files in the 'builds', 'run's and 'suites' directories are
-  are expressed in YAML. They are parsed by the core driver and instantiated as
-  hash and array containers. Inside Run objects and the methods they call, an
-  'env' environment object is available whose 'build', 'run' and 'suite' members
-  expose the contents of their respective configs, as well as items that may be
-  added by the library implementer, as OpenStruct objects.
-
-  - Build configs are represented as the YAML equivalents of nested hashes, and
-    contain the information necessary to construct a command to perform a build
-    via the external build-automation system. Their content, then, depends on
-    the requirements of that system and the interface to it defined in the core
-    driver and library. Like run configs (see below), build configs can be
-    composed via the 'extends' key.
-
-  - Run configs are represented as the YAML equivalents of nested hashes, and
-    contain the information necessary to prepare, configure, execute and verify
-    a run; to associate it with a baseline image; etc. Config contents will
-    depend on the model and platform, but several top-level keys are reserved:
-
-    - [required] The 'baseline' key specifies the name of the baseline image
-      into which this run's output should (potentially) be copied, or against
-      which this run's output should be compared. Runs whose output is expected
-      to be identical should share a common 'baseline' value. To exclude a run
-      from baseline participation, specify the value 'none'.
-
-    - [required] The 'build' key specifies the name of the build (i.e. the
-      filename of a build config) to use for this run.
-
-    - [optional] The 'extends' key specifies the name of a run config from which
-      the current config should inherit, and which is may override. Rrecursion
-      is supported, but loops are fatal errors.
-
-    - [optional] The 'profile' key specifies the name of a Ruby module (defined
-      in profiles.rb) that may be used to alias required method names to
-      platform-specific versions in library.rb. Due to Ruby naming rules,
-      'profile' values must begin with an upper-case letter. If no profile is
-      specified, the Library module will be loaded as-is, with no aliasing
-      performed.
-
-  - Suite configs are represented as the YAML equivalent of a hash of arrays
-    and strings. Each outer array element names a group of runs expected to
-    produce identical output, whose output will be compared together for bitwise
-    identity. Inner array elements are the names of runs (i.e. filenames of run
-    configs).
-
-    The following reserved keys are available:
-
-    - [optional] The 'build_only' key, defined with any true value, indicates
-      that the builds required by the suite should be performed, but that all
-      subsequent runs and comparisons should be skipped.
-
-    - [optional] The 'continue' key, defined with any true value, will allow the
-      test suite to continue running even if some components (e.g. comparisons
-      of output, or entire runs) fail.
-
-    - [optional] The 'profile' key behaves the same as its run-config namesake.
-
-    - [optional] The 'retain_builds' key, defined with any true value, indicates
-      that the core driver should rebuild over existing builds without deleting
-      them first.
-
-  - In addition to those already listed, key names beginning with an underscore
-    are reserved. In particular, the following keys are made available by the
-    core driver to library methods:
-
-    - env.build._result: The final value returned by the run thread that
-      performs a build.
-
-    - env.build._root: The path to a unique directory reserved for this build.
-      It is recommended, but not required, that the build be performed under
-      this directory, which will be created automatically by the core drive for
-      use by library methods.
-
-    - env.run._name: The name of the run, as reported e.g. in log entries.
-
-    - env.suite._dlog: The delayed (file) logger object.
-
-    - env.suite._ilog: The immediate (screen) logger object.
-
-    - env.suite._totalfailures: The number of runs that failed, either when
-      executing or in comparison of their output against another run or against
-      a baseline. This value is final only in the lib_suite_post library method.
-
-    - env.suite._totalruns: The number of runs executed by the test suite. This
-      value is final only in the lib_suite_post library method.
-
-    NOTE that any suite-config items whose values are arrays will be interpreted
-    as run group definitions. Those whose values are scalars will be interpreted
-    as suite-level settings.
-
-  - Running the test suite with arguments 'show suite <suite_name>' or
-    'show run <run_name>' will show the complete form of a suite or run config,
-    respectively, including ancestry. The commands 'show runs' and 'show suites'
-    show complete list of those items.
-
-Quoting Rules for Fortran Namelists
-
-  If namelist editing is to be performed, please note that, in general, values
-  recognized as strings in YAML are instantiated as Ruby String objects. Some
-  caveats:
-
-  - YAML casts some unquoted strings to primitive data types. For example, the
-    unquoted word 'yes' will be instantiated as a Ruby 'true' boolean. There are
-    a number of similar cases. When casting yields unwated behavior, explicitly
-    quote the problematic value in the config. A conservative solution is to
-    quote all strings.
-
-  - The YAML library would normally print Ruby string objects without enclosing
-    quotes, whether or not they are quoted in the config. For example, values
-    abc, 'abc' and "abc" would all be printed without quotes. The core driver
-    adds single quotes around all String values when writing Fortran namelists
-    so that, for the previous example, all three values would appear as 'abc'
-    (i.e. in single quotes). Sometimes this isn't what's needed. For example,
-    the Fortran primitive value .true. will be recognized by YAML as a string,
-    but must appear unquoted in a namelist. To support this, a value may be
-    preceded by the tag !unquoted in a YAML config to suppress quoting of that
-    value. For example, the YAML entries
-
-      gribout: !unquoted  .true.
-      gribout: !unquoted '.true.'
-      gribout: !unquoted ".true."
-
-    would all result in the Fortran namelist entry
-
-      gribout=.true.
-
-  - Values recognized as numbers will be written without quotes. If quotes are
-    desired, explicitly quote the value in the config so that it is recognized
-    as a string.
+Each 'ddts' invocation that does not fail immediately generates a verbose
+logfile named 'log.timestamp', where timestamp is the seconds-since-epoch test-
+suite start time.
 
 --------------------------------------------------------------------------------
-Profiles
+3. Configuration
 --------------------------------------------------------------------------------
 
-  library.rb contains methods defining the interface between the test suite and
-  the model and platform. profiles.rb contains modules used to extend individual
-  test-suite Run objects with appropriate library methods. Each such module
-  starts by including all of the library methods as defaults, then defines
-  aliases for any methods for which the default must be overridden. The section
-  'Model/Platform Methods', below, describes the methods called by the core
-  driver. Each must be implemented.
+A DDTS application requires, in addition to the core driver in ts.rb, the
+following, which must appear either in a (possibly symlinked) directory named
+'app', alongside ts.rb; or in a directory named by the environment variable
+'DDTSAPP' (where the latter, if defined, takes precedence):
 
-  Library methods should not use instance variables. Communication with the core
-  driver or with other library methods may be done either via method arguments,
-  or via the passed-in 'env' environment object. (The 'env' OpenStruct object
-  has .build, .run and .suite members that expose the contents of the respective
-  configs) New members may be added to env.[build|run|suite], or to env itself,
-  as needed.)
+- An implementation of library.rb: See below, and the example application in
+  the directory 'ex', for reference.
 
-Model/Platform Methods
+- YAML build, run and suite configuration files, in the 'builds', 'runs', and
+  'suites' subdirectories, respectively, of the $DDTSAPP/configs directory.
 
-  These methods are called directly by the core driver. An environment object
-  (see above) is passed in as the first argument to each method; it may be
-  inspected in each method to determine what information it contains.
+The configuration files in the 'builds', 'runs' and 'suites' directories are
+expressed in YAML. They are parsed by the core driver and instantiated as hash
+and array containers. An 'env' environment object is passed in as the first
+argument to each library method. Its 'build', 'run' and 'suite' members expose
+the contents of their respective configs -- as well as items that may be added
+by the library implementer -- as OpenStruct objects.
 
-  Other methods useful to a specific model or platform may be implemented as
-  needed.
+3.1 Build Configs
+-----------------
 
-  lib_build(env)
+Build configs are represented as the YAML equivalents of nested hashes, and
+contain the information necessary to construct a command to perform a build
+via the external build-automation system. Their content, then, depends on
+the requirements of that system and the interface to it defined in the core
+driver and library. Like run configs (see below), build configs can be
+composed via the 'extends' key.
 
-    Returns an array, potentially containing build output or other data, to be
-    passed to lib_build_post(); the actual contents should be determined by the
-    needs of that method. Performs the build described by env.build, or halts
-    the test suite if the build fails.
+Keys prefixed with 'lib_' are reserved, and provide a per-build mechanism
+for overriding library methods.
 
-  lib_build_post(env,output)
+3.2 Run Configs
+---------------
 
-    Returns a string containing the path to a directory that should be copied
-    into the test suite's 'runs' directory to be used by a single run. An array
-    of strings (possibly representing the output from the build) is provided via
-    the 'output' argument.
+Run configs are represented as the YAML equivalents of nested hashes, and
+contain the information necessary to prepare, configure, execute and verify
+a run; to associate it with a baseline image; etc. Config contents will
+depend on the model and platform, but several top-level keys are reserved:
 
-  lib_build_prep(env)
+- [required] The 'baseline' key specifies the name of the baseline image
+  into which this run's output should (potentially) be copied, or against
+  which this run's output should be compared. Runs whose output is expected
+  to be identical should share a common 'baseline' value. To exclude a run
+  from baseline participation, specify the value 'none'.
 
-    Return value is unused. Takes any actions required prior to performing the
-    build.
+- [required] The 'build' key specifies the name of the build (i.e. the
+  filename of a build config) to use for this run.
 
-  lib_data(env)
+- [optional] The 'extends' key specifies the name of a run config from which
+  the current config should inherit, and which is may override. Rrecursion
+  is supported, but loops are fatal errors.
 
-    Return value is unused. Takes actions necessary to create, populate, verify,
-    etc., in the top-level test-suite directory, a 'data' directory containing
-    data files to be used by the test-suite runs. To allow for automated clean-
-    up, if this method places a data-archive file in the top-level test-suite
-    directory, it should be named 'data.tgz'; if a data directory is created, it
-    should be named 'data'.
+- Keys prefixed with 'lib_', which provide a per-run mechanism for over-
+  riding library methods.
 
-  lib_outfiles(env,path)
+3.3 Suite Configs
+-----------------
 
-    Returns an array containing the pathnames of the files that will be (1)
-    added to this run's baseline if one is being produced; (2) compared against
-    an existing baseline, if baseline comparison is being performed; and (3)
-    compared against comparable runs. The 'path' argument specifies a directory
-    under which the run's unique output can be found. Each entry in the returned
-    array is in the form [path1,path2], where path1+path2 forms the absolute
-    path to an output file, and path2 is the suffix of the path that is (a) the
-    same across runs in the comparison group; and (b) what should be stored in a
-    baseline image.
+Suite configs are represented as the YAML equivalent of a hash of arrays
+and strings. Each outer array element names a group of runs expected to
+produce identical output, whose output will be compared together via some
+comparison criterion (bitwise identity, by default). Inner array elements
+are the names of runs (i.e. filenames of run configs).
 
-  lib_queue_del_cmd(env)
+The following reserved keys are available:
 
-    Returns a string containing the name of the external program to run to
-    delete a job from the queue system, given its ID as an argument.
+- [optional] The 'build_only' key, defined with any true value, indicates
+  that the builds required by the suite should be performed, but that all
+  subsequent runs and comparisons should be skipped.
 
-  lib_run(env,rundir)
+- [optional] The 'continue' key, defined with any true value, will allow the
+  test suite to continue running even if some components (e.g. comparisons
+  of output, or entire runs) fail.
 
-    Returns a single object that will be passed to lib_run_post, which may use
-    it for any purpose, including determining whether the run succeeded or
-    failed. Performs a run.
+- [optional] The 'retain_builds' key, defined with any true value, indicates
+  that the core driver should rebuild over existing builds without deleting
+  them first.
 
-  lib_run_post(env,runkit)
+- Keys prefixed with 'lib_', which provide a per-suite (or per-comparison-group)
+  mechanism for overriding library methods.
 
-    Returns a true or false value indicating whether the run succeeded or failed.
-    The runkit argument contains the object returned by the lib_run method. Take
-    any actions necessary following a successful run, before the test suite
-    proceeds to output comparision, and determines run success/failure.
+NOTE that any suite-config items whose values are arrays will be interpreted
+as run group definitions. Those whose values are scalars will be interpreted
+as suite-level settings.
 
-  lib_run_prep(env,rundir)
+3.4 Other Reserved Keys
+-----------------------
 
-    Returns a string containing the path to the directory where the run should
-    be started (perhaps via queue submission). Takes any actions required prior
-    to starting the run. The 'rundir' argument contains the name of a unique
-    directory to be used by this run.
+In addition to those already listed, key names beginning with an underscore
+are reserved. In particular, the following keys are made available by the
+core driver to library methods:
 
-  lib_suite_post(env)
+- env.build._result: The final value returned by the run thread that
+  performs a build.
 
-    Return value is unused. Take any actions necessary after a successful test-
-    suite execution. The passed-in env object has no .build or .run members,
-    only .suite.
+- env.build._root: The path to a unique directory reserved for this build.
+  It is recommended, but not required, that the build be performed under
+  this directory, which will be created automatically by the core drive for
+  use by library methods.
 
-  lib_suite_prep(env)
+- env.run._name: The name of the run, as reported e.g. in log entries.
 
-    Return value is unused. Take any actions necessary prior to performing the
-    builds, runs and comparisons defined by the test suite. The passed-in env
-    object has no .build or .run members, only .suite.
+- env.suite._dlog: The delayed (file) logger object.
 
-Utility Methods
+- env.suite._ilog: The immediate (screen) logger object.
 
-  The core driver provides a number of utility methods that may be useful in the
-  implementation of library methods:
+- env.suite._totalfailures: The number of runs that failed, either when
+  executing or in comparison of their output against another run or against
+  a baseline. This value is final only in the lib_suite_post library method.
 
-  app_dir
+- env.suite._totalruns: The number of runs executed by the test suite. This
+  value is final only in the lib_suite_post library method.
 
-    Returns the root path of the current application.
+--------------------------------------------------------------------------------
+4. Quoting Rules for Fortran Namelists
+--------------------------------------------------------------------------------
 
-  die(msg)
+If namelist editing is to be performed, please note that, in general, values
+recognized as strings in YAML are instantiated as Ruby String objects. Some
+caveats:
 
-    Attempts to delete any jobs queued to the batch system, and prints/logs the
-    (optional) 'msg' argument's String value. Terminates the test suite (unless
-    'continue' mode is active) by raising an exception, and so does not return.
+- YAML casts some unquoted strings to primitive data types. For example, the
+  unquoted word 'yes' will be instantiated as a Ruby 'true' boolean. There are
+  a number of similar cases. When casting yields unwated behavior, explicitly
+  quote the problematic value in the config. A conservative solution is to
+  quote all strings.
 
-  ext(cmd,props)
+- The YAML library would normally print Ruby string objects without enclosing
+  quotes, whether or not they are quoted in the config. For example, values
+  abc, 'abc' and "abc" would all be printed without quotes. The core driver
+  adds single quotes around all String values when writing Fortran namelists
+  so that, for the previous example, all three values would appear as 'abc'
+  (i.e. in single quotes). Sometimes this isn't what's needed. For example,
+  the Fortran primitive value .true. will be recognized by YAML as a string,
+  but must appear unquoted in a namelist. To support this, a value may be
+  preceded by the tag !unquoted in a YAML config to suppress quoting of that
+  value. For example, the YAML entries
 
-    Executes, in a subshell (/bin/sh under Linux), the command contained in the
-    String 'cmd'. Returns a two-element Array composed of (1) an Array of the
-    command's combined stdout and stderr streams, and (2) the command's integer
-    exit status.
+    gribout: !unquoted  .true.
+    gribout: !unquoted '.true.'
+    gribout: !unquoted ".true."
 
-    The (optional) 'props' Hash may contain the following key/value pairs:
+  would all result in the Fortran namelist entry
 
-      :die
+    gribout=.true.
 
-      Terminates the suite if the shell command sets a non-zero exit status.
-      True by default.
+- Values recognized as numbers will be written without quotes. If quotes are
+  desired, explicitly quote the value in the config so that it is recognized
+  as a string.
 
-      :msg
+--------------------------------------------------------------------------------
+5. Library
+--------------------------------------------------------------------------------
 
-      If :die is true, :msg's String value will be printed/logged before exit.
+library.rb contains methods defining the interface between the test suite and
+the model and platform. The section 'Model/Platform Methods', below, describes
+the methods called by the core driver.
 
-      :out
+Library methods should not use instance variables. Communication with the core
+driver or with other library methods may be done either via method arguments, or
+via the passed-in 'env' environment object. (The 'env' OpenStruct object has
+.build, .run and .suite members that expose the contents of the respective
+configs) New members may be added to env.[build|run|suite], or to env itself, as
+needed.)
 
-      If :out is true, the shell command's output (combined stdout/stderr)
-      will be logged to the verbose logfile (but not to the screen). True by
-      default.
+5.1 Model/Platform Methods
+--------------------------
 
-  hash_matches(file,hash)
+These methods are called directly by the core driver. An environment object (see
+above) is passed in as the first argument to each method; it may be inspected in
+each method to determine what information it contains.
 
-    Returns true if the MD5 checksum of the file identified by the 'file' String
-    matches the MD5 checksum contained in String 'hash', and false otherwise.
+A Library module with default (and mostly useless) implementations of these
+methods is provided by defaults.rb, which is loaded automatically by the core
+driver for all applications. If $DDTSAPP/library.rb exists, it will also be
+loaded, with the methods contained in its Library module overriding those in
+defaults.rb. Finally, as described below for each library method, special keys
+in suite, run and build configs may override both library.rb and defaults.rb
+definitions, specifying alternate method names for each standard library method
+name. See the 'ex' application for examples.
 
-  job_activate(jobid,run)
+lib_build(env)
 
-    Register's the given 'jobid' as having been submitted to the batch system
-    for the Run objet referenced by the 'run' argument. The list of registered
-    job IDs is used to delete jobs from the batch system when the test suite
-    fails. The supplied job ID should be the appropriate argument to the program
-    identified by the lib_queue_del_cmd library method.
+  Returns an array, potentially containing build output or other data, to be
+  passed to lib_build_post(); the actual contents should be determined by the
+  needs of that method. Performs the build described by env.build, or halts
+  the test suite if the build fails.
 
-  job_check(stdout,restr)
+  May be aliased to an alternate library method via the 'lib_build' key in a run
+  config.
 
-    Returns true if a regular expression instantiated from the 'restr' String
-    argument matches any line in the file identified by the 'stdout' argument,
-    and false otherwise.
+lib_build_post(env,output)
 
-  job_deactivate(jobid)
+  Returns a string containing the path to a directory that should be copied
+  into the test suite's 'runs' directory to be used by a single run. An array
+  of strings (possibly representing the output from the build) is provided via
+  the 'output' argument.
 
-    De-registers the given 'jobid' from the list of batch-system jobs. See
-    job_activate(), above, for more information.
+  May be aliased to an alternate library method via the 'lib_build_post' key in
+  a run config.
 
-  logd(msg)
+lib_build_prep(env)
 
-    Log the 'msg' argument's String value to the delayed (file) logger.
+  Return value is unused. Takes any actions required prior to performing the
+  build.
 
-  logfile
+  May be aliased to an alternate library method via the 'lib_build_prep' key in
+  a run config.
 
-    Returns the path to the logfile.
+lib_comp(env,file1,file2)
 
-  logi(msg)
+  Performs a comparison between file1 and file2, returning true if comparison
+  was deemed successful, and false otherwise.
 
-    Log the 'msg' argument's String value to the immediate (screen) logger, and
-    to the delayed (file) logger.
-    
-  logw(msg)
+  May be aliased to an alternate library method via the 'lib_data' key in a
+  suite config. NOTE: The 'lib_data' key should be specified under each
+  comparison group that requires special treatment.
 
-    Like logi(), but prefixes 'msg' with the text "WARNING!" and, on successful
-    completion of the test suite, prints/logs a reminder about the warning. It
-    may be useful to warn users about issues not deemed serious enough to halt
-    the test suite.
+lib_data(env)
 
-  tmp_dir(dir)
+  Return value is unused. Takes actions necessary to create, populate, verify,
+  etc., in the top-level test-suite directory, a 'data' directory containing
+  data files to be used by the test-suite runs. To allow for automated clean-
+  up, if this method places a data-archive file in the top-level test-suite
+  directory, it should be named 'data.tgz'; if a data directory is created, it
+  should be named 'data'.
 
-    The path to a temporary directory, which will be removed by the 'clean'
-    command.
+  May be aliased to an alternate library method via the 'lib_data' key in a run
+  config.
 
-  valid_dir(dir)
+lib_outfiles(env,path)
 
-    A convenience wrapper to ensure that the directory named by argument 'dir'
-    actually exists. Calls die() with an appropriate message if the directory
-    does not exist. For example, 'd=valid_dir(File.join(a,b,c))' would set 'd'
-    if and only if the path constructed from 'a', 'b' and 'c' exists.
+  Returns an array containing the pathnames of the files that will be (1)
+  added to this run's baseline if one is being produced; (2) compared against
+  an existing baseline, if baseline comparison is being performed; and (3)
+  compared against comparable runs. The 'path' argument specifies a directory
+  under which the run's unique output can be found. Each entry in the returned
+  array is in the form [path1,path2], where path1+path2 forms the absolute
+  path to an output file, and path2 is the suffix of the path that is (a) the
+  same across runs in the comparison group; and (b) what should be stored in a
+  baseline image.
 
-  valid_file(file)
+  May be aliased to an alternate library method via the 'lib_outfiles' key in a
+  run config.
 
-    Same as valid_dir(), but for a file argument.
+lib_queue_del_cmd(env)
+
+  Returns a string containing the name of the external program to run to
+  delete a job from the queue system, given its ID as an argument.
+
+  May be aliased to an alternate library method via the 'lib_queue_del_cmd' key
+  in a run config.
+
+lib_run(env,rundir)
+
+  Returns a single object that will be passed to lib_run_post, which may use
+  it for any purpose, including determining whether the run succeeded or
+  failed. Performs a run.
+
+  May be aliased to an alternate library method via the 'lib_run' key in a run
+  config.
+
+lib_run_post(env,runkit)
+
+  Returns a true or false value indicating whether the run succeeded or failed.
+  The runkit argument contains the object returned by the lib_run method. Take
+  any actions necessary following a successful run, before the test suite
+  proceeds to output comparision, and determines run success/failure.
+
+  May be aliased to an alternate library method via the 'lib_run_post' key in a
+  run config.
+
+lib_run_prep(env,rundir)
+
+  Returns a string containing the path to the directory where the run should
+  be started (perhaps via queue submission). Takes any actions required prior
+  to starting the run. The 'rundir' argument contains the name of a unique
+  directory to be used by this run.
+
+  May be aliased to an alternate library method via the 'lib_run_prep' key in a
+  run config.
+
+lib_suite_post(env)
+
+  Return value is unused. Take any actions necessary after a successful test-
+  suite execution. The passed-in env object has no .build or .run members,
+  only .suite.
+
+  May be aliased to an alternate library method via the 'lib_suite_post' key in
+  a run config.
+
+lib_suite_prep(env)
+
+  Return value is unused. Take any actions necessary prior to performing the
+  builds, runs and comparisons defined by the test suite. The passed-in env
+  object has no .build or .run members, only .suite.
+
+  May be aliased to an alternate library method via the 'lib_suite_prep' key in
+  a run config.
+
+Other methods useful to a specific model or platform may be provided by the
+library implementer as needed.
+
+5.2 Utility Methods
+-------------------
+
+The core driver provides a number of utility methods that may be useful in the
+implementation of library methods:
+
+app_dir
+
+  Returns the root path of the current application.
+
+die(msg)
+
+  Attempts to delete any jobs queued to the batch system, and prints/logs the
+  (optional) 'msg' argument's String value. Terminates the test suite (unless
+  'continue' mode is active) by raising an exception, and so does not return.
+
+ext(cmd,props)
+
+  Executes, in a subshell (/bin/sh under Linux), the command contained in the
+  String 'cmd'. Returns a two-element Array composed of (1) an Array of the
+  command's combined stdout and stderr streams, and (2) the command's integer
+  exit status.
+
+  The (optional) 'props' Hash may contain the following key/value pairs:
+
+    :die
+
+    Terminates the suite if the shell command sets a non-zero exit status.
+    True by default.
+
+    :msg
+
+    If :die is true, :msg's String value will be printed/logged before exit.
+
+    :out
+
+    If :out is true, the shell command's output (combined stdout/stderr)
+    will be logged to the verbose logfile (but not to the screen). True by
+    default.
+
+hash_matches(file,hash)
+
+  Returns true if the MD5 checksum of the file identified by the 'file' String
+  matches the MD5 checksum contained in String 'hash', and false otherwise.
+
+job_activate(jobid,run)
+
+  Register's the given 'jobid' as having been submitted to the batch system
+  for the Run objet referenced by the 'run' argument. The list of registered
+  job IDs is used to delete jobs from the batch system when the test suite
+  fails. The supplied job ID should be the appropriate argument to the program
+  identified by the lib_queue_del_cmd library method.
+
+job_check(stdout,restr)
+
+  Returns true if a regular expression instantiated from the 'restr' String
+  argument matches any line in the file identified by the 'stdout' argument,
+  and false otherwise.
+
+job_deactivate(jobid)
+
+  De-registers the given 'jobid' from the list of batch-system jobs. See
+  job_activate(), above, for more information.
+
+logd(msg)
+
+  Log the 'msg' argument's String value to the delayed (file) logger.
+
+logfile
+
+  Returns the path to the logfile.
+
+logi(msg)
+
+  Log the 'msg' argument's String value to the immediate (screen) logger, and
+  to the delayed (file) logger.
+
+logw(msg)
+
+  Like logi(), but prefixes 'msg' with the text "WARNING!" and, on successful
+  completion of the test suite, prints/logs a reminder about the warning. It
+  may be useful to warn users about issues not deemed serious enough to halt
+  the test suite.
+
+tmp_dir(dir)
+
+  The path to a temporary directory, which will be removed by the 'clean'
+  command.
+
+valid_dir(dir)
+
+  A convenience wrapper to ensure that the directory named by argument 'dir'
+  actually exists. Calls die() with an appropriate message if the directory
+  does not exist. For example, 'd=valid_dir(File.join(a,b,c))' would set 'd'
+  if and only if the path constructed from 'a', 'b' and 'c' exists.
+
+valid_file(file)
+
+  Same as valid_dir(), but for a file argument.
 
 --------------------------------------------------------------------------------
 Environment Variables
