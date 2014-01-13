@@ -10,7 +10,7 @@ DDTS provides a system for composing test suites whose overall activity is drive
 
 The system ensures the minimum necessary activity. For example, only one build is made on behalf of any number of run configurations sharing the same build type; only one run from an output-identical set contributes its output to the baseline image, when one is being generated; and only the builds and runs necessary to satisfy the top-level suite configuration are performed. The code leverages concurrency for faster results, and tries to respect end users by confining verbose activity traces to a log file and printing only comparatively terse progress messages to the console.
 
-The system is adapted to a specific tested code and runtime platform by providing implementations of a set of methods in _library.rb_.
+The system is adapted to a specific tested code and runtime platform by providing implementations of a set of methods in library.rb.
 
 A simple example implementation (numerical integration using the trapezoid rule) is provided in the ex directory, along with configuration files and a full set of definitions in ex/library.rb. In a Bourne-family shell, run `DDTSCONF=ex ddts ex_suite` to run the example suite. GNU `tar` and an MPI installation providing `mpif90` and `mpirun` are required.
 
