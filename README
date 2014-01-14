@@ -270,8 +270,8 @@ lib_comp(env,file1,file2)
   Performs a comparison between file1 and file2, returning true if comparison
   was deemed successful, and false otherwise.
 
-  May be aliased to an alternate library method via the 'lib_data' key in a
-  suite config. NOTE: The 'lib_data' key should be specified under each
+  May be aliased to an alternate library method via the 'lib_comp' key in a
+  suite config. NOTE: The 'lib_comp' key should be specified under each
   comparison group that requires special treatment.
 
 lib_data(env)
