@@ -16,10 +16,6 @@ module Library
     []
   end
 
-  def lib_comp_alt(f1,f2)
-    true
-  end
-
   def lib_data(env)
     true
   end
