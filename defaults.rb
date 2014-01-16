@@ -16,10 +16,6 @@ module Library
     []
   end
 
-  def lib_outfiles_ex(env,path)
-    true
-  end
-
   def lib_comp_alt(f1,f2)
     true
   end
@@ -48,15 +44,7 @@ module Library
     true
   end
 
-  def lib_suite_post_ex(env)
-    true
-  end
-
   def lib_suite_prep(env)
-    true
-  end
-
-  def lib_suite_prep_ex(env)
     true
   end
 
