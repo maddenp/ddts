@@ -74,6 +74,13 @@ module Utility
     Digest::MD5.file(file)==hash
   end
 
+  def invoke(std,key,*args)
+    env=args.first
+    section=env.marshal_dump[key]
+    alt=section.marshal_dump[std]
+    method(alt||std.to_s).call(*args)
+  end
+
   def job_activate(jobid,run)
 
     # Add jobid:run to the active-jobs hash, so that the job can be killed if
@@ -284,13 +291,6 @@ module Common
       h[k.to_s]=((v.is_a?(OpenStruct))?(convert_o2h(v)):(v))
     end
     h
-  end
-
-  def invoke(std,key,*args)
-    env=args.first
-    section=env.marshal_dump[key]
-    alt=section.marshal_dump[std]
-    method(alt||std.to_s).call(*args)
   end
 
   def loadenv(file,descendant=nil,specs=nil)

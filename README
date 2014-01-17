@@ -239,50 +239,52 @@ name. See the 'ex' application for examples.
 
 lib_build(env)
 
-  Returns an array, potentially containing build output or other data, to be
-  passed to lib_build_post(); the actual contents should be determined by the
-  needs of that method. Performs the build described by env.build, or halts
-  the test suite if the build fails.
+  Performs the build described by env.build.
+
+  Returns an arbitrary object, which is passed to lib_build_post; the object's
+  type and value should be determined by the needs of that method.
 
   May be aliased to an alternate library method via the 'lib_build' key in a run
   config.
 
-lib_build_post(env,output)
+lib_build_post(env,build_result)
 
-  Returns a string containing the path to a directory that should be copied
-  into the test suite's 'runs' directory to be used by a single run. An array
-  of strings (possibly representing the output from the build) is provided via
-  the 'output' argument.
+  Performs any actions necessary after a build completes. The object returned by
+  the lib_build method is received as the 'build_result' argument.
+
+  Returns a string containing the path to a directory containing the runtime
+  files necessary to perform a run.
 
   May be aliased to an alternate library method via the 'lib_build_post' key in
   a run config.
 
 lib_build_prep(env)
 
-  Return value is unused. Takes any actions required prior to performing the
-  build.
+  Takes any actions required prior to performing a build.
 
+  Return value is unused.
+  
   May be aliased to an alternate library method via the 'lib_build_prep' key in
   a run config.
 
 lib_comp(env,file1,file2)
 
-  Performs a comparison between file1 and file2, returning true if comparison
-  was deemed successful, and false otherwise.
+  Performs a comparison between file1 and file2.
+
+  Returns true if comparison was deemed successful, false otherwise.
 
   May be aliased to an alternate library method via the 'lib_comp' key in a
   suite config. NOTE: The 'lib_comp' key should be specified under each
-  comparison group that requires special treatment.
+  comparison group that requires a special comparator. If lib_comp is left
+  undefined, FileUtils.compare_file is used.
 
 lib_data(env)
 
-  Return value is unused. Takes actions necessary to create, populate, verify,
-  etc., in the top-level test-suite directory, a 'data' directory containing
-  data files to be used by the test-suite runs. To allow for automated clean-
-  up, if this method places a data-archive file in the top-level test-suite
-  directory, it should be named 'data.tgz'; if a data directory is created, it
-  should be named 'data'.
+  Takes actions necessary to make input data available for the suite. Called
+  once per test-suite invocation.
 
+  Return value is unused.
+  
   May be aliased to an alternate library method via the 'lib_data' key in a run
   config.
 
@@ -303,58 +305,65 @@ lib_outfiles(env,path)
 
 lib_queue_del_cmd(env)
 
-  Returns a string containing the name of the external program to run to
-  delete a job from the queue system, given its ID as an argument.
+  Returns a string containing the name of the external program to run to delete
+  a job from the queue system, given its ID as an argument.
 
   May be aliased to an alternate library method via the 'lib_queue_del_cmd' key
   in a run config.
 
 lib_run(env,rundir)
 
-  Returns a single object that will be passed to lib_run_post, which may use
-  it for any purpose, including determining whether the run succeeded or
-  failed. Performs a run.
+  Performs a run.
+
+  Returns an arbitrary object, which is passed to lib_run_post; the object's
+  type and value should be determined by the needs of that method.
 
   May be aliased to an alternate library method via the 'lib_run' key in a run
   config.
 
 lib_run_post(env,runkit)
 
+  Takes any actions necessary following a successful run, before the test suite
+  proceeds to output comparision, and determines run success or failure. The
+  'runkit' argument contains the object returned by the lib_run method.
+
   Returns a true or false value indicating whether the run succeeded or failed.
-  The runkit argument contains the object returned by the lib_run method. Take
-  any actions necessary following a successful run, before the test suite
-  proceeds to output comparision, and determines run success/failure.
 
   May be aliased to an alternate library method via the 'lib_run_post' key in a
   run config.
 
 lib_run_prep(env,rundir)
 
+  Takes any actions required prior to starting a run. The 'rundir' argument
+  contains the name of a unique directory to be used by this run.
+
   Returns a string containing the path to the directory where the run should
-  be started (perhaps via queue submission). Takes any actions required prior
-  to starting the run. The 'rundir' argument contains the name of a unique
-  directory to be used by this run.
+  be started (perhaps via queue submission). This may be the same 'rundir' as
+  was passed in, or something else.
 
   May be aliased to an alternate library method via the 'lib_run_prep' key in a
   run config.
 
 lib_suite_post(env)
 
-  Return value is unused. Take any actions necessary after a successful test-
-  suite execution. The passed-in env object has no .build or .run members,
-  only .suite.
+  Take any actions necessary after a successful test-suite execution. The
+  passed-in env object has no .build or .run members, only .suite.
+
+  Return value is unused.
 
   May be aliased to an alternate library method via the 'lib_suite_post' key in
-  a run config.
+  a suite config.
 
 lib_suite_prep(env)
 
-  Return value is unused. Take any actions necessary prior to performing the
-  builds, runs and comparisons defined by the test suite. The passed-in env
-  object has no .build or .run members, only .suite.
+  Take any actions necessary prior to the builds, runs and comparisons defined
+  by the test suite. The passed-in env object has no .build or .run members,
+  only .suite.
+
+  Return value is unused.
 
   May be aliased to an alternate library method via the 'lib_suite_prep' key in
-  a run config.
+  a suite config.
 
 Other methods useful to a specific model or platform may be provided by the
 library implementer as needed.
@@ -404,6 +413,16 @@ hash_matches(file,hash)
   Returns true if the MD5 checksum of the file identified by the 'file' String
   matches the MD5 checksum contained in String 'hash', and false otherwise.
 
+invoke(std,key,*args)
+
+  Symbol argument 'std' names a library method. Symbol argument 'key' names a
+  config type. The *args are the arguments to be passed to the named library
+  method (the first of *args MUST be the 'env' object). If the config named by
+  'key' defines an alias for the method named by 'std', it is called; otherwise,
+  'std' is called. In either case, *args are passed as arguments. For example,
+  'invoke(:lib_comp,:run,env,x)' would result in the call 'lib_comp_alt(env,x)'
+  if the run config contained 'lib_comp: lib_comp_alt'.
+
 job_activate(jobid,run)
 
   Register's the given 'jobid' as having been submitted to the batch system
@@ -443,7 +462,7 @@ logw(msg)
   may be useful to warn users about issues not deemed serious enough to halt
   the test suite.
 
-tmp_dir(dir)
+tmp_dir
 
   The path to a temporary directory, which will be removed by the 'clean'
   command.
