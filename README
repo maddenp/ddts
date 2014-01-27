@@ -156,18 +156,23 @@ core driver to library methods:
   this directory, which will be created automatically by the core drive for
   use by library methods.
 
+- env._dlog: The delayed (file) logger object.
+
+- env._ilog: The immediate (screen) logger object.
+
 - env.run._name: The name of the run, as reported e.g. in log entries.
 
-- env.suite._dlog: The delayed (file) logger object.
-
-- env.suite._ilog: The immediate (screen) logger object.
+- env.suite._suitename: The name of the running suite, as given on the command
+  line. Not valid for single-run (i.e. non-suite) invocations.
 
 - env.suite._totalfailures: The number of runs that failed, either when
   executing or in comparison of their output against another run or against
-  a baseline. This value is final only in the lib_suite_post library method.
+  a baseline. This value is final only in the lib_suite_post library method,
+  and is not valid for single-run (i.e. non-suite) invocations.
 
 - env.suite._totalruns: The number of runs executed by the test suite. This
-  value is final only in the lib_suite_post library method.
+  value is final only in the lib_suite_post library method, and is not valid
+  for single-run (i.e. non-suite) invocations.
 
 --------------------------------------------------------------------------------
 4. Quoting Rules for Fortran Namelists

@@ -516,9 +516,9 @@ class Run
     end
     @ts.runlocks[@r].synchronize do
       break if @ts.runs.has_key?(@r)
-      @env=OpenStruct.new({:run=>loadenv(File.join(run_confs,@r))})
+      @env=OpenStruct.new(@ts.env.marshal_dump) # private copy
+      @env.run=loadenv(File.join(run_confs,@r))
       logd_flush
-      @env.suite=@ts.env.suite
       self.extend(Library)
       @env.run._name=@r
       unless (@bline=@env.run.baseline)
@@ -677,8 +677,8 @@ class TS
   include Common
 
   attr_accessor :activemaster,:activejobs,:baselinemaster,:baselinesrcs,
-  :buildlocks,:buildmaster,:builds,:dlog,:gen_baseline_dir,:havedata,:ilog,:pre,
-  :runlocks,:runmaster,:runs,:suite,:uniq,:use_baseline_dir
+  :buildlocks,:buildmaster,:builds,:dlog,:env,:gen_baseline_dir,:havedata,:ilog,
+  :pre,:runlocks,:runmaster,:runs,:suite,:uniq,:use_baseline_dir
 
   def initialize(tsname,cmd,rest)
 
@@ -693,7 +693,8 @@ class TS
     @buildmaster=Mutex.new
     @builds={}
     @dlog=nil
-    @env={}
+    @env=OpenStruct.new
+    @env.suite=OpenStruct.new
     @gen_baseline_dir=nil
     @havedata=false
     @ilog=nil
@@ -766,7 +767,7 @@ class TS
       m
     end
     if Dir.exist?(builds_dir)
-      if not @env["retain_builds"]
+      if not @env.suite.retain_builds
         builds.each do |build|
           if Dir.exist?(build)
             FileUtils.rm_rf(build)
@@ -845,8 +846,8 @@ class TS
     # or interruption via ctrl-c, commands can be issued to abort them. A
     # baseline is generated if one was requested.
 
-    setup
     @suite=suite
+    setup
     f=File.join(suite_confs,@suite)
     unless File.exists?(f)
       die "Suite '#{@suite}' not found"
@@ -859,18 +860,16 @@ class TS
       logd_flush
       suitespec.each do |k,v|
         # Assume that array values are run groups and move all scalar values
-        # into env, assuming that these are either reserved or user-defined
-        # suite-level settings.
-        @env[k]=suitespec.delete(k) unless v.is_a?(Array)
+        # into @env.suite, assuming that these are either reserved or user-
+        # defined suite-level settings.
+        eval "@env.suite.#{k}=suitespec.delete(k)" unless v.is_a?(Array)
       end
-      @env["_dlog"]=@dlog
-      @env["_ilog"]=@ilog
-      @env["_totalruns"]=0
-      @env["_totalfailures"]=0
-      @env["_suitename"]=@suite
+      @env.suite._totalruns=0
+      @env.suite._totalfailures=0
+      @env.suite._suitename=@suite
       self.extend(Library)
       FileUtils.mkdir_p(tmp_dir)
-      invoke(:lib_suite_prep,:suite,env)
+      invoke(:lib_suite_prep,:suite,@env)
       runset=suitespec.reduce(Set.new) do |m,(k,v)|
         v.each { |x| m.add(x) if x.is_a?(String) }
         m
@@ -891,11 +890,11 @@ class TS
           logi "Suite group #{group} empty, ignoring..."
         end
       end
-      failgroups=threadmon(threads,@env["continue"])
-      if @env["continue"]
+      failgroups=threadmon(threads,@env.suite.continue)
+      if @env.suite.continue
         threads.each do |e|
-          @env["_totalruns"]+=e[:comparison].totalruns
-          @env["_totalfailures"]+=e[:comparison].failruns
+          @env.suite._totalruns+=e[:comparison].totalruns
+          @env.suite._totalfailures+=e[:comparison].failruns
           failgroups+=1 unless e[:comparison].comp_ok
         end
         logi "Suite stats: Failure in #{failgroups} of #{threads.size} group(s)"
@@ -916,17 +915,13 @@ class TS
       end
     end
     if failgroups>0
-      msg="#{@env["_totalfailures"]} of #{@env["_totalruns"]} TEST(S) FAILED"
+      msg="#{@env.suite._totalfailures} of #{@env.suite._totalruns} TEST(S) FAILED"
     else
       msg="ALL TESTS PASSED"
       msg+=" -- but note WARNING(s) above!" if @ilog.warned
     end
     logi msg
-    invoke(:lib_suite_post,:suite,env)
-  end
-
-  def env
-    OpenStruct.new({:suite=>OpenStruct.new(@env)})
+    invoke(:lib_suite_post,:suite,@env)
   end
 
   def gen_baseline(args=nil)
@@ -1008,8 +1003,8 @@ class TS
     # Perform common tasks needed for either full-suite or single-run
     # invocations.
 
-    @ilog=Xlog.new(logs_dir,@uniq)
-    @dlog=XlogBuffer.new(@ilog)
+    env._ilog=(@ilog=Xlog.new(logs_dir,@uniq))
+    env._dlog=(@dlog=XlogBuffer.new(@ilog))
     trap("INT") do
       logi "Interrupted"
       raise Interrupt
