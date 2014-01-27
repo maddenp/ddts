@@ -159,6 +159,31 @@ exe("ex_suite_mismatch_continue","ex_suite_mismatch_continue",
   "0 of 4 TEST(S) FAILED"
   )
 
+# Remove baseline
+
+FileUtils.rm_rf(baseline)
+
+# Single run, generate baseline
+
+exe("ex_1 gen baseline","run gen-baseline #{baseline} ex_1",
+  "Run ex_1: Completed",
+  "Creating ex_baseline baseline: OK"
+  )
+
+# Single run, generate baseline (fail due to conflict)
+
+exe("ex_1 gen baseline (conflict)","run gen-baseline #{baseline} ex_1",
+  "Baseline conflicts in #{baseline}:",
+  "ex_baseline already exists"
+  )
+
+# Single run, use baseline
+
+exe("ex_1 use baseline","run use-baseline #{baseline} ex_1",
+  "Comparing to baseline ex_baseline",
+  "Baseline comparison OK"
+  )
+
 # Remove output directory.
 
 FileUtils.rm_rf($OUT)

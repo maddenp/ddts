@@ -237,7 +237,7 @@ module Common
         logd "#{r2_name} files: #{r2_bases.join(' ')}"
         begin
           ok=false
-          die "File list matching failed #{m}"
+          die "File list matching failed #{m}, see #{logfile}"
         rescue Exception=>x
           unless x.is_a?(DDTSException) and continue
             logd_flush
@@ -262,7 +262,7 @@ module Common
         logd "Comparing #{r1_name} to #{r2_name}: OK"
       else
         begin
-          die "Comparison failed #{m}"
+          die "Comparison failed #{m}, see #{logfile}"
         rescue Exception=>x
           unless x.is_a?(DDTSException) and continue
             logd_flush
@@ -726,7 +726,7 @@ class TS
       end
     end
     unless conflicts.empty?
-      logi "Baseline conflicts:"
+      logi "Baseline conflicts in #{@gen_baseline_dir}:"
       conflicts.sort.uniq.each { |e| logi "  #{e} already exists" }
       die "Aborting..."
     end
@@ -934,7 +934,7 @@ class TS
     # specified baseline directory, then call dosuite() with the supplied suite
     # name.
 
-    help(args,1) if args.empty?
+    help(args,1) unless args.size==2
     @gen_baseline_dir=args.shift
     help(args,1) if args.empty?
     dosuite(args[0])
@@ -968,7 +968,8 @@ class TS
     puts "       #{@pre} use-baseline <directory> <suite>"
     puts "       #{@pre} clean"
     puts "       #{@pre} help"
-    puts "       #{@pre} run <run>"
+    puts "       #{@pre} run [ gen-baseline <dir> ] <run>"
+    puts "       #{@pre} run [ use-baseline <dir> ] <run>"
     puts "       #{@pre} show build <build>"
     puts "       #{@pre} show builds"
     puts "       #{@pre} show run <run>"
@@ -986,13 +987,30 @@ class TS
 
     # Handle the command-line "run" argument, to perform a single named run.
 
-    die "No run name specified" if args.empty?
+    help(args,1) unless args.size==1 or args.size==3
+    help(args,1) unless args.size==1 or args.first=~/^(gen|use)-baseline$/
+    run=args.pop
     setup
+    if args.first=="gen-baseline"
+      args.shift
+      @gen_baseline_dir=args.shift
+      begin
+        avoid_baseline_conflicts([run])
+      rescue Exception=>x
+        exit 1
+      end
+    elsif args.first=="use-baseline"
+      args.shift
+      @use_baseline_dir=args.shift
+      unless Dir.exist?(@use_baseline_dir)
+        die "Baseline directory #{@use_baseline_dir} not found"
+      end
+    end
     FileUtils.mkdir_p(tmp_dir)
     begin
-      run=args[0]
       build_init(run)
       Run.new(run,self)
+      baseline_gen if @gen_baseline_dir
     rescue Interrupt,DDTSException=>x
       halt(x)
     rescue Exception=>x
@@ -1064,8 +1082,11 @@ class TS
     # specified baseline directory, then call dosuite() with the supplied suite
     # name.
 
-    help(args,1) if args.empty?
+    help(args,1) unless args.size==2
     @use_baseline_dir=args.shift
+    unless Dir.exist?(@use_baseline_dir)
+      die "Baseline directory #{@use_baseline_dir} not found"
+    end
     help(args,1) if args.empty?
     dosuite(args[0])
   end

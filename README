@@ -4,19 +4,20 @@ DDTS
 
 Quick Start
 
-  ddts <suite>                    : run the suite named <suite>
-  ddts gen-baseline <dir> <suite> : run <suite> & generate baseline in <dir>
-  ddts use-baseline <dir> <suite> : run <suite> & compare to baseline in <dir>
-  ddts clean                      : remove most test-suite created items
-  ddts help                       : shows this usage information
-  ddts run <run>                  : perform the single run named <run>
-  ddts show build <build>         : show details of the build named <build>
-  ddts show builds                : show valid build names
-  ddts show run <run>             : show details of the run named <run>
-  ddts show runs                  : show valid run names
-  ddts show suite <suite>         : show details of the suite named <suite>
-  ddts show suites                : show valid suite names
-  ddts version                    : print version number and exit
+  ddts <suite>                          : run the suite named <suite>
+  ddts gen-baseline <dir> <suite>       : run <suite>, write baseline to <dir>
+  ddts use-baseline <dir> <suite>       : run <suite>, compare to baseline <dir>
+  ddts clean                            : remove most test-suite created items
+  ddts help                             : shows this usage information
+  ddts run [ gen-baseline <dir> ] <run> : do <run>, write baseline to <dir>
+  ddts run [ use-baseline <dir> ] <run> : do <run>, compare to baseline <dir>
+  ddts show build <build>               : show details of the build <build>
+  ddts show builds                      : show valid build names
+  ddts show run <run>                   : show details of the run <run>
+  ddts show runs                        : show valid run names
+  ddts show suite <suite>               : show details of the suite <suite>
+  ddts show suites                      : show valid suite names
+  ddts version                          : print version number and exit
 
 * Note that either an 'app' directory must exist alongside the 'ddts' wrapper
   script, or the environment variable DDTSAPP must be defined (with the path to
