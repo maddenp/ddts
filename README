@@ -418,6 +418,10 @@ hash_matches(file,hash)
   Returns true if the MD5 checksum of the file identified by the 'file' String
   matches the MD5 checksum contained in String 'hash', and false otherwise.
 
+home_dir
+
+  Returns the root path of the test-suite core driver.
+
 invoke(std,key,*args)
 
   Symbol argument 'std' names a library method. Symbol argument 'key' names a

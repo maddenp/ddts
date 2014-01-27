@@ -74,6 +74,10 @@ module Utility
     Digest::MD5.file(file)==hash
   end
 
+  def home_dir
+    $DDTSHOME
+  end
+
   def invoke(std,key,*args)
     env=args.first
     section=env.marshal_dump[key]
