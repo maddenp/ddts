@@ -253,13 +253,19 @@ lib_build(env)
   May be aliased to an alternate library method via the 'lib_build' key in a run
   config.
 
-lib_build_post(env,build_result)
+lib_build_post(env,buildkit)
 
   Performs any actions necessary after a build completes. The object returned by
-  the lib_build method is received as the 'build_result' argument.
+  the lib_build method is received as the 'buildkit' argument.
 
-  Returns a string containing the path to a directory containing the runtime
-  files necessary to perform a run.
+  Returns an arbitrary object containing whatever is needed for a run to make
+  use of the build results. For example, the object may contain (among other
+  things), the path to a directory containing the runtime files necessary to
+  perform a run. This object will be made available to each run using this
+  build via env.build._result.
+
+  If the build fails to return, env.build._result will contain the :build_failed
+  symbol.
 
   May be aliased to an alternate library method via the 'lib_build_post' key in
   a run config.

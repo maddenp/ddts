@@ -646,10 +646,10 @@ class Run
         invoke(:lib_build_prep,:run,@env)
         logd_flush
         logd "* Output from build #{b}:"
-        build_result=invoke(:lib_build,:run,@env)
+        buildkit=invoke(:lib_build,:run,@env)
         logd_flush
         @ts.buildmaster.synchronize do
-          @ts.builds[b]=invoke(:lib_build_post,:run,@env,build_result)
+          @ts.builds[b]=invoke(:lib_build_post,:run,@env,buildkit)
         end
         logi "Build #{b} completed"
       end

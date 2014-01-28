@@ -4,7 +4,7 @@ module Library
     true
   end
 
-  def lib_build_post(env,output)
+  def lib_build_post(env,buildkit)
     true
   end
 

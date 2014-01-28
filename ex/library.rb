@@ -12,7 +12,7 @@ module Library
     ext(cmd,{:msg=>"Build failed, see #{logfile}"})
   end
 
-  def lib_build_post(env,output)
+  def lib_build_post(env,buildkit)
     File.join(env.build._root,env.build.bindir,env.build.binname)
   end
 
