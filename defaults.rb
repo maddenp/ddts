@@ -24,6 +24,10 @@ module Library
     true
   end
 
+  def lib_run_check(env,postkit)
+    true
+  end
+
   def lib_run_post(env,runkit)
     true
   end

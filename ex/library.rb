@@ -59,9 +59,12 @@ module Library
     File.join(rundir,'stdout')
   end
 
+  def lib_run_check(env,postkit)
+    (job_check(postkit,"SUCCESS"))?(true):(false)
+  end
+
   def lib_run_post(env,runkit)
-    stdout=runkit
-    (job_check(stdout,"SUCCESS"))?(true):(false)
+    runkit
   end
 
   def lib_run_prep(env,rundir)

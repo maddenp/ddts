@@ -333,13 +333,24 @@ lib_run(env,rundir)
   May be aliased to an alternate library method via the 'lib_run' key in a run
   config.
 
+lib_run_check(env,postkit)
+
+  Returns a true or false value indicating whether the run suceeded or failed.
+  The 'postkit' argument contains the object returned by the lib_run_post
+  method.
+
+  May be aliased to an alternate library method via the 'lib_run_check' key in
+  a run config.
+
 lib_run_post(env,runkit)
 
   Takes any actions necessary following a successful run, before the test suite
-  proceeds to output comparision, and determines run success or failure. The
-  'runkit' argument contains the object returned by the lib_run method.
+  proceeds to output comparision. The 'runkit' argument contains the object
+  returned by the lib_run method.
 
-  Returns a true or false value indicating whether the run succeeded or failed.
+  Returns an arbitrary object containing whatever is needed (1) to determine
+  whether the run succeeded or failed, and (2) for any suite-level purposes
+  identified by the library implementor.
 
   May be aliased to an alternate library method via the 'lib_run_post' key in a
   run config.

@@ -548,9 +548,14 @@ class Run
         logd_flush
         logd "* Output from run:"
         runkit=invoke(:lib_run,:run,@env,@rundir)
-        if (success=invoke(:lib_run_post,:run,@env,runkit))
-          result=OpenStruct.new({:name=>@r,:files=>invoke(:lib_outfiles,:run,@env,@rundir)})
-          @ts.runmaster.synchronize { @ts.runs[@r]=result }
+        postkit=invoke(:lib_run_post,:run,@env,runkit)
+        if (success=invoke(:lib_run_check,:run,@env,postkit))
+          result={
+            :files=>invoke(:lib_outfiles,:run,@env,@rundir),
+            :name=>@r,
+            :result=>postkit
+          }
+          @ts.runmaster.synchronize { @ts.runs[@r]=OpenStruct.new(result) }
           if @ts.use_baseline_dir
             baseline_comp
           elsif @ts.gen_baseline_dir
