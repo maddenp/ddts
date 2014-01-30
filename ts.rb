@@ -450,9 +450,8 @@ class Comparison
     # of this object.
 
     @env=env
-    @env._dlog=@ts.env._dlog
-    @env._ilog=@ts.env._ilog
     @ts=ts
+    @env.suite=OpenStruct.new(@ts.env.marshal_dump)
     @dlog=XlogBuffer.new(ts.ilog)
     @pre="Comparison"
     @totalruns=a.size
@@ -1033,8 +1032,8 @@ class TS
     # Perform common tasks needed for either full-suite or single-run
     # invocations.
 
-    env._ilog=(@ilog=Xlog.new(logs_dir,@uniq))
-    env._dlog=(@dlog=XlogBuffer.new(@ilog))
+    @env._ilog=(@ilog=Xlog.new(logs_dir,@uniq))
+    @env._dlog=(@dlog=XlogBuffer.new(@ilog))
     trap("INT") do
       logi "Interrupted"
       raise Interrupt
