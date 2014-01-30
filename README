@@ -35,8 +35,8 @@ necessary. One subdirectory will be created under <dir> for each unique
 'baseline' value specified in the configs of the suite's various runs. These
 subdirectories must not already exist.
 
-Run 'ddts use-baseline <dir> <suite>' to compare a new suite to the existing
-baseline in <dir>.
+Run 'ddts use-baseline <dir> <suite>' to compare the output produced by a new
+suite invocation to the existing baseline in <dir>.
 
 A useful workflow might consist of these steps:
 
@@ -51,7 +51,8 @@ A useful workflow might consist of these steps:
 
 Each 'ddts' invocation that does not fail immediately generates a verbose
 logfile named 'log.timestamp', where timestamp is the seconds-since-epoch test-
-suite start time.
+suite start time. Logfiles are created under $DDTSAPP/logs (see the next section
+for information on DDTSAPP).
 
 --------------------------------------------------------------------------------
 3. Configuration
@@ -62,7 +63,7 @@ following, which must appear either in a (possibly symlinked) directory named
 'app', alongside ts.rb; or in a directory named by the environment variable
 'DDTSAPP' (where the latter, if defined, takes precedence):
 
-- An implementation of library.rb: See below, and the example application in
+- An implementation of library.rb. See below, and the example application in
   the directory 'ex', for reference.
 
 - YAML build, run and suite configuration files, in the 'builds', 'runs', and
@@ -71,57 +72,59 @@ following, which must appear either in a (possibly symlinked) directory named
 The configuration files in the 'builds', 'runs' and 'suites' directories are
 expressed in YAML. They are parsed by the core driver and instantiated as hash
 and array containers. An 'env' environment object is passed in as the first
-argument to each library method. Its 'build', 'run' and 'suite' members expose
-the contents of their respective configs -- as well as items that may be added
-by the library implementer -- as OpenStruct objects.
+argument to each library method (see section 5). The 'build', 'run' and 'suite'
+members of the env object expose the contents of their respective configs -- as
+well as items that may be added by the library implementer -- as OpenStruct
+objects, for easy access.
 
 3.1 Build Configs
 -----------------
 
-Build configs are represented as the YAML equivalents of nested hashes, and
-contain the information necessary to construct a command to perform a build
-via the external build-automation system. Their content, then, depends on
-the requirements of that system and the interface to it defined in the core
-driver and library. Like run configs (see below), build configs can be
+Build configs contain the information necessary to construct a command to
+perform a build via the external build-automation system. Their content, then,
+depends on the requirements of that system and the interface to it defined in
+library methods. Like run configs (see section 3.2, below), build configs can be
 composed via the 'extends' key.
 
-Keys prefixed with 'lib_' are reserved, and provide a per-build mechanism
-for overriding library methods.
+Keys prefixed with 'lib_' are reserved, and provide a per-build mechanism for
+overriding library methods.
 
 3.2 Run Configs
 ---------------
 
-Run configs are represented as the YAML equivalents of nested hashes, and
-contain the information necessary to prepare, configure, execute and verify
-a run; to associate it with a baseline image; etc. Config contents will
+Run configs contain the information necessary to prepare, configure, execute and
+verify runs; to associate them with baseline images; etc. Config contents will
 depend on the model and platform, but several top-level keys are reserved:
 
 - [required] The 'baseline' key specifies the name of the baseline image
-  into which this run's output should (potentially) be copied, or against
-  which this run's output should be compared. Runs whose output is expected
-  to be identical should share a common 'baseline' value. To exclude a run
-  from baseline participation, specify the value 'none'.
+  into which this run's output should be copied (when baseline generation is
+  requested), or against which it should be verified (when baseline comparison
+  is requested). Runs whose output is expected to be identical should share a
+  common 'baseline' value. To exclude a run from baseline participation, specify
+  the value 'none'.
 
-- [required] The 'build' key specifies the name of the build (i.e. the
-  filename of a build config) to use for this run.
+- [required] The 'build' key specifies the name of the build (i.e. the filename
+  of a build config) to use for this run.
 
 - [optional] The 'extends' key specifies the name of a run config from which
-  the current config should inherit, and which is may override. Rrecursion
-  is supported, but loops are fatal errors.
+  the current config should inherit, and which it may override. Rrecursion is
+  supported, but loops are fatal errors.
 
-- Keys prefixed with 'lib_', which provide a per-run mechanism for over-
-  riding library methods.
+- Keys prefixed with 'lib_', which provide a per-run mechanism for overriding
+  library methods, are reserved.
 
 3.3 Suite Configs
 -----------------
 
-Suite configs are represented as the YAML equivalent of a hash of arrays
-and strings. Each outer array element names a group of runs expected to
+Each outer, array element in a suite config names a group of runs expected to
 produce identical output, whose output will be compared together via some
 comparison criterion (bitwise identity, by default). Inner array elements
 are the names of runs (i.e. filenames of run configs).
 
-The following reserved keys are available:
+Each outer, scalar element in a suite config represents a suite-level
+configuration parameter.
+
+The following reserved keys (suite-level configuration paramters) are available:
 
 - [optional] The 'build_only' key, defined with any true value, indicates
   that the builds required by the suite should be performed, but that all
@@ -133,51 +136,63 @@ The following reserved keys are available:
 
 - [optional] The 'retain_builds' key, defined with any true value, indicates
   that the core driver should rebuild over existing builds without deleting
-  them first.
+  them first. This should generally be considered unsafe.
 
 - Keys prefixed with 'lib_', which provide a per-suite (or per-comparison-group)
-  mechanism for overriding library methods.
+  mechanism for overriding library methods, are reserved.
 
 NOTE that any suite-config items whose values are arrays will be interpreted
 as run group definitions. Those whose values are scalars will be interpreted
-as suite-level settings.
+as suite-level configuration parameters. Custom parameters may be be added, and
+will appear in the env.suite object passed into library methods.
 
 3.4 Other Reserved Keys
 -----------------------
 
 In addition to those already listed, key names beginning with an underscore
 are reserved. In particular, the following keys are made available by the
-core driver to library methods:
+core driver to library methods. Recommended library methods from which to
+access these keys are given. Access may be possible from other methods, but
+access from other than the recommended methods should handle errors (i.e.
+nil values).
 
-- env._dlog: The delayed (file) logger object. Valid in all library methods.
+- env._dlog: The delayed (file) logger object. Access recommended from method
+  lib_suite_post. For expert use only: Logging should be done via Utility
+  methods logd and logi.
 
-- env._ilog: The immediate (screen) logger object. Valid in all library methods.
+- env._ilog: The immediate (screen) logger object. Access recommended from
+  methods lib_suite_post. For expert use only: Logging should be done via
+  Utility methods logd and logi.
 
-- env.build._result: The final value returned by the run thread that performs a
-  build. 
+- env.build._result: The final value returned from lib_build_post. Access
+  recommended from methdos lib_run*.
 
 - env.build._root: The path to a unique directory reserved for this build.
   It is recommended, but not required, that the build be performed under
   this directory, which will be created automatically by the core drive for
-  use by library methods.
+  use by library methods. Access recommended from methods lib_build*.
 
-- env.run._name: The name of the run, as reported e.g. in log entries.
+- env.run._name: The name of the run, as reported e.g. in log entries. Access
+  recommended from methods lib_run*.
 
 - env.suite._runs: A hash mapping run names to the object returned by the
-  lib_run_post method. This value is final only in the lib_suite_post library
-  method, and is not valid for single-run (i.e. non-suite) invocations.
+  lib_run_post method. Access recommended from method lib_suite_post. This value
+  is final only in lib_suite_post, and only for suite (not single-run)
+  invocations.
 
 - env.suite._suitename: The name of the running suite, as given on the command
-  line. Not valid for single-run (i.e. non-suite) invocations.
+  line. Access recommended from methods lib_suite*, and only for suite (not
+  single-run) invocations.
 
 - env.suite._totalfailures: The number of runs that failed, either when
   executing or in comparison of their output against another run or against
-  a baseline. This value is final only in the lib_suite_post library method,
-  and is not valid for single-run (i.e. non-suite) invocations.
+  a baseline. Access recommended from method lib_suite_post. This value is final
+  only in lib_suite_post, and only for suite (not single-run) invocations.
 
-- env.suite._totalruns: The number of runs executed by the test suite. This
-  value is final only in the lib_suite_post library method, and is not valid
-  for single-run (i.e. non-suite) invocations.
+- env.suite._totalruns: The number of runs executed by the test suite. Access
+  recommended from method lib_suite_post. This value is final only in
+  lib_suite_post library method, and only for suite (not single-run)
+  invocations.
 
 --------------------------------------------------------------------------------
 4. Quoting Rules for Fortran Namelists
@@ -221,22 +236,27 @@ caveats:
 --------------------------------------------------------------------------------
 
 library.rb contains methods defining the interface between the test suite and
-the model and platform. The section 'Model/Platform Methods', below, describes
-the methods called by the core driver.
+the model and platform. Section 5.1, below, describes the methods called by the
+core driver.
 
 Library methods should not use instance variables. Communication with the core
-driver or with other library methods may be done either via method arguments, or
-via the passed-in 'env' environment object. (The 'env' OpenStruct object has
-.build, .run and .suite members that expose the contents of the respective
-configs) New members may be added to env.[build|run|suite], or to env itself, as
-needed.)
+driver or with other library methods should be done either via the passed-in
+'env' object, or via the objects returned by certain library methods. Section
+5.1 discusses the return values expected from library methods and how they are
+used by the core driver. The 'env' OpenStruct object has .build, .run and .suite
+members that expose the contents of the respective configs. New members may be
+added to env.[build|run|suite], or to env itself, as needed. Note that, while
+changes made to the top-level env object and its .suite member from TS objects
+(see call-order table in section 5.1) are visible in the subordinate Comparison
+and Run objects, changes made by Comparison and Run objects are confined to
+those objects.
 
 5.1 Model/Platform Methods
 --------------------------
 
 These methods are called directly by the core driver. An environment object (see
-above) is passed in as the first argument to each method; it may be inspected in
-each method to determine what information it contains.
+section 3) is passed in as the first argument to each library method; it may be
+inspected in each method to determine what information it contains.
 
 A Library module with default (and mostly useless) implementations of these
 methods is provided by defaults.rb, which is loaded automatically by the core
@@ -246,6 +266,29 @@ defaults.rb. Finally, as described below for each library method, special keys
 in suite, run and build configs may override both library.rb and defaults.rb
 definitions, specifying alternate method names for each standard library method
 name. See the 'ex' application for examples.
+
+The library methods are called in the following order:
+
+ # Calling Object  Method            Notes
+-- -------------- ------------------ -------------------------------------------
+ 1 TS             lib_suite_prep
+ 2 Run            lib_build_prep
+ 3 Run            lib_build
+ 4 Run            lib_build_post
+ 5 Run            lib_data
+ 6 Run            lib_run_prep
+ 7 Run            lib_run
+ 8 Run            lib_run_post
+ 9 Run            lib_run_check
+10 Run            lib_outfiles
+11 Run            lib_comp           When 'use-baseline' is specified
+12 Comparison     lib_comp           When comparison group contains > 1 run
+13 TS             lib_suite_post
+
+Additionally, lib_queue_del_cmd may be called asynchronously for any job whose
+ID has been registered via a call to Utility#job_activate.
+
+Description of library methods:
 
 lib_build(env)
 
@@ -354,7 +397,7 @@ lib_run_post(env,runkit)
 
   Returns an arbitrary object containing whatever is needed (1) to determine
   whether the run succeeded or failed, and (2) for any suite-level purposes
-  identified by the library implementor.
+  identified by the library implementer.
 
   May be aliased to an alternate library method via the 'lib_run_post' key in a
   run config.
@@ -393,7 +436,8 @@ lib_suite_prep(env)
   a suite config.
 
 Other methods useful to a specific model or platform may be provided by the
-library implementer as needed.
+library implementer as needed. See uses of Utility#invoke in ts.rb for examples
+of how to override such custom methods via build, run and suite configs.
 
 5.2 Utility Methods
 -------------------
