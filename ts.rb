@@ -931,7 +931,10 @@ class TS
       msg+=" -- but note WARNING(s) above!" if @ilog.warned
     end
     logi msg
-    @env.suite._runs=@runs.reduce({}) { |m,(k,v)| m[k]=v.result; m }
+    @env.suite._runs=@runs.reduce({}) do |m,(k,v)|
+      m[k]=(v.is_a?(OpenStruct))?(v.result):(v)
+      m
+    end
     invoke(:lib_suite_post,:suite,@env)
   end
 
