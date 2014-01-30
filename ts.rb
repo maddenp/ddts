@@ -450,6 +450,8 @@ class Comparison
     # of this object.
 
     @env=env
+    @env._dlog=@ts.env._dlog
+    @env._ilog=@ts.env._ilog
     @ts=ts
     @dlog=XlogBuffer.new(ts.ilog)
     @pre="Comparison"
@@ -930,6 +932,7 @@ class TS
       msg+=" -- but note WARNING(s) above!" if @ilog.warned
     end
     logi msg
+    @env.suite._runs=@runs.reduce({}) { |m,(k,v)| m[k]=v.result; m }
     invoke(:lib_suite_post,:suite,@env)
   end
 
