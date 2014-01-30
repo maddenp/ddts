@@ -108,7 +108,8 @@ exe("ex_suite use-baseline","use-baseline #{baseline} ex_suite",
 exe("ex_suite_1p_1f","ex_suite_1p_1f",
   "Group stats: 1 of 2 runs failed, skipping comparison",
   "Suite stats: Failure in 1 of 1 group(s)",
-  "Failure in 1 of 1 group(s)"
+  "Failure in 1 of 1 group(s)",
+  "fail rate = 0.5"
   )
 
 # ex_suite_2p_1f executes three runs in one group, where one fails. The two
