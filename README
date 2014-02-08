@@ -161,19 +161,19 @@ nil values).
   methods logd and logi.
 
 - env._ilog: The immediate (screen) logger object. Access recommended from
-  methods lib_suite_post. For expert use only: Logging should be done via
+  method lib_suite_post. For expert use only: Logging should be done via
   Utility methods logd and logi.
 
 - env.build._result: The final value returned from lib_build_post. Access
-  recommended from methdos lib_run*.
+  recommended from method lib_run*.
 
 - env.build._root: The path to a unique directory reserved for this build.
   It is recommended, but not required, that the build be performed under
   this directory, which will be created automatically by the core drive for
-  use by library methods. Access recommended from methods lib_build*.
+  use by library methods. Access recommended from method lib_build*.
 
 - env.run._name: The name of the run, as reported e.g. in log entries. Access
-  recommended from methods lib_run*.
+  recommended from method lib_run*.
 
 - env.suite._runs: A hash mapping run names to the object returned by the
   lib_run_post method. Access recommended from method lib_suite_post. This value
@@ -181,7 +181,7 @@ nil values).
   invocations.
 
 - env.suite._suitename: The name of the running suite, as given on the command
-  line. Access recommended from methods lib_suite*, and only for suite (not
+  line. Access recommended from method lib_suite*, and only for suite (not
   single-run) invocations.
 
 - env.suite._totalfailures: The number of runs that failed, either when
