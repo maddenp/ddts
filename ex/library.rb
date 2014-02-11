@@ -26,7 +26,7 @@ module Library
     Dir.glob(expr).map { |e| [path,File.basename(e)] }
   end
 
-  def lib_comp_alt(f1,f2)
+  def lib_comp_alt(env,f1,f2)
     logi "Comparing '#{f1}' to '#{f2}' with alternate comparator..."
     FileUtils.compare_file(f1,f2)
   end
