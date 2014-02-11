@@ -1099,7 +1099,7 @@ class TS
   end
 
   def version(args)
-    puts "pre-1.0"
+    puts "1.0"
   end
 
 end # class TS
