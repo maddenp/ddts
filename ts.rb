@@ -820,44 +820,6 @@ class TS
 
   end
 
-  def avoid_baseline_conflicts
-
-    # Examine each run the suite plans to execute, report any pre-existing
-    # baseline-image directories that would potentially be clobbered if we
-    # continue, then die.
-
-    conflicts=[]
-    runs_all.each do |run|
-      unless (b=loadspec(File.join(run_confs,run),true)["baseline"])=="none"
-        conflicts.push(b) if Dir.exist?(File.join(gen_baseline_dir,b))
-      end
-    end
-    unless conflicts.empty?
-      logi "Baseline conflicts in #{gen_baseline_dir}:"
-      conflicts.sort.uniq.each { |e| logi "  #{e} already exists" }
-      die "Aborting..."
-    end
-
-  end
-
-  def avoid_unsatisfied_requires
-
-    error=false
-    runs_all.each do |run|
-      unless (require=loadspec(File.join(run_confs,run),true)["require"])==nil
-        require=[require] unless require.is_a?(Array)
-        require.each do |e|
-          unless @ts.runs_all.include?(e)
-            logi "Run '#{@r}' depends on unscheduled run '#{e}'"
-            error=true
-          end
-        end
-      end
-    end
-    die "Aborting..." if error
-
-  end
-
   def baseline_gen
 
     # Generate a baseline. For each set of runs sharing a common value for the
@@ -1007,7 +969,7 @@ class TS
       suitespec.each do |k,v|
         v.each { |x| runs_all.add(x) if x.is_a?(String) }
       end
-      avoid_baseline_conflicts if gen_baseline_dir
+      sanity_checks(gen_baseline_dir)
       build_init(runs_all)
       suitespec.each do |group,runs|
         group_hash=runs.reduce({}) do |m,e|
@@ -1129,20 +1091,20 @@ class TS
     run=args.pop
     runs_all.add(run)
     setup
-    if args.first=="gen-baseline"
-      args.shift
-      @gen_baseline_dir=args.shift
-      begin
-        avoid_baseline_conflicts
-      rescue Exception=>x
-        exit 1
+    begin
+      if args.first=="gen-baseline"
+        args.shift
+        @gen_baseline_dir=args.shift
+      elsif args.first=="use-baseline"
+        args.shift
+        @use_baseline_dir=args.shift
+        unless Dir.exist?(use_baseline_dir)
+          die "Baseline directory #{use_baseline_dir} not found"
+        end
       end
-    elsif args.first=="use-baseline"
-      args.shift
-      @use_baseline_dir=args.shift
-      unless Dir.exist?(use_baseline_dir)
-        die "Baseline directory #{use_baseline_dir} not found"
-      end
+      sanity_checks(gen_baseline_dir)
+    rescue Exception=>x
+      exit 1
     end
     FileUtils.mkdir_p(tmp_dir)
     begin
@@ -1156,6 +1118,45 @@ class TS
       x.backtrace.each { |e| logi e }
       exit 1
     end
+
+  end
+
+  def sanity_checks(check_baseline_conflicts=false)
+
+    baseline_conflict=false
+    unsatisfied_require=false
+
+    runs_all.each do |run|
+
+      spec=loadspec(File.join(run_confs,run),true)
+
+      # If a baseline is being generated, check for any pre-existing baseline-
+      # image directories that would potentially be clobbered if we continue.
+
+      if check_baseline_conflicts
+        unless (b=spec["baseline"])=="none"
+          if Dir.exist?(File.join(gen_baseline_dir,b))
+            logi "ERROR: Run '#{run}' could overwrite baseline '#{b}'"
+            baseline_conflict=true
+          end
+        end
+      end
+
+      # Check that all run dependencies are satisfied by scheduled runs.
+
+      unless (r=spec["require"])==nil
+        r=[r] unless r.is_a?(Array)
+        r.each do |e|
+          unless runs_all.include?(e)
+            logi "ERROR: Run '#{run}' depends on unscheduled run '#{e}'"
+            unsatisfied_require=true
+          end
+        end
+      end
+
+    end
+
+    die "Aborting..." if baseline_conflict or unsatisfied_require
 
   end
 

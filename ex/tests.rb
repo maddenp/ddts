@@ -90,7 +90,7 @@ exe("ex_suite (gen baseline pass)","gen-baseline #{baseline} ex_suite",
 # Retry baseline creation -- it should fail.
 
 exe("ex_suite (gen baseline fail)","gen-baseline #{baseline} ex_suite",
-  "ex_baseline already exists",
+  "Run 'ex_1' could overwrite baseline 'ex_baseline'",
   "Test suite 'ex_suite' FAILED"
   )
 
@@ -174,8 +174,8 @@ exe("ex_1 gen baseline","run gen-baseline #{baseline} ex_1",
 # Single run, generate baseline (fail due to conflict)
 
 exe("ex_1 gen baseline (conflict)","run gen-baseline #{baseline} ex_1",
-  "Baseline conflicts in #{baseline}:",
-  "ex_baseline already exists"
+  "Run 'ex_1' could overwrite baseline 'ex_baseline'",
+  "Aborting..."
   )
 
 # Single run, use baseline
