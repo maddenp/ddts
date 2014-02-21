@@ -185,6 +185,32 @@ exe("ex_1 use baseline","run use-baseline #{baseline} ex_1",
   "Baseline comparison OK"
   )
 
+## Single run with unsatisfied 'require'.
+#
+#exe("ex_2_require fail","run ex_2_require",
+# "Run 'ex_2_require' depends on unscheduled run 'ex_1'",
+# "Run FAILED"
+# )
+#
+## Suite with satisfied 'require'.
+#
+#exe("ex_suite_require pass","ex_suite_require_pass",
+# "Waiting on required run: ex_1",
+# "Run ex_2_require: Completed",
+# "ALL TESTS PASSED"
+# )
+#
+## Suite with unsatisfied 'require' (unscheduled run)
+#
+#exe("ex_suite_require fail (unscheduled run)","ex_suite_require_fail_1",
+# )
+#
+## Suite with unsatisfied 'require' (failed run)
+#
+#exe("ex_suite_require fail (failed run)","ex_suite_fail_2",
+#
+# )
+
 # Remove output directory.
 
 FileUtils.rm_rf($OUT)

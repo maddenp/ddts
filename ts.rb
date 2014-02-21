@@ -327,7 +327,7 @@ module Common
 
   end
 
-  def loadspec(file,descendant=nil,specs=nil)
+  def loadspec(file,quiet=false,descendant=nil,specs=nil)
 
     # Parse YAML spec from file, potentially using recursion to merge the
     # current spec onto a specified ancestor. Keep track of spec files already
@@ -336,9 +336,9 @@ module Common
     specs=[] if specs.nil?
     die "Circular dependency detected for #{file}" if specs.include?(file)
     specs << file
-    me=parse(file)
+    me=parse(file,quiet)
     ancestor=me["extends"]
-    me=loadspec(File.join(File.dirname(file),ancestor),me,specs) if ancestor
+    me=loadspec(File.join(File.dirname(file),ancestor),quiet,me,specs) if ancestor
     me=mergespec(me,descendant) unless descendant.nil?
     me
 
@@ -371,7 +371,7 @@ module Common
 
   end
 
-  def parse(file)
+  def parse(file,quiet=false)
 
     # Instantiate a Ruby object from a YAML config file.
 
@@ -384,7 +384,7 @@ module Common
       x.backtrace.each { |e| logd e }
       die "Error parsing YAML from "+file
     end
-    if @dlog
+    if @dlog and not quiet
       c=File.basename(file)
       logd "Read config '#{c}':"
       die "Config '#{c}' is invalid" unless o
@@ -569,11 +569,6 @@ class Run
 
       if (require=@env.run.require)
         require=[require] unless require.is_a?(Array)
-        require.each do |e|
-          unless @ts.runs_all.include?(e)
-            die "Run '#{@r}' depends on unscheduled run '#{e}'"
-          end
-        end
         suffix=(require.size==1)?(""):("(s)")
         logi "Waiting on required run#{suffix}: #{require.join(', ')}"
         @env.run.reqout={}
@@ -833,7 +828,7 @@ class TS
 
     conflicts=[]
     runs_all.each do |run|
-      unless (b=loadspec(File.join(run_confs,run))["baseline"])=="none"
+      unless (b=loadspec(File.join(run_confs,run),true)["baseline"])=="none"
         conflicts.push(b) if Dir.exist?(File.join(gen_baseline_dir,b))
       end
     end
@@ -842,6 +837,24 @@ class TS
       conflicts.sort.uniq.each { |e| logi "  #{e} already exists" }
       die "Aborting..."
     end
+
+  end
+
+  def avoid_unsatisfied_requires
+
+    error=false
+    runs_all.each do |run|
+      unless (require=loadspec(File.join(run_confs,run),true)["require"])==nil
+        require=[require] unless require.is_a?(Array)
+        require.each do |e|
+          unless @ts.runs_all.include?(e)
+            logi "Run '#{@r}' depends on unscheduled run '#{e}'"
+            error=true
+          end
+        end
+      end
+    end
+    die "Aborting..." if error
 
   end
 
@@ -880,7 +893,7 @@ class TS
     logd "----"
     runs=(run_or_runs.respond_to?(:each))?(run_or_runs):([run_or_runs])
     builds=runs.reduce(Set.new) do |m,e|
-      m.add(File.join(builds_dir,loadspec(File.join(run_confs,e))["build"]))
+      m.add(File.join(builds_dir,loadspec(File.join(run_confs,e),true)["build"]))
       logd "----"
       m
     end
