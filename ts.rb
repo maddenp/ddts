@@ -831,11 +831,11 @@ class TS
     conflicts=[]
     runs_all.each do |run|
       unless (b=loadspec(File.join(run_confs,run))["baseline"])=="none"
-        conflicts.push(b) if Dir.exist?(File.join(@gen_baseline_dir,b))
+        conflicts.push(b) if Dir.exist?(File.join(gen_baseline_dir,b))
       end
     end
     unless conflicts.empty?
-      logi "Baseline conflicts in #{@gen_baseline_dir}:"
+      logi "Baseline conflicts in #{gen_baseline_dir}:"
       conflicts.sort.uniq.each { |e| logi "  #{e} already exists" }
       die "Aborting..."
     end
@@ -849,9 +849,9 @@ class TS
     # managed to insert its result data in the baseline-sources array first) to
     # the subdirectory of baseline/<suite> named by that common 'baseline' key.
 
-    @baselinesrcs.each do |r,src|
+    baselinesrcs.each do |r,src|
       logi "Creating #{r} baseline..."
-      dst=File.join(@gen_baseline_dir,r)
+      dst=File.join(gen_baseline_dir,r)
       src.files.each do |p1,p2|
         fullpath=File.join(p1,p2)
         minipath=p2
@@ -882,7 +882,7 @@ class TS
       m
     end
     if Dir.exist?(builds_dir)
-      if not @env.suite.retain_builds
+      if not env.suite.retain_builds
         builds.each do |build|
           if Dir.exist?(build)
             FileUtils.rm_rf(build)
@@ -966,11 +966,11 @@ class TS
 
     @suite=suite
     setup
-    f=File.join(suite_confs,@suite)
+    f=File.join(suite_confs,suite)
     unless File.exists?(f)
-      die "Suite '#{@suite}' not found"
+      die "Suite '#{suite}' not found"
     end
-    logi "Running test suite '#{@suite}'"
+    logi "Running test suite '#{suite}'"
     threads=[]
     begin
       logd "Loading suite spec #{f}"
@@ -978,20 +978,20 @@ class TS
       logd_flush
       suitespec.each do |k,v|
         # Assume that array values are run groups and move all scalar values
-        # into @env.suite, assuming that these are either reserved or user-
+        # into env.suite, assuming that these are either reserved or user-
         # defined suite-level settings.
-        eval "@env.suite.#{k}=suitespec.delete(k)" unless v.is_a?(Array)
+        eval "env.suite.#{k}=suitespec.delete(k)" unless v.is_a?(Array)
       end
-      @env.suite._totalruns=0
-      @env.suite._totalfailures=0
-      @env.suite._suitename=@suite
+      env.suite._totalruns=0
+      env.suite._totalfailures=0
+      env.suite._suitename=suite
       self.extend(Library)
       FileUtils.mkdir_p(tmp_dir)
-      invoke(:lib_suite_prep,:suite,@env)
+      invoke(:lib_suite_prep,:suite,env)
       suitespec.each do |k,v|
         v.each { |x| runs_all.add(x) if x.is_a?(String) }
       end
-      avoid_baseline_conflicts if @gen_baseline_dir
+      avoid_baseline_conflicts if gen_baseline_dir
       build_init(runs_all)
       suitespec.each do |group,runs|
         group_hash=runs.reduce({}) do |m,e|
@@ -1007,11 +1007,11 @@ class TS
           logi "Suite group #{group} empty, ignoring..."
         end
       end
-      failgroups=threadmon(threads,@env.suite.continue)
-      if @env.suite.continue
+      failgroups=threadmon(threads,env.suite.continue)
+      if env.suite.continue
         threads.each do |e|
-          @env.suite._totalruns+=e[:comparison].totalruns
-          @env.suite._totalfailures+=e[:comparison].failruns
+          env.suite._totalruns+=e[:comparison].totalruns
+          env.suite._totalfailures+=e[:comparison].failruns
           failgroups+=1 unless e[:comparison].comp_ok
         end
         logi "Suite stats: Failure in #{failgroups} of #{threads.size} group(s)"
@@ -1024,7 +1024,7 @@ class TS
       x.backtrace.each { |e| logi e }
       exit 1
     end
-    if @gen_baseline_dir
+    if gen_baseline_dir
       if failgroups>0
         logi "Skipping baseline generation due to #{failgroups} run failure(s)"
       else
@@ -1032,25 +1032,24 @@ class TS
       end
     end
     if failgroups>0
-      msg="#{@env.suite._totalfailures} of #{@env.suite._totalruns} TEST(S) FAILED"
+      msg="#{env.suite._totalfailures} of #{env.suite._totalruns} TEST(S) FAILED"
     else
       msg="ALL TESTS PASSED"
-      msg+=" -- but note WARNING(s) above!" if @ilog.warned
+      msg+=" -- but note WARNING(s) above!" if ilog.warned
     end
     logi msg
-    @env.suite._runs=@runs_completed.reduce({}) do |m,(k,v)|
+    env.suite._runs=runs_completed.reduce({}) do |m,(k,v)|
       m[k]=(v.is_a?(OpenStruct))?(v.result):(v)
       m
     end
-    invoke(:lib_suite_post,:suite,@env)
+    invoke(:lib_suite_post,:suite,env)
 
   end
 
   def gen_baseline(args=nil)
 
     # If 'gen-baseline' was supplied as the command-line argument, record the
-    # specified baseline directory, then call dosuite() with the supplied suite
-    # name.
+    # specified baseline directory, then call dosuite with the suite name.
 
     help(args,1) unless args.size==2
     @gen_baseline_dir=args.shift
@@ -1065,17 +1064,17 @@ class TS
     # that are still active. Print some (hopefully helpful) diagnostic messages
     # and then exit.
 
-    unless @activejobs.nil? or @activejobs.empty?
+    unless activejobs.nil? or activejobs.empty?
       logi "Stopping runs..."
-      @activemaster.synchronize do
-        @activejobs.each { |jobid,job| job.jobdel(jobid) }
+      activemaster.synchronize do
+        activejobs.each { |jobid,job| job.jobdel(jobid) }
       end
     end
     logd x.message
     logd "* Backtrace:"
     x.backtrace.each { |e| logd e }
     logd_flush
-    pre=(@suite.nil?)?("Run"):("Test suite '#{@suite}'")
+    pre=(suite.nil?)?("Run"):("Test suite '#{suite}'")
     logi "#{pre} FAILED"
     exit 1
 
@@ -1084,20 +1083,20 @@ class TS
   def help(args=nil,status=0)
 
     puts
-    puts "usage: #{@pre} <suite>"
-    puts "       #{@pre} gen-baseline <directory> <suite>"
-    puts "       #{@pre} use-baseline <directory> <suite>"
-    puts "       #{@pre} clean"
-    puts "       #{@pre} help"
-    puts "       #{@pre} run [ gen-baseline <dir> ] <run>"
-    puts "       #{@pre} run [ use-baseline <dir> ] <run>"
-    puts "       #{@pre} show build <build>"
-    puts "       #{@pre} show builds"
-    puts "       #{@pre} show run <run>"
-    puts "       #{@pre} show runs"
-    puts "       #{@pre} show suite <suite>"
-    puts "       #{@pre} show suites"
-    puts "       #{@pre} version"
+    puts "usage: #{pre} <suite>"
+    puts "       #{pre} gen-baseline <directory> <suite>"
+    puts "       #{pre} use-baseline <directory> <suite>"
+    puts "       #{pre} clean"
+    puts "       #{pre} help"
+    puts "       #{pre} run [ gen-baseline <dir> ] <run>"
+    puts "       #{pre} run [ use-baseline <dir> ] <run>"
+    puts "       #{pre} show build <build>"
+    puts "       #{pre} show builds"
+    puts "       #{pre} show run <run>"
+    puts "       #{pre} show runs"
+    puts "       #{pre} show suite <suite>"
+    puts "       #{pre} show suites"
+    puts "       #{pre} version"
     puts
     puts "See the README for more information."
     puts
@@ -1125,15 +1124,15 @@ class TS
     elsif args.first=="use-baseline"
       args.shift
       @use_baseline_dir=args.shift
-      unless Dir.exist?(@use_baseline_dir)
-        die "Baseline directory #{@use_baseline_dir} not found"
+      unless Dir.exist?(use_baseline_dir)
+        die "Baseline directory #{use_baseline_dir} not found"
       end
     end
     FileUtils.mkdir_p(tmp_dir)
     begin
       build_init(run)
       Run.new(run,self)
-      baseline_gen if @gen_baseline_dir
+      baseline_gen if gen_baseline_dir
     rescue Interrupt,DDTSException=>x
       halt(x)
     rescue Exception=>x
@@ -1149,8 +1148,8 @@ class TS
     # Perform common tasks needed for either full-suite or single-run
     # invocations.
 
-    @env._ilog=(@ilog=Xlog.new(logs_dir,@uniq))
-    @env._dlog=(@dlog=XlogBuffer.new(@ilog))
+    env._ilog=(@ilog=Xlog.new(logs_dir,uniq))
+    env._dlog=(@dlog=XlogBuffer.new(ilog))
     trap("INT") do
       logi "Interrupted"
       raise Interrupt
@@ -1205,13 +1204,13 @@ class TS
   def use_baseline(args=nil)
 
     # If 'use-baseline' was supplied as the command-line argument, record the
-    # specified baseline directory, then call dosuite() with the supplied suite
-    # name.
+    # specified baseline directory, then set the suite name and call dosuite
+    # with the suite name.
 
     help(args,1) unless args.size==2
     @use_baseline_dir=args.shift
-    unless Dir.exist?(@use_baseline_dir)
-      die "Baseline directory #{@use_baseline_dir} not found"
+    unless Dir.exist?(use_baseline_dir)
+      die "Baseline directory #{use_baseline_dir} not found"
     end
     help(args,1) if args.empty?
     dosuite(args[0])
