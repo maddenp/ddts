@@ -24,7 +24,9 @@ require "yaml"
 module Utility
 
   def app_dir
+
     $DDTSAPP
+
   end
 
   def die(msg=nil)
@@ -42,6 +44,7 @@ module Utility
     logd_flush
     @ts.ilog.fatal("#{@pre}: #{msg}") unless msg.nil?
     raise DDTSException
+
   end
 
   def ext(cmd,props={})
@@ -65,6 +68,7 @@ module Utility
     end
     die(m) if d and status!=0
     [output,status]
+
   end
 
   def hash_matches(file,hash)
@@ -72,17 +76,22 @@ module Utility
     # Do they match?
 
     Digest::MD5.file(file)==hash
+
   end
 
   def home_dir
+
     $DDTSHOME
+
   end
 
   def invoke(std,key,*args)
+
     env=args.first
     section=env.marshal_dump[key]
     alt=section.marshal_dump[std]
     method(alt||std.to_s).call(*args)
+
   end
 
   def job_activate(jobid,run)
@@ -91,6 +100,7 @@ module Utility
     # the test suite halts.
 
     @activemaster.synchronize { @activejobs[jobid]=run }
+
   end
 
   def job_check(stdout,restr)
@@ -104,6 +114,7 @@ module Utility
       io.readlines.each { |e| return true if re.match(e) }
     end
     false
+
   end
 
   def job_deactivate(jobid)
@@ -111,6 +122,7 @@ module Utility
     # Remove jobid:run from the active-jobs hash.
 
     @activemaster.synchronize { @activejobs.delete(jobid) }
+
   end
 
   def logd(msg)
@@ -121,10 +133,13 @@ module Utility
 
     s="#{@pre}: #{msg}"
     (@dlog)?(@dlog.debug s):(puts s)
+
   end
 
   def logfile
+
     @ts.ilog.file
+
   end
 
   def logi(msg)
@@ -133,6 +148,7 @@ module Utility
     # logger, to appear both on stdout and in the log file.
 
     @ts.ilog.info "#{@pre}: #{msg}"
+
   end
 
   def logw(msg)
@@ -142,6 +158,7 @@ module Utility
 
     @ts.ilog.warn "#{@pre}: WARNING! #{msg}"
     @ts.ilog.warned=true
+
   end
 
   def tmp_dir
@@ -150,6 +167,7 @@ module Utility
     # command.
 
     File.join($DDTSOUT,"tmp")
+
   end
 
   def valid_dir(dir)
@@ -159,6 +177,7 @@ module Utility
     dir=File.expand_path(dir)
     die "Directory #{dir} not found" unless File.directory?(dir)
     dir
+
   end
 
   def valid_file(file)
@@ -168,6 +187,7 @@ module Utility
     file=File.expand_path(file)
     die "File #{file} not found" unless File.exists?(file)
     file
+
   end
 
 end # module Utility
@@ -204,6 +224,7 @@ module Common
     ancestor=me["extends"]
     ancestry(File.join(dir,ancestor),chain) if ancestor
     chain
+
   end
 
   def comp(runs,continue=false)
@@ -272,6 +293,7 @@ module Common
     end
     logd_flush
     ok
+
   end
 
   def convert_h2o(h)
@@ -283,6 +305,7 @@ module Common
       eval("o.#{k}="+((v.is_a?(Hash))?("convert_h2o(v)"):("v")))
     end
     o
+
   end
 
   def convert_o2h(o)
@@ -294,11 +317,14 @@ module Common
       h[k.to_s]=((v.is_a?(OpenStruct))?(convert_o2h(v)):(v))
     end
     h
+
   end
 
   def loadenv(file,descendant=nil,specs=nil)
+
     logd "Loading env from #{file}"
     convert_h2o(loadspec(file))
+
   end
 
   def loadspec(file,descendant=nil,specs=nil)
@@ -315,10 +341,13 @@ module Common
     me=loadspec(File.join(File.dirname(file),ancestor),me,specs) if ancestor
     me=mergespec(me,descendant) unless descendant.nil?
     me
+
   end
 
   def logd_flush
+
     @dlog.flush if @dlog
+
   end
 
   def mergespec(me,descendant)
@@ -339,6 +368,7 @@ module Common
       end
     end
     me
+
   end
 
   def parse(file)
@@ -361,6 +391,7 @@ module Common
       pp(o).each_line { |e| logd e }
     end
     o
+
   end
 
   def pp(o,level=0,indent=true,quote=true)
@@ -390,6 +421,7 @@ module Common
       s+=(quote)?("#{quote_string(o)}\n"):("#{o}\n")
     end
     s
+
   end
 
   def quote_string(s)
@@ -403,6 +435,7 @@ module Common
       s="'#{s}'"
     end
     s
+
   end
 
   def threadmon(threads,continue=false)
@@ -430,6 +463,7 @@ module Common
       sleep 1
     end
     failcount
+
   end
 
 end # module Common
@@ -477,6 +511,7 @@ class Comparison
           "skipping comparison for group #{set}"
       end
     end
+
   end
 
 end # class Comparison
@@ -496,17 +531,7 @@ class Run
 
   def initialize(r,ts)
 
-    # Set up instance variables, including references to variables exposed by
-    # the passed-in TS object. Due to the pair of mutex locks, only one thread
-    # (the first to arrive) will perform the actual run; threads that gain
-    # subsequent access to the critical region will break out of the synchronize
-    # block and return immediately. The thread that performs the run obtains its
-    # run spec, the build it needs and the canned data set. It copies the run-
-    # material directory indicated by the build, modifies the queuetime and
-    # runtime model configuration files, runs and checks for the success of the
-    # job, and either registers to create a baseline or (potentially) has its
-    # output compared against the baseline. It provides a result value comprised
-    # of its name and its output files.
+    # Define a few things.
 
     @r=r
     @ts=ts
@@ -514,11 +539,23 @@ class Run
     @activemaster=@ts.activemaster
     @dlog=XlogBuffer.new(@ts.ilog)
     @pre="Run #{@r}"
+
+    # Create a lock for this run unless one already exists.
+
     @ts.runmaster.synchronize do
       @ts.runlocks[@r]=Mutex.new unless @ts.runlocks.has_key?(@r)
     end
+
+    # Obtain the lock for this run and (maybe) perform it.
+
     @ts.runlocks[@r].synchronize do
+
+      # If the run has already performed, break out of this block.
+
       break if @ts.runs.has_key?(@r)
+
+      # Otherwise, perform the run.
+
       @env=OpenStruct.new(@ts.env.marshal_dump) # private copy
       @env.run=loadenv(File.join(run_confs,@r))
       logd_flush
@@ -527,10 +564,22 @@ class Run
       unless (@bline=@env.run.baseline)
         die "Config incomplete: No baseline name specified"
       end
+
+      # Perform the build required for this run.
+
       build
+
       if @env.suite.build_only
+
+        # If this suite is only performing builds, set the run's result to the
+        # symbol :build_only.
+
         @ts.runmaster.synchronize { @ts.runs[@r]=:build_only }
+
       else
+
+        # Otherwise, obtain the necessary data...
+
         @ts.runmaster.synchronize do
           unless @ts.havedata
             logd "* Preparing data for all test-suite runs..."
@@ -539,6 +588,9 @@ class Run
             @ts.havedata=true
           end
         end
+
+        # ...and perform the run.
+
         logi "Started"
         @rundir=File.join(runs_dir,"#{@r}.#{@ts.uniq}")
         FileUtils.mkdir_p(@rundir) unless Dir.exist?(@rundir)
@@ -548,27 +600,48 @@ class Run
         logd "* Output from run:"
         runkit=invoke(:lib_run,:run,@env,@rundir)
         postkit=invoke(:lib_run_post,:run,@env,runkit)
+
+        # Check run success.
+
         if (success=invoke(:lib_run_check,:run,@env,postkit))
+
+          # If the run succeeded, prepare a useful result value...
+
           result={
             :files=>invoke(:lib_outfiles,:run,@env,@rundir),
             :name=>@r,
             :result=>postkit
           }
           @ts.runmaster.synchronize { @ts.runs[@r]=OpenStruct.new(result) }
+
+          # ...and (potentially) compare the run's output to its baseline or
+          # register its output for inclusion in a newly-generated baseline.
+
           if @ts.use_baseline_dir
             baseline_comp
           elsif @ts.gen_baseline_dir
             baseline_reg
           end
+
           logd_flush
           logi "Completed"
+
         else
+
+          # Otherwise, set the result to the sumbol :run_failed.
+
           @ts.runmaster.synchronize { @ts.runs[@r]=:run_failed }
           die "Run failed: See #{logfile}"
+
         end
       end
     end
+
+    # Obtain the run results, whether or not the run was actually performed by
+    # the current thread.
+
     @ts.runmaster.synchronize { @result=@ts.runs[@r] }
+
   end
 
   def jobdel(jobid)
@@ -579,6 +652,7 @@ class Run
     qdel=invoke(:lib_queue_del_cmd,:run,@env)
     cmd="#{qdel} #{jobid}"
     output,status=ext(cmd,{:die=>false})
+
   end
 
   private
@@ -604,6 +678,7 @@ class Run
         end
       end
     end
+
   end
 
   def baseline_reg
@@ -621,6 +696,7 @@ class Run
         end
       end
     end
+
   end
 
   def build
@@ -659,6 +735,7 @@ class Run
     end
     die "Required build unavailable" if @ts.builds[b]==:build_failed
     @ts.buildmaster.synchronize { @env.build._result=@ts.builds[b] }
+
   end
 
   def mod_namelist_file(nlfile,nlenv)
@@ -675,6 +752,7 @@ class Run
       end
     end
     nlh.write
+
   end
 
 end # class Run
@@ -714,6 +792,7 @@ class TS
     @uniq=Time.now.to_i
     @use_baseline_dir=nil
     dispatch(cmd,rest)
+
   end
 
   def avoid_baseline_conflicts(runs)
@@ -733,6 +812,7 @@ class TS
       conflicts.sort.uniq.each { |e| logi "  #{e} already exists" }
       die "Aborting..."
     end
+
   end
 
   def baseline_gen
@@ -756,6 +836,7 @@ class TS
       logd_flush
       logi "Creating #{r} baseline: OK"
     end
+
   end
 
   def build_init(run_or_runs)
@@ -791,6 +872,7 @@ class TS
       logd "Created empty build directory '#{build}'"
     end
     logd_flush
+
   end
 
   def clean(extras=nil)
@@ -807,6 +889,7 @@ class TS
         FileUtils.rm_rf(e)
       end
     end
+
   end
 
   def dispatch(cmd,args)
@@ -836,6 +919,7 @@ class TS
     else
       help(args,1)
     end
+
   end
 
   def dosuite(suite)
@@ -933,6 +1017,7 @@ class TS
       m
     end
     invoke(:lib_suite_post,:suite,@env)
+
   end
 
   def gen_baseline(args=nil)
@@ -945,6 +1030,7 @@ class TS
     @gen_baseline_dir=args.shift
     help(args,1) if args.empty?
     dosuite(args[0])
+
   end
 
   def halt(x)
@@ -966,9 +1052,11 @@ class TS
     pre=(@suite.nil?)?("Run"):("Test suite '#{@suite}'")
     logi "#{pre} FAILED"
     exit 1
+
   end
 
   def help(args=nil,status=0)
+
     puts
     puts "usage: #{@pre} <suite>"
     puts "       #{@pre} gen-baseline <directory> <suite>"
@@ -988,6 +1076,7 @@ class TS
     puts "See the README for more information."
     puts
     exit status
+
   end
 
   def run(args=nil)
@@ -1025,6 +1114,7 @@ class TS
       x.backtrace.each { |e| logi e }
       exit 1
     end
+
   end
 
   def setup
@@ -1038,6 +1128,7 @@ class TS
       logi "Interrupted"
       raise Interrupt
     end
+
   end
 
   def show(args)
@@ -1081,6 +1172,7 @@ class TS
     else
       help(args,1)
     end
+
   end
 
   def use_baseline(args=nil)
@@ -1096,10 +1188,13 @@ class TS
     end
     help(args,1) if args.empty?
     dosuite(args[0])
+
   end
 
   def version(args)
+
     puts "1.0"
+
   end
 
 end # class TS
@@ -1135,7 +1230,9 @@ class Xlog
   attr_reader :file
 
   def initialize(dir,uniq)
+
     # File logger
+
     FileUtils.mkdir_p(dir)
     @file=File.join(dir,"log.#{uniq}")
     FileUtils.rm_f(@file)
@@ -1145,20 +1242,25 @@ class Xlog
       timestr="#{t.year}-#{t.month}-#{t.day} #{t.hour}:#{t.min}:#{t.sec}"
       "#{timestr} [#{s}] #{m}\n"
     end
+
     # Screen logger
+
     @slog=Logger.new(STDOUT)
     @slog.level=Logger::INFO
     @slog.formatter=proc { |s,t,p,m| "#{m}\n" }
     @warned=false
+
   end
 
   def method_missing(m,*a)
+
     if m==:flush
       @flog.debug("\n#{a.first}")
     else
       @flog.send(m,"\n\n  #{a.first}\n")
       @slog.send(m,a.first)
     end
+
   end
 
 end # class Xlog
@@ -1170,21 +1272,29 @@ class XlogBuffer
   # buffer.
 
   def initialize(ilog)
+
     @ilog=ilog
     reset
+
   end
 
   def flush
+
     @ilog.flush(@buffer)
     reset
+
   end
 
   def method_missing(m,*a)
+
     @buffer+="  #{a[0].chomp}\n"
+
   end
 
   def reset
+
     @buffer="\n"
+
   end
 
 end # class XlogBuffer
