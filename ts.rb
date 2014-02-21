@@ -822,14 +822,14 @@ class TS
 
   end
 
-  def avoid_baseline_conflicts(runs)
+  def avoid_baseline_conflicts
 
     # Examine each run the suite plans to execute, report any pre-existing
     # baseline-image directories that would potentially be clobbered if we
     # continue, then die.
 
     conflicts=[]
-    runs.each do |run|
+    runs_all.each do |run|
       unless (b=loadspec(File.join(run_confs,run))["baseline"])=="none"
         conflicts.push(b) if Dir.exist?(File.join(@gen_baseline_dir,b))
       end
@@ -991,7 +991,7 @@ class TS
       suitespec.each do |k,v|
         v.each { |x| runs_all.add(x) if x.is_a?(String) }
       end
-      avoid_baseline_conflicts(runs_all) if @gen_baseline_dir
+      avoid_baseline_conflicts if @gen_baseline_dir
       build_init(runs_all)
       suitespec.each do |group,runs|
         group_hash=runs.reduce({}) do |m,e|
@@ -1118,7 +1118,7 @@ class TS
       args.shift
       @gen_baseline_dir=args.shift
       begin
-        avoid_baseline_conflicts([run])
+        avoid_baseline_conflicts
       rescue Exception=>x
         exit 1
       end
