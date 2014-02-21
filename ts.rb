@@ -988,12 +988,11 @@ class TS
       self.extend(Library)
       FileUtils.mkdir_p(tmp_dir)
       invoke(:lib_suite_prep,:suite,@env)
-      runset=suitespec.reduce(Set.new) do |m,(k,v)|
-        v.each { |x| m.add(x) if x.is_a?(String) }
-        m
+      suitespec.each do |k,v|
+        v.each { |x| runs_all.add(x) if x.is_a?(String) }
       end
-      avoid_baseline_conflicts(runset) if @gen_baseline_dir
-      build_init(runset)
+      avoid_baseline_conflicts(runs_all) if @gen_baseline_dir
+      build_init(runs_all)
       suitespec.each do |group,runs|
         group_hash=runs.reduce({}) do |m,e|
           (e.is_a?(Hash))?(m.merge(runs.delete(e))):(m)
@@ -1113,6 +1112,7 @@ class TS
     help(args,1) unless args.size==1 or args.size==3
     help(args,1) unless args.size==1 or args.first=~/^(gen|use)-baseline$/
     run=args.pop
+    runs_all.add(run)
     setup
     if args.first=="gen-baseline"
       args.shift
