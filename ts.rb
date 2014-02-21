@@ -565,30 +565,33 @@ class Run
         die "Config incomplete: No baseline name specified"
       end
 
-#     #PM#
-#
-#     if (require=@env.run.require)
-#       require=[require] unless require.is_a?(Array)
-#       @env.run.reqout={}
-#       until require.empty?
-#         @ts.runmaster.synchronize do
-#           require.each do |e|
-#logi "Checking on required run '#{e}'"
-#             if (result=@ts.runs_completed[e])
-#               if result==:run_failed
-#                 die "Run '#{@r}' depends on failed run '#{e}'"
-#               end
-#               @env.run.reqout[e]=result
-#               require.delete(e)
-#             end
-#           end
-#         end
-##         sleep 10
-#sleep 3
-#       end
-#     end
-#
-#     #PM#
+      # Wait on required runs.
+
+      if (require=@env.run.require)
+        require=[require] unless require.is_a?(Array)
+        require.each do |e|
+          unless @ts.runs_all.include?(e)
+            die "Run '#{@r}' depends on unscheduled run '#{e}'"
+          end
+        end
+        suffix=(require.size==1)?(""):("(s)")
+        logi "Waiting on required run#{suffix}: #{require.join(', ')}"
+        @env.run.reqout={}
+        until require.empty?
+          @ts.runmaster.synchronize do
+            require.each do |e|
+              if (result=@ts.runs_completed[e])
+                if result==:run_failed
+                  die "Run '#{@r}' depends on failed run '#{e}'"
+                end
+                @env.run.reqout[e]=result
+                require.delete(e)
+              end
+            end
+          end
+          sleep 3
+        end
+      end
 
       # Perform the build required for this run.
 
