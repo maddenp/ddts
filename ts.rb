@@ -552,7 +552,7 @@ class Run
 
       # If the run has already performed, break out of this block.
 
-      break if @ts.runs.has_key?(@r)
+      break if @ts.runs_completed.has_key?(@r)
 
       # Otherwise, perform the run.
 
@@ -565,6 +565,31 @@ class Run
         die "Config incomplete: No baseline name specified"
       end
 
+#     #PM#
+#
+#     if (require=@env.run.require)
+#       require=[require] unless require.is_a?(Array)
+#       @env.run.reqout={}
+#       until require.empty?
+#         @ts.runmaster.synchronize do
+#           require.each do |e|
+#logi "Checking on required run '#{e}'"
+#             if (result=@ts.runs_completed[e])
+#               if result==:run_failed
+#                 die "Run '#{@r}' depends on failed run '#{e}'"
+#               end
+#               @env.run.reqout[e]=result
+#               require.delete(e)
+#             end
+#           end
+#         end
+##         sleep 10
+#sleep 3
+#       end
+#     end
+#
+#     #PM#
+
       # Perform the build required for this run.
 
       build
@@ -574,7 +599,7 @@ class Run
         # If this suite is only performing builds, set the run's result to the
         # symbol :build_only.
 
-        @ts.runmaster.synchronize { @ts.runs[@r]=:build_only }
+        @ts.runmaster.synchronize { @ts.runs_completed[@r]=:build_only }
 
       else
 
@@ -612,7 +637,7 @@ class Run
             :name=>@r,
             :result=>postkit
           }
-          @ts.runmaster.synchronize { @ts.runs[@r]=OpenStruct.new(result) }
+          @ts.runmaster.synchronize { @ts.runs_completed[@r]=OpenStruct.new(result) }
 
           # ...and (potentially) compare the run's output to its baseline or
           # register its output for inclusion in a newly-generated baseline.
@@ -630,7 +655,7 @@ class Run
 
           # Otherwise, set the result to the sumbol :run_failed.
 
-          @ts.runmaster.synchronize { @ts.runs[@r]=:run_failed }
+          @ts.runmaster.synchronize { @ts.runs_completed[@r]=:run_failed }
           die "Run failed: See #{logfile}"
 
         end
@@ -640,7 +665,7 @@ class Run
     # Obtain the run results, whether or not the run was actually performed by
     # the current thread.
 
-    @ts.runmaster.synchronize { @result=@ts.runs[@r] }
+    @ts.runmaster.synchronize { @result=@ts.runs_completed[@r] }
 
   end
 
@@ -670,7 +695,7 @@ class Run
         blinepair=OpenStruct.new
         blinepair.name="baseline #{@bline}"
         blinepair.files=invoke(:lib_outfiles,:run,@env,blinepath)
-        comp([@ts.runs[@r],blinepair])
+        comp([@ts.runs_completed[@r],blinepair])
         logi "Baseline comparison OK"
       else
         if Dir.exist?(@ts.use_baseline_dir)
@@ -692,7 +717,7 @@ class Run
     else
       @ts.baselinemaster.synchronize do
         unless @ts.baselinesrcs.has_key?(@bline)
-          @ts.baselinesrcs[@bline]=@ts.runs[@r]
+          @ts.baselinesrcs[@bline]=@ts.runs_completed[@r]
         end
       end
     end
@@ -763,7 +788,8 @@ class TS
 
   attr_accessor :activemaster,:activejobs,:baselinemaster,:baselinesrcs,
   :buildlocks,:buildmaster,:builds,:dlog,:env,:gen_baseline_dir,:havedata,:ilog,
-  :pre,:runlocks,:runmaster,:runs,:suite,:uniq,:use_baseline_dir
+  :pre,:runlocks,:runmaster,:runs_all,:runs_completed,:suite,:uniq,
+  :use_baseline_dir
 
   def initialize(tsname,cmd,rest)
 
@@ -786,7 +812,8 @@ class TS
     @pre=tsname
     @runlocks={}
     @runmaster=Mutex.new
-    @runs={}
+    @runs_all=SortedSet.new
+    @runs_completed={}
     @suite=nil
     @ts=self
     @uniq=Time.now.to_i
@@ -1012,7 +1039,7 @@ class TS
       msg+=" -- but note WARNING(s) above!" if @ilog.warned
     end
     logi msg
-    @env.suite._runs=@runs.reduce({}) do |m,(k,v)|
+    @env.suite._runs=@runs_completed.reduce({}) do |m,(k,v)|
       m[k]=(v.is_a?(OpenStruct))?(v.result):(v)
       m
     end
