@@ -1,0 +1,4 @@
+extends: 'ex_base'
+sleep: 6
+tasks: 2
+require: ex_1

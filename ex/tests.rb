@@ -17,7 +17,7 @@ def exe(desc,suite,*expected)
   # treated literally.
 
   expected.map! { |e| Regexp::escape(e) }
-  print "Testing: #{desc}"+" "*(40-desc.length)
+  print "Testing: #{desc}"+" "*(78-desc.length)
   ddts=File.join("..","ddts")
   cmd="DDTSAPP=. DDTSOUT=#{$OUT} #{ddts} #{suite} 2>&1"
   out=`#{cmd}`.split("\n")
@@ -185,31 +185,42 @@ exe("ex_1 use baseline","run use-baseline #{baseline} ex_1",
   "Baseline comparison OK"
   )
 
-## Single run with unsatisfied 'require'.
-#
-#exe("ex_2_require fail","run ex_2_require",
-# "Run 'ex_2_require' depends on unscheduled run 'ex_1'",
-# "Run FAILED"
-# )
-#
-## Suite with satisfied 'require'.
-#
-#exe("ex_suite_require pass","ex_suite_require_pass",
-# "Waiting on required run: ex_1",
-# "Run ex_2_require: Completed",
-# "ALL TESTS PASSED"
-# )
-#
-## Suite with unsatisfied 'require' (unscheduled run)
-#
-#exe("ex_suite_require fail (unscheduled run)","ex_suite_require_fail_1",
-# )
-#
-## Suite with unsatisfied 'require' (failed run)
-#
-#exe("ex_suite_require fail (failed run)","ex_suite_fail_2",
-#
-# )
+# Single run with unsatisfied 'require'.
+
+exe("ex_2_require_scalar fail","run ex_2_require_scalar",
+  "Run 'ex_2_require_scalar' depends on unscheduled run 'ex_1'",
+  "Aborting..."
+  )
+
+# Suite with satisfied 'require', scalar version
+
+exe("ex_suite_require_pass_1","ex_suite_require_pass_1",
+  "Waiting on required run: ex_1",
+  "Run ex_2_require_scalar: Completed",
+  "ALL TESTS PASSED"
+  )
+
+# Suite with satisfied 'require', array version
+
+exe("ex_suite_require_pass_2","ex_suite_require_pass_2",
+  "Waiting on required run: ex_1",
+  "Run ex_2_require_array: Completed",
+  "ALL TESTS PASSED"
+  )
+
+# Suite with unsatisfied 'require' (unscheduled run)
+
+exe("ex_suite_require fail_1 (unscheduled run)","ex_suite_require_fail_1",
+  "Run 'ex_2_require_array' depends on unscheduled run 'ex_1'",
+  "Test suite 'ex_suite_require_fail_1' FAILED"
+  )
+
+# Suite with unsatisfied 'require' (failed run)
+
+exe("ex_suite_require fail_2 (failed run)","ex_suite_require_fail_2",
+  "Run 'ex_2_require_fail' depends on failed run 'ex_fail'",
+  "2 of 2 TEST(S) FAILED"
+  )
 
 # Remove output directory.
 

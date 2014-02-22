@@ -1,4 +1,5 @@
 extends: ex_suite_base
 group_ex:
-  - ex_2_require_bad
-  - ex_4_bad
+  - ex_2_require_fail
+  - ex_fail
+continue: true
