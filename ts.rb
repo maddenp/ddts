@@ -571,7 +571,7 @@ class Run
         require=[require] unless require.is_a?(Array)
         suffix=(require.size==1)?(""):("(s)")
         logi "Waiting on required run#{suffix}: #{require.join(', ')}"
-        @env.run.reqout={}
+        @env.run._require_results={}
         until require.empty?
           @ts.runmaster.synchronize do
             require.each do |e|
@@ -579,7 +579,7 @@ class Run
                 if result==:run_failed
                   die "Run '#{@r}' depends on failed run '#{e}'"
                 end
-                @env.run.reqout[e]=result
+                @env.run._require_results[e]=result
                 require.delete(e)
               end
             end
