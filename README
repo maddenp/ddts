@@ -114,7 +114,11 @@ depend on the model and platform, but several top-level keys are reserved:
   on which this run depends. The value may be a scalar string (for a single
   required run), or an array of strings. A run will wait until its required runs
   have completed before starting, and may access those runs' results via the
-  env.run._require_results key.
+  env.run._require_results key. Note that defining run dependencies makes
+  dependent runs ineligible for single execution (i.e. via 'ddts run' command-
+  line syntax), since their required run(s) will not, by definition, execute.
+  Dependent runs should therefore only be executed via suites that also execute
+  all required runs.
 
 - Keys prefixed with 'lib_', which provide a per-run mechanism for overriding
   library methods, are reserved.
