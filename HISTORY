@@ -3,6 +3,10 @@ HISTORY
 Version numbers are in major.minor form, where changes to the minor component
 indicate bugfixes and similar non-breaking enhanements, and changes to the major
 component indicate breaking changes.
+
+v1.1
+
+Added support for run dependencies.
  
 v1.0
 
