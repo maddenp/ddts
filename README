@@ -107,7 +107,7 @@ depend on the model and platform, but several top-level keys are reserved:
   of a build config) to use for this run.
 
 - [optional] The 'extends' key specifies the name of a run config from which
-  the current config should inherit, and which it may override. Rrecursion is
+  the current config should inherit, and which it may override. Recursion is
   supported, but loops are fatal errors.
 
 - [optional] The 'require' key specifies the name of a run or the names of runs
