@@ -8,7 +8,7 @@ v2.0
 
 Change env.suite._runs object to always provide .failed, .files and .result
 members, which allows propagation of information from even failed runs to
-post-processing methods like lib_suite_post.
+post-processing methods like lib_suite_post. Add env.suite._builds object.
 
 v1.1
 
