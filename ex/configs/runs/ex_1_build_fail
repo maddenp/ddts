@@ -1,0 +1,2 @@
+extends: 'ex_1'
+build: 'ex_build_fail'

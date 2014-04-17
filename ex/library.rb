@@ -86,8 +86,10 @@ module Library
   end
 
   def lib_suite_post_ex(env)
-    failures=env.suite._runs.reduce(0) { |m,(k,v)| (v.failed)?(m+1):(m) }
-    logi "fail rate = #{Float(failures)/env.suite._runs.size}"
+    buildfails=env.suite._builds.reduce(0) { |m,(k,v)| (v.failed)?(m+1):(m) }
+    logi "build fail rate = #{Float(buildfails)/env.suite._builds.size}"
+    runfails=env.suite._runs.reduce(0) { |m,(k,v)| (v.failed)?(m+1):(m) }
+    logi "run fail rate = #{Float(runfails)/env.suite._runs.size}"
     logi "[ custom post action ]"
   end
 

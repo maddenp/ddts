@@ -49,7 +49,8 @@ FileUtils.rm_rf(baseline)
 
 exe("ex_suite_single","ex_suite_single",
   "Run ex_4: Completed",
-  "ALL TESTS PASSED"
+  "ALL TESTS PASSED",
+  "build fail rate = 0.0"
   )
 
 # ex_suite_fail executes the single ex_fail run, which is expected to fail.
@@ -109,7 +110,7 @@ exe("ex_suite_1p_1f","ex_suite_1p_1f",
   "Group stats: 1 of 2 runs failed, skipping comparison",
   "Suite stats: Failure in 1 of 1 group(s)",
   "Failure in 1 of 1 group(s)",
-  "fail rate = 0.5"
+  "run fail rate = 0.5"
   )
 
 # ex_suite_2p_1f executes three runs in one group, where one fails. The two
@@ -220,6 +221,24 @@ exe("ex_suite_require fail_1 (unscheduled run)","ex_suite_require_fail_1",
 exe("ex_suite_require fail_2 (failed run)","ex_suite_require_fail_2",
   "Run 'ex_2_require_fail' depends on failed run 'ex_fail'",
   "2 of 2 TEST(S) FAILED"
+  )
+
+# Suite with a failed build, no continue
+
+exe("ex_suite_build_fail","ex_suite_build_fail",
+  "Build ex_build_fail started",
+  "Build failed",
+  "Test suite 'ex_suite_build_fail' FAILED"
+  )
+
+# Suite with a failed build, with continue
+
+exe("ex_suite_build_fail_continue","ex_suite_build_fail_continue",
+  "Build ex_build_fail started",
+  "Build failed",
+  "1 of 2 TEST(S) FAILED",
+  "build fail rate = 0.5",
+  "run fail rate = 0.5"
   )
 
 # Remove output directory.

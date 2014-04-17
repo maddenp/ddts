@@ -531,6 +531,18 @@ class Run
 
   def initialize(r,ts)
 
+    def update_runs_completed(failed,files,name,result,incomplete=false)
+      if incomplete
+        o=:incomplete
+      else
+        h={:failed=>failed,:files=>files,:name=>name,:result=>result}
+        o=OpenStruct.new(h)
+      end
+      @ts.runmaster.synchronize do
+        @ts.runs_completed[name]=o
+      end
+    end
+
     # Define a few things.
 
     @r=r
@@ -575,7 +587,7 @@ class Run
         until require.empty?
           @ts.runmaster.synchronize do
             require.each do |e|
-              if (result=@ts.runs_completed[e])
+              if (result=@ts.runs_completed[e] and result!=:incomplete)
                 if result.failed
                   die "Run '#{@r}' depends on failed run '#{e}'"
                 end
@@ -587,6 +599,12 @@ class Run
           sleep 3
         end
       end
+
+      # Create a default entry for this run in case the build fails and never
+      # returns so that, e.g., post-suite statistics can determine the number of
+      # runs that were attempted.
+
+      update_runs_completed(nil,nil,@r,nil,true)
 
       # Perform the build required for this run.
 
@@ -624,18 +642,11 @@ class Run
         runkit=invoke(:lib_run,:run,@env,@rundir)
         postkit=invoke(:lib_run_post,:run,@env,runkit)
         success=invoke(:lib_run_check,:run,@env,postkit)
+        files=invoke(:lib_outfiles,:run,@env,@rundir)
 
-        # Prepare and record a useful result value.
-
-        result={
-          :failed => (not success),
-          :files => invoke(:lib_outfiles,:run,@env,@rundir),
-          :name => @r,
-          :result => postkit
-        }
-        @ts.runmaster.synchronize do
-          @ts.runs_completed[@r]=OpenStruct.new(result)
-        end
+        # Record final result value.
+        
+        update_runs_completed(!success,files,@r,postkit)
 
         # If the run succeeded, (potentially) compare the run's output to its
         # baseline or register its output for inclusion in a newly-generated
@@ -728,6 +739,15 @@ class Run
     # shell after obtaining its build spec. It stores into a global hash the
     # information required by its dependent runs.
 
+    def update_builds(build,failed,result)
+      @ts.buildmaster.synchronize do
+        x=OpenStruct.new({:failed=>failed,:result=>result})
+        @env.suite._builds||={}
+        @env.suite._builds[build]=x
+        @ts.builds[build]=x
+      end
+    end
+
     b=@env.run.build
     @env.build=loadenv(File.join(build_confs,b))
     logd_flush
@@ -737,10 +757,7 @@ class Run
     end
     @ts.buildlocks[b].synchronize do
       unless @ts.builds.has_key?(b)
-        @ts.buildmaster.synchronize do
-          # Assume the worst.
-          @ts.builds[b]=OpenStruct.new({:failed=>true,:result=>nil})
-        end
+        update_builds(b,true,nil) # assume the worst
         logi "Build #{b} started"
         logd "* Output from build #{b} prep:"
         invoke(:lib_build_prep,:run,@env)
@@ -749,17 +766,13 @@ class Run
         buildkit=invoke(:lib_build,:run,@env)
         logd_flush
         result=invoke(:lib_build_post,:run,@env,buildkit)
-        @ts.buildmaster.synchronize do
-          @ts.builds[b]=OpenStruct.new({:failed=>false,:result=>result})
-        end
+        update_builds(b,false,result)
         logi "Build #{b} completed"
       end
     end
     die "Required build unavailable" if @ts.builds[b].failed
     @ts.buildmaster.synchronize do
       x=@ts.builds[b]
-      @env.suite._builds||={}
-      @env.suite._builds[b]=x
       @env.build._result=(x.failed)?(:build_failed):(x.result)
     end
 
@@ -1021,7 +1034,11 @@ class TS
     end
     logi msg
     env.suite._runs=runs_completed.reduce({}) do |m,(k,v)|
-      h={:failed=>v.failed,:files=>v.files,:result=>v.result}
+      if v==:incomplete
+        h={:failed=>true,:files=>[],:result=>nil}
+      else
+        h={:failed=>v.failed,:files=>v.files,:result=>v.result}
+      end
       m[k]=OpenStruct.new(h)
       m
     end
