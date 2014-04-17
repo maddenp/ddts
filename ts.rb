@@ -738,7 +738,8 @@ class Run
     @ts.buildlocks[b].synchronize do
       unless @ts.builds.has_key?(b)
         @ts.buildmaster.synchronize do
-          @ts.builds[b]=:build_failed # assume the worst
+          # Assume the worst.
+          @ts.builds[b]=OpenStruct.new({:failed=>true,:result=>nil})
         end
         logi "Build #{b} started"
         logd "* Output from build #{b} prep:"
@@ -747,14 +748,20 @@ class Run
         logd "* Output from build #{b}:"
         buildkit=invoke(:lib_build,:run,@env)
         logd_flush
+        result=invoke(:lib_build_post,:run,@env,buildkit)
         @ts.buildmaster.synchronize do
-          @ts.builds[b]=invoke(:lib_build_post,:run,@env,buildkit)
+          @ts.builds[b]=OpenStruct.new({:failed=>false,:result=>result})
         end
         logi "Build #{b} completed"
       end
     end
-    die "Required build unavailable" if @ts.builds[b]==:build_failed
-    @ts.buildmaster.synchronize { @env.build._result=@ts.builds[b] }
+    die "Required build unavailable" if @ts.builds[b].failed
+    @ts.buildmaster.synchronize do
+      x=@ts.builds[b]
+      @env.suite._builds||={}
+      @env.suite._builds[b]=x
+      @env.build._result=(x.failed)?(:build_failed):(x.result)
+    end
 
   end
 
