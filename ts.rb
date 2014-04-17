@@ -497,7 +497,7 @@ class Comparison
     @comp_ok=true # hope for the best
     return if @ts.env.suite.build_only
     if @totalruns-@failruns > 1
-      runs.delete_if { |e| e.result==:run_failed }
+      runs.delete_if { |e| e.failed }
       set=runs.reduce([]) { |m,e| m.push(e.name) }.sort.join(", ")
       logi "#{set}: Checking..."
       sorted_runs=runs.sort { |r1,r2| r1.name <=> r2.name }
@@ -576,7 +576,7 @@ class Run
           @ts.runmaster.synchronize do
             require.each do |e|
               if (result=@ts.runs_completed[e])
-                if result==:run_failed
+                if result.failed
                   die "Run '#{@r}' depends on failed run '#{e}'"
                 end
                 @env.run._require_results[e]=result
@@ -623,40 +623,37 @@ class Run
         logd "* Output from run:"
         runkit=invoke(:lib_run,:run,@env,@rundir)
         postkit=invoke(:lib_run_post,:run,@env,runkit)
+        success=invoke(:lib_run_check,:run,@env,postkit)
 
-        # Check run success.
+        # Prepare and record a useful result value.
 
-        if (success=invoke(:lib_run_check,:run,@env,postkit))
+        result={
+          :failed => (not success),
+          :files => invoke(:lib_outfiles,:run,@env,@rundir),
+          :name => @r,
+          :result => postkit
+        }
+        @ts.runmaster.synchronize do
+          @ts.runs_completed[@r]=OpenStruct.new(result)
+        end
 
-          # If the run succeeded, prepare a useful result value...
+        # If the run succeeded, (potentially) compare the run's output to its
+        # baseline or register its output for inclusion in a newly-generated
+        # baseline. Otherwise, report failure.
 
-          result={
-            :files=>invoke(:lib_outfiles,:run,@env,@rundir),
-            :name=>@r,
-            :result=>postkit
-          }
-          @ts.runmaster.synchronize { @ts.runs_completed[@r]=OpenStruct.new(result) }
-
-          # ...and (potentially) compare the run's output to its baseline or
-          # register its output for inclusion in a newly-generated baseline.
+        if success
 
           if @ts.use_baseline_dir
             baseline_comp
           elsif @ts.gen_baseline_dir
             baseline_reg
           end
-
           logd_flush
           logi "Completed"
-
         else
-
-          # Otherwise, set the result to the sumbol :run_failed.
-
-          @ts.runmaster.synchronize { @ts.runs_completed[@r]=:run_failed }
           die "Run failed: See #{logfile}"
-
         end
+
       end
     end
 
@@ -1017,7 +1014,8 @@ class TS
     end
     logi msg
     env.suite._runs=runs_completed.reduce({}) do |m,(k,v)|
-      m[k]=(v.is_a?(OpenStruct))?(v.result):(v)
+      h={:failed=>v.failed,:files=>v.files,:result=>v.result}
+      m[k]=OpenStruct.new(h)
       m
     end
     invoke(:lib_suite_post,:suite,env)
@@ -1236,7 +1234,7 @@ class TS
 
   def version(args)
 
-    puts "1.1"
+    puts "2.0"
 
   end
 

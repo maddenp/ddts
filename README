@@ -188,10 +188,15 @@ nil values).
 - env.run._require_results: A hash mapping the names of runs on which this run
   was defined to require to the results of those runs.
 
-- env.suite._runs: A hash mapping run names to the object returned by the
-  lib_run_post method. Access recommended from method lib_suite_post. This value
-  is final only in lib_suite_post, and only for suite (not single-run)
-  invocations.
+- env.suite._runs: A hash mapping each run name to an OpenStruct object with the
+  following members:
+
+  .failed : true or false depending on whether the run succeeded or failed
+  .files  : the file list returned by the run's lib_outfiles method
+  .result : the object returned by the run's lib_run_post method
+
+  Access recommended from method lib_suite_post. This value is final only in
+  lib_suite_post, and only for suite (not single-run) invocations.
 
 - env.suite._suitename: The name of the running suite, as given on the command
   line. Access recommended from method lib_suite*, and only for suite (not
