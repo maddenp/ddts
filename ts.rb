@@ -561,9 +561,7 @@ class Run
       logd_flush
       self.extend(Library)
       @env.run._name=@r
-      unless (@bline=@env.run.baseline)
-        die "Config incomplete: No baseline name specified"
-      end
+      @bline=@env.run.baseline
 
       # Wait on required runs.
 
@@ -684,9 +682,7 @@ class Run
 
     # Compare this run's output files to its baseline.
 
-    if @bline=="none"
-      logd "Baseline comparison for #{@r} disabled, skipping"
-    else
+    if @bline
       blinepath=File.join(@ts.use_baseline_dir,@bline)
       if Dir.exist?(blinepath)
         logi "Comparing to baseline #{@bline}"
@@ -700,6 +696,8 @@ class Run
           logw "No baseline '#{@bline}' found, continuing..."
         end
       end
+    else
+      logd "No baseline specified for #{@r} disabled, skipping"
     end
 
   end
@@ -710,14 +708,14 @@ class Run
     # of runs sharing a common baseline name, this run's output files. Only one
     # run of the set performs this operation, due to the mutex.
 
-    if @bline=="none"
-      logd "Baseline registration for #{@r} disabled, skipping"
-    else
+    if @bline
       @ts.baselinemaster.synchronize do
         unless @ts.baselinesrcs.has_key?(@bline)
           @ts.baselinesrcs[@bline]=@ts.runs_completed[@r]
         end
       end
+    else
+      logd "Baseline registration for #{@r} disabled, skipping"
     end
 
   end
@@ -1236,7 +1234,7 @@ class TS
 
   def version(args)
 
-    puts "1.1"
+    puts "1.2"
 
   end
 

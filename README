@@ -96,12 +96,12 @@ Run configs contain the information necessary to prepare, configure, execute and
 verify runs; to associate them with baseline images; etc. Config contents will
 depend on the model and platform, but several top-level keys are reserved:
 
-- [required] The 'baseline' key specifies the name of the baseline image
-  into which this run's output should be copied (when baseline generation is
+- [optional] The 'baseline' key specifies the name of the baseline image into
+  which this run's output should be copied (when baseline generation is
   requested), or against which it should be verified (when baseline comparison
   is requested). Runs whose output is expected to be identical should share a
-  common 'baseline' value. To exclude a run from baseline participation, specify
-  the value 'none'.
+  common 'baseline' value. Run configs with no 'baseline' key do not participate
+  in baseline generation or comparison.
 
 - [required] The 'build' key specifies the name of the build (i.e. the filename
   of a build config) to use for this run.
