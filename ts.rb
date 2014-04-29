@@ -1034,7 +1034,9 @@ class TS
     end
     logi msg
     env.suite._runs=runs_completed.reduce({}) do |m,(k,v)|
-      if v==:incomplete
+      if v==:build_only
+        h={:failed=>false,:files=>[],:result=>nil}
+      elsif v==:incomplete
         h={:failed=>true,:files=>[],:result=>nil}
       else
         h={:failed=>v.failed,:files=>v.files,:result=>v.result}
