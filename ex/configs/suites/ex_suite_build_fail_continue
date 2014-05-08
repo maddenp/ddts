@@ -1,0 +1,5 @@
+extends: ex_suite_base
+group_ex:
+  - ex_1
+  - ex_1_build_fail
+continue: true
