@@ -359,7 +359,9 @@ module Common
     me={} if me.nil?
     descendant={} if descendant.nil?
     descendant.each do |k,v|
-      if v.is_a?(Hash)
+      if v.is_a?(Replace)
+        me[k]=v.obj
+      elsif v.is_a?(Hash)
         me[k]=mergespec(me[k],v)
       elsif v.is_a?(Array)
         me[k]=(me[k].nil?)?(v):(me[k]+v)
@@ -643,7 +645,7 @@ class Run
         files=invoke(:lib_outfiles,:run,@env,@rundir)
 
         # Record final result value.
-        
+
         update_runs_completed(!success,files,@r,postkit)
 
         # If the run succeeded, (potentially) compare the run's output to its
@@ -1264,17 +1266,40 @@ class TS
 
 end # class TS
 
+# Special YAML handling. See JRuby's lib/ruby/shared/psych/coder.rb.
+
+class Replace
+
+  # A wrapper class to allow for suppression of default Array/Hash merging.
+
+  attr_accessor :obj
+
+  def init_with(coder)
+    @obj=coder.send(coder.type)
+  end
+
+end # class Replace
+
+YAML.add_tag("!replace",Replace)
+
 class Unquoted
 
-  # An alternative to String for namelist values that must not be quoted.
+  # A wrapper class to suppress default quoting of Strings e.g. for Fortran
+  # namelist values.
 
-  def initialize(v) @v=v end
-  def init_with(coder) @v=coder.scalar end
-  def to_s() @v end
+  def init_with(coder)
+    @v=coder.scalar
+  end
+
+  def to_s
+    @v
+  end
 
 end # class Unquoted
 
 YAML.add_tag("!unquoted",Unquoted)
+
+# Logging
 
 class Xlog
 
