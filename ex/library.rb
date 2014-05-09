@@ -54,6 +54,9 @@ module Library
     run=env.run.runcmd
     sleep=env.run.sleep
     tasks=env.run.tasks
+    if message=env.run.message
+      logi message.join(" ")
+    end
     cmd="cd #{rundir} && #{run} #{tasks} #{bin} >stdout 2>&1 && sleep #{sleep}"
     IO.popen(cmd) { |io| io.readlines.each { |e| logd "#{e}" } }
     File.join(rundir,'stdout')

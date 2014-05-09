@@ -16,15 +16,18 @@ def exe(desc,suite,*expected)
   # The 'expected' strings are escaped, so regexp characters will be
   # treated literally.
 
-  expected.map! { |e| Regexp::escape(e) }
+  expected.map! { |e| [e,Regexp::escape(e)] }
   print "Testing: #{desc}"+" "*(78-desc.length)
   ddts=File.join("..","ddts")
   cmd="DDTSAPP=. DDTSOUT=#{$OUT} #{ddts} #{suite} 2>&1"
   out=`#{cmd}`.split("\n")
-  expected.each do |string|
-    if out.grep(/.*#{string}.*/).empty? 
-      puts "FAILED"
+  expected.each do |pair|
+    string=pair.first
+    re_str=pair.last
+    if out.grep(/.*#{re_str}.*/).empty?
+      puts "FAILED\n"
       puts "\nCommand was:\n\n#{cmd}"
+      puts "\nExpected to see:\n\n#{string}"
       die "\nOutput was:\n\n#{out.join("\n")}"
     end
   end
@@ -251,6 +254,12 @@ exe("ex_no_build","run ex_no_build",
 
 exe("ex_bad_build","run ex_bad_build",
   "Run 'ex_bad_build' associated with unknown build 'no_such_build', aborting..."
+  )
+
+# Test !replace yaml tag
+
+exe("ex_1_alt !replace test","run ex_1_alt",
+  ": Running case ex_1_alt"
   )
 
 # Remove output directory.
