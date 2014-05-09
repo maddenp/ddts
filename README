@@ -221,6 +221,37 @@ nil values).
   lib_suite_post library method, and only for suite (not single-run)
   invocations.
 
+3.4 Merge vs Replace for Arrays and Hashes
+------------------------------------------
+
+By default, the 'extends' mechanism merges Array and Hash objects. For example,
+given config c0
+
+  key: [1,2]
+
+and config c1
+
+  extends: c0
+  key: [3,4]
+
+The value of 'key' in c1 will be [1,2,3,4], as 'key' in c1 will extend 'key' in
+c0. Similarly, Hash values will be merged, will key-value paris from ancestor
+configs perserved unless specifically overridden.
+
+Alternatively, the YAML tag !replace can be used to suppress this behavior,
+allowing the descendant's value to simply replace any ancestors'. Applied to the
+previous example, c1 might be specified as
+
+  key: !replace [3,4]
+
+or
+
+  key: !replace
+    - 3
+    - 4
+
+The value of 'key' in c1 will now be [3,4].
+
 --------------------------------------------------------------------------------
 4. Quoting Rules for Fortran Namelists
 --------------------------------------------------------------------------------
