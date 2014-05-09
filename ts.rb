@@ -1232,10 +1232,11 @@ class TS
     elsif ["builds","runs","suites"].include?(type)
       dir=get_dir(type)
       puts
-      puts "Available #{type}:"
+      configs=Dir.glob("#{dir}/*").sort
+      puts (configs.empty?)?("No #{type} found"):("Available #{type}:")
       puts
-      Dir.glob("#{dir}/*").sort.each { |item| puts "  #{File.basename(item)}" }
-      puts
+      configs.each { |item| puts "  #{File.basename(item)}" }
+      puts unless configs.empty?
     else
       help(args,1)
     end
