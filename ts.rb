@@ -198,10 +198,10 @@ module Common
 
   # Config directories
 
-  def confdir()     File.join($DDTSAPP,"configs") end
-  def build_confs() File.join(confdir,"builds")   end
-  def run_confs()   File.join(confdir,"runs")     end
-  def suite_confs() File.join(confdir,"suites")   end
+  def configdir()     File.join($DDTSAPP,"configs") end
+  def build_configs() File.join(configdir,"builds") end
+  def run_configs()   File.join(configdir,"runs")   end
+  def suite_configs() File.join(configdir,"suites") end
 
   # Runtime directories
 
@@ -571,7 +571,7 @@ class Run
       # Otherwise, perform the run.
 
       @env=OpenStruct.new(@ts.env.marshal_dump) # private copy
-      @env.run=loadenv(File.join(run_confs,@r))
+      @env.run=loadenv(File.join(run_configs,@r))
       logd_flush
       self.extend(Library)
       @env.run._name=@r
@@ -749,7 +749,7 @@ class Run
     end
 
     b=@env.run.build
-    @env.build=loadenv(File.join(build_confs,b))
+    @env.build=loadenv(File.join(build_configs,b))
     logd_flush
     @env.build._root=File.join(builds_dir,b)
     @ts.buildmaster.synchronize do
@@ -872,7 +872,7 @@ class TS
     logd "----"
     runs=(run_or_runs.respond_to?(:each))?(run_or_runs):([run_or_runs])
     builds=runs.reduce(Set.new) do |m,e|
-      m.add(File.join(builds_dir,loadspec(File.join(run_confs,e),true)["build"]))
+      m.add(File.join(builds_dir,loadspec(File.join(run_configs,e),true)["build"]))
       logd "----"
       m
     end
@@ -923,7 +923,7 @@ class TS
     cmd="gen_baseline" if cmd=="gen-baseline"
     cmd="use_baseline" if cmd=="use-baseline"
     okargs=["clean","gen_baseline","help","run","show","use_baseline","version"]
-    suites=Dir.glob(File.join(suite_confs,"*")).map { |e| File.basename(e) }
+    suites=Dir.glob(File.join(suite_configs,"*")).map { |e| File.basename(e) }
     unless ["help","version"].include?(cmd)
       unless Dir.exist?($DDTSAPP)
         die "Configuration directory '#{$DDTSAPP}' not found"
@@ -961,7 +961,7 @@ class TS
 
     @suite=suite
     setup
-    f=File.join(suite_confs,suite)
+    f=File.join(suite_configs,suite)
     unless File.exists?(f)
       die "Suite '#{suite}' not found"
     end
@@ -1150,11 +1150,11 @@ class TS
     baseline_conflict=false
     unsatisfied_require=false
 
-    builds_all=Dir.glob(File.join(build_confs,"*")).map { |e| File.basename(e) }
+    builds_all=Dir.glob(File.join(build_configs,"*")).map { |e| File.basename(e) }
 
     runs_all.each do |run|
 
-      spec=loadspec(File.join(run_confs,run),true)
+      spec=loadspec(File.join(run_configs,run),true)
 
       # If a baseline is being generated, check for any pre-existing baseline-
       # image directories that would potentially be clobbered if we continue.
@@ -1216,11 +1216,11 @@ class TS
     def get_dir(type)
       case
       when type=~/build(s?)/
-        build_confs
+        build_configs
       when type=~/run(s?)/
-        run_confs
+        run_configs
       when type=~/suite(s?)/
-        suite_confs
+        suite_configs
       else
         die "Unrecognized config type '#{type}'"
       end
