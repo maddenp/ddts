@@ -1,5 +1,5 @@
 extends: 'ex_base'
-sleep: 6
+sleep: 2
 tasks: 2
 require:
   - ex_1
