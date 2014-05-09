@@ -4,6 +4,11 @@ Version numbers are in major.minor form, where changes to the minor component
 indicate bugfixes and similar non-breaking enhanements, and changes to the major
 component indicate breaking changes.
 
+v2.1
+
+Add support for YAML tag !replace (see README), and add sanity check for run
+configs with missing or invalid 'build' keys.
+
 v2.0
 
 Change env.suite._runs object to always provide .failed, .files and .result
