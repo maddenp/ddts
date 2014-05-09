@@ -241,6 +241,18 @@ exe("ex_suite_build_fail_continue","ex_suite_build_fail_continue",
   "run fail rate = 0.5"
   )
 
+# Run with no build specified
+
+exe("ex_no_build","run ex_no_build",
+  "Run 'ex_no_build' not associated with any build, aborting..."
+  )
+
+# Run with non-existent build specified
+
+exe("ex_bad_build","run ex_bad_build",
+  "Run 'ex_bad_build' associated with unknown build 'no_such_build', aborting..."
+  )
+
 # Remove output directory.
 
 FileUtils.rm_rf($OUT)

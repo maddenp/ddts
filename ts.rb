@@ -1150,6 +1150,8 @@ class TS
     baseline_conflict=false
     unsatisfied_require=false
 
+    builds_all=Dir.glob(File.join(build_confs,"*")).map { |e| File.basename(e) }
+
     runs_all.each do |run|
 
       spec=loadspec(File.join(run_confs,run),true)
@@ -1176,6 +1178,15 @@ class TS
             unsatisfied_require=true
           end
         end
+      end
+
+      # Check that all runs have defined 'build'.
+
+      unless build=spec["build"]
+        die "Run '#{run}' not associated with any build, aborting..."
+      end
+      unless builds_all.include?(build)
+        die "Run '#{run}' associated with unknown build '#{build}', aborting..."
       end
 
     end
