@@ -1,7 +1,7 @@
 DDTS
 ====
 
-A Ruby-Based Dependency-Driven Test Suite system
+A Ruby-Based Dependency-Driven Test System
 ### Notes
 
 See the README for general test-suite driver usage; for information on the build, run and suite configuration files; for a description of the library methods; and for other configuration and use information.
