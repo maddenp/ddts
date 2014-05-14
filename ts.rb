@@ -337,6 +337,7 @@ module Common
     die "Circular dependency detected for #{file}" if specs.include?(file)
     specs << file
     me=parse(file,quiet)
+    die "No valid config found in '#{file}'" unless me
     ancestor=me["extends"]
     me=loadspec(File.join(File.dirname(file),ancestor),quiet,me,specs) if ancestor
     me=mergespec(me,descendant) unless descendant.nil?
