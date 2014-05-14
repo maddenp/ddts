@@ -926,12 +926,12 @@ class TS
     suites=Dir.glob(File.join(suite_configs,"*")).map { |e| File.basename(e) }
     unless ["help","version"].include?(cmd)
       unless Dir.exist?($DDTSAPP)
-        die "Configuration directory '#{$DDTSAPP}' not found"
+        die "Application directory '#{$DDTSAPP}' not found"
       end
       begin
         require "library"
       rescue LoadError=>ex
-        puts "NOTE: No library.rb found, using defaults.rb..."
+        puts "NOTE: No library.rb found, using defaults.rb"
       end
     end
     if okargs.include?(cmd)
@@ -1216,16 +1216,28 @@ class TS
     def get_dir(type)
       case
       when type=~/build(s?)/
-        build_configs
+        unless Dir.exist?(d=build_configs)
+          die "Build configurations directory '#{d}' not found"
+        end
+        d
       when type=~/run(s?)/
-        run_configs
+        unless Dir.exist?(d=run_configs)
+          die "Run configurations directory '#{d}' not found"
+        end
+        d
       when type=~/suite(s?)/
-        suite_configs
+        unless Dir.exist?(d=suite_configs)
+          die "Suite configurations directory '#{d}' not found"
+        end
+        d
       else
         die "Unrecognized config type '#{type}'"
       end
     end
 
+    unless Dir.exist?(configdir)
+      die "Configuration directory '#{configdir}' not found"
+    end
     type=args[0]
     name=args[1]
     if ["build","run","suite"].include?(type)
