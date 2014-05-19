@@ -2,3 +2,4 @@ extends: 'ex_base'
 message: ['Running','case','ex_1']
 sleep: 3
 tasks: 1
+lib_comp: lib_comp_alt

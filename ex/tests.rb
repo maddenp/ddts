@@ -102,6 +102,7 @@ exe("ex_suite (gen baseline fail)","gen-baseline #{baseline} ex_suite",
 
 exe("ex_suite use-baseline","use-baseline #{baseline} ex_suite",
   "Run ex_1: Baseline comparison OK",
+  "with alternate comparator",
   "Comparison: ex_1, ex_1_alt, ex_2, ex_4: OK",
   "ALL TESTS PASSED"
   )

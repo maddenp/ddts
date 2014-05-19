@@ -227,7 +227,7 @@ module Common
 
   end
 
-  def comp(runs,continue=false)
+  def comp(runs,env,continue=false)
 
     # Compare the output files for a set of runs (a 'run' may be a baseline
     # image). Each element in the passed-in array is an OpenStruct object with
@@ -272,8 +272,8 @@ module Common
         f1=s1.shift
         f2=s2.shift
         fb=File.basename(f1)
-        meth=(x=@env.lib_comp)?(method(x)):(FileUtils.method(:compare_file))
-        args=(x=@env.lib_comp)?([@env,f1,f2]):([f1,f2])
+        meth=(x=env.lib_comp)?(method(x)):(FileUtils.method(:compare_file))
+        args=(x=env.lib_comp)?([env,f1,f2]):([f1,f2])
         match=meth.call(*args)
         ok=false unless match
         logd "Comparing #{fb}: #{(match)?('OK'):('failed')} #{m}"
@@ -504,7 +504,7 @@ class Comparison
       set=runs.reduce([]) { |m,e| m.push(e.name) }.sort.join(", ")
       logi "#{set}: Checking..."
       sorted_runs=runs.sort { |r1,r2| r1.name <=> r2.name }
-      @comp_ok=comp(sorted_runs,@ts.env.suite.continue)
+      @comp_ok=comp(sorted_runs,env,@ts.env.suite.continue)
       logi "#{set}: OK" if @comp_ok
     else
       unless @totalruns==1
@@ -700,7 +700,7 @@ class Run
         blinepair=OpenStruct.new
         blinepair.name="baseline #{@bline}"
         blinepair.files=invoke(:lib_outfiles,:run,@env,blinepath)
-        comp([@ts.runs_completed[@r],blinepair])
+        comp([@ts.runs_completed[@r],blinepair],@env.run)
         logi "Baseline comparison OK"
       else
         if Dir.exist?(@ts.use_baseline_dir)
