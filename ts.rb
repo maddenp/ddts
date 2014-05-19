@@ -1285,7 +1285,7 @@ class TS
 
   def version(args)
 
-    puts "2.1"
+    puts "2.2"
 
   end
 

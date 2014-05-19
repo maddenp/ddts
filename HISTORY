@@ -4,6 +4,11 @@ Version numbers are in major.minor form, where changes to the minor component
 indicate bugfixes and similar non-breaking enhanements, and changes to the major
 component indicate breaking changes.
 
+v2.2
+
+Add support for 'lib_comp' setting in run configs, for specifying alternate
+comparators on a per-run basis.
+
 v2.1
 
 Add support for YAML tag !replace (see README), and add sanity check for run
