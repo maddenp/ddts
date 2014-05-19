@@ -390,10 +390,11 @@ lib_comp(env,file1,file2)
 
   Returns true if comparison was deemed successful, false otherwise.
 
-  May be aliased to an alternate library method via the 'lib_comp' key in a
-  suite config. NOTE: The 'lib_comp' key should be specified under each
-  comparison group that requires a special comparator. If lib_comp is left
-  undefined, FileUtils.compare_file is used.
+  May be aliased to an alternate library method via the 'lib_comp' key in a run
+  or suite config. If lib_comp is left undefined, FileUtils.compare_file is
+  to test for bitwise identity. NOTE: In a suite config, the 'lib_comp' key must
+  be specified in each comparison group that requires a special comparator,
+  inline with the run names.
 
 lib_data(env)
 
