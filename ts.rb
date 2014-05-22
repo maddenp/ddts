@@ -272,9 +272,8 @@ module Common
         f1=s1.shift
         f2=s2.shift
         fb=File.basename(f1)
-        meth=(x=env.lib_comp)?(method(x)):(FileUtils.method(:compare_file))
-        args=(x=env.lib_comp)?([env,f1,f2]):([f1,f2])
-        match=meth.call(*args)
+        c=(x=env.lib_comp)?(x.to_sym):(nil)
+        match=(c)?(send(c,env,f1,f2)):(FileUtils.compare_file(f1,f2))
         ok=false unless match
         logd "Comparing #{fb}: #{(match)?('OK'):('failed')} #{m}"
       end
