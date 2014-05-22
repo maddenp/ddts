@@ -1312,6 +1312,10 @@ class Unquoted
   # A wrapper class to suppress default quoting of Strings e.g. for Fortran
   # namelist values.
 
+  def initialize(v)
+    @v=v
+  end
+
   def init_with(coder)
     @v=coder.scalar
   end
