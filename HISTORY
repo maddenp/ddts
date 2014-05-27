@@ -4,31 +4,36 @@ Version numbers are in major.minor form, where changes to the minor component
 indicate bugfixes and similar non-breaking enhanements, and changes to the major
 component indicate breaking changes.
 
-v2.2
+2.3
+
+Fix a bug related to baseline generation. Replace a use of Object#method with
+Object#send to allow method_missing handling. Restore Unquoted#initialize.
+
+2.2
 
 Add support for 'lib_comp' setting in run configs, for specifying alternate
 comparators on a per-run basis.
 
-v2.1
+2.1
 
 Add support for YAML tag !replace (see README), and add sanity check for run
 configs with missing or invalid 'build' keys.
 
-v2.0
+2.0
 
 Change env.suite._runs object to always provide .failed, .files and .result
 members, which allows propagation of information from even failed runs to
 post-processing methods like lib_suite_post. Add env.suite._builds object.
 
-v1.2
+1.2
 
 Make 'baseline' key in run configs optional.
 
-v1.1
+1.1
 
 Added support for run dependencies.
  
-v1.0
+1.0
 
 Initial release.
 
