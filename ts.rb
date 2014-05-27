@@ -1159,12 +1159,10 @@ class TS
       # If a baseline is being generated, check for any pre-existing baseline-
       # image directories that would potentially be clobbered if we continue.
 
-      if check_baseline_conflicts
-        unless (b=spec["baseline"])=="none"
-          if Dir.exist?(File.join(gen_baseline_dir,b))
-            logi "ERROR: Run '#{run}' could overwrite baseline '#{b}'"
-            baseline_conflict=true
-          end
+      if check_baseline_conflicts and (b=spec["baseline"])
+        if Dir.exist?(File.join(gen_baseline_dir,b))
+          logi "ERROR: Run '#{run}' could overwrite baseline '#{b}'"
+          baseline_conflict=true
         end
       end
 
