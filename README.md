@@ -17,6 +17,3 @@ A simple example implementation (numerical integration using the trapezoid rule)
 JRuby Complete 1.7.2 or later is required. Place jruby-complete.jar in the test-suite directory before invoking `ddts`.
 
 See the README for detailed information on configuring DDTS.
-### License
-
-The contents of this repository are released under the [Apache 2.0](http://www.apache.org/licenses/LICENSE-2.0) license. See the LICENSE file for details.
