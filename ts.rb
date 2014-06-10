@@ -449,12 +449,12 @@ module Common
     # (i.e. 'continue' is false).
 
     live=[].replace(threads)
-    failcount=0
+    failures=0
     until live.empty?
       live.each do |e|
         unless e.alive?
           live.delete(e)
-          failcount+=1 if e.status.nil?
+          failures+=1 if e.status.nil?
           begin
             e.join
           rescue Exception=>x
@@ -464,7 +464,7 @@ module Common
       end
       sleep 1
     end
-    failcount
+    failures
 
   end
 
