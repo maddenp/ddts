@@ -252,6 +252,12 @@ or
 
 The value of 'key' in c1 will now be [3,4].
 
+The YAML tag !delete can be used to suppress inheritance. For example,
+
+  key: !delete
+
+will delete any 'key' that would otherwise be inherited from an ancestor.
+
 --------------------------------------------------------------------------------
 4. Quoting Rules for Fortran Namelists
 --------------------------------------------------------------------------------
