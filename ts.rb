@@ -359,7 +359,9 @@ module Common
     me={} if me.nil?
     descendant={} if descendant.nil?
     descendant.each do |k,v|
-      if v.is_a?(Replace)
+      if v.is_a?(YAML_Delete)
+        me.delete(k)
+      elsif v.is_a?(YAML_Replace)
         me[k]=v.obj
       elsif v.is_a?(Hash)
         me[k]=mergespec(me[k],v)
@@ -431,7 +433,7 @@ module Common
     # Wrap values instantiated as Ruby Strings in quotes, except for those
     # tagged '!unquoted'.
 
-    if s.is_a?(Unquoted)
+    if s.is_a?(YAML_Unquoted)
       s="#{s}"
     elsif s.is_a?(String)
       s="'#{s}'"
@@ -1282,7 +1284,7 @@ class TS
 
   def version(args)
 
-    puts "2.3"
+    puts "2.4"
 
   end
 
@@ -1290,9 +1292,9 @@ end # class TS
 
 # Special YAML handling. See JRuby's lib/ruby/shared/psych/coder.rb.
 
-class Replace
+class YAML_Delete
 
-  # A wrapper class to allow for suppression of default Array/Hash merging.
+  # To delete inherited keys/values.
 
   attr_accessor :obj
 
@@ -1300,14 +1302,27 @@ class Replace
     @obj=coder.send(coder.type)
   end
 
-end # class Replace
+end # class YAML_Delete
 
-YAML.add_tag("!replace",Replace)
+YAML.add_tag("!delete",YAML_Delete)
 
-class Unquoted
+class YAML_Replace
 
-  # A wrapper class to suppress default quoting of Strings e.g. for Fortran
-  # namelist values.
+  # To to suppress Array/Hash merging.
+
+  attr_accessor :obj
+
+  def init_with(coder)
+    @obj=coder.send(coder.type)
+  end
+
+end # class YAML_Replace
+
+YAML.add_tag("!replace",YAML_Replace)
+
+class YAML_Unquoted
+
+  # To suppress quoting Strings e.g. for Fortran namelist values.
 
   def initialize(v)
     @v=v
@@ -1321,9 +1336,9 @@ class Unquoted
     @v
   end
 
-end # class Unquoted
+end # class YAML_Unquoted
 
-YAML.add_tag("!unquoted",Unquoted)
+YAML.add_tag("!unquoted",YAML_Unquoted)
 
 # Logging
 

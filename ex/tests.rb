@@ -263,6 +263,12 @@ exe("ex_1_alt !replace test","run ex_1_alt",
   ": Running case ex_1_alt"
   )
 
+# Test !delete yaml tag
+
+exe("ex_1_no_n !delete test (no n parameter)","run ex_1_no_n",
+  "Configuration parameter 'n' must be > 0"
+  )
+
 # Remove output directory.
 
 FileUtils.rm_rf($OUT)

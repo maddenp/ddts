@@ -63,6 +63,9 @@ module Library
   end
 
   def lib_run_check(env,postkit)
+    unless (stdout=File.open(postkit).read)=~/SUCCESS/
+      stdout.each_line { |line| logi line.chomp }
+    end
     (job_check(postkit,"SUCCESS"))?(true):(false)
   end
 
@@ -77,7 +80,7 @@ module Library
     FileUtils.chmod(0755,File.join(rundir,binname))
     a=env.run.a
     b=env.run.b
-    n=env.run.n
+    n=env.run.n||0
     confstr="&config a=#{a} b=#{b} n=#{n} /\n"
     conffile=File.join(rundir,env.run.conffile)
     File.open(conffile,'w') { |f| f.write(confstr) }

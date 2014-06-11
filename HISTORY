@@ -4,6 +4,10 @@ Version numbers are in major.minor form, where changes to the minor component
 indicate bugfixes and similar non-breaking enhanements, and changes to the major
 component indicate breaking changes.
 
+2.4
+
+Add support for YAML tag !delete, to suppress inheritance of a key.
+
 2.3
 
 Fix a bug related to baseline generation. Replace a use of Object#method with
