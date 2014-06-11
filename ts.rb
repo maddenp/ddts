@@ -899,14 +899,13 @@ class TS
 
   end
 
-  def clean(extras=nil)
+  def clean(args)
 
     # Clean up items created by the test suite. As well as those defined here,
     # remove any items specified by the caller.
 
     items=[builds_dir,logs_dir,runs_dir,tmp_dir]
     Dir.glob(File.join($DDTSOUT,"log.*")).each { |e| items << e }
-    extras.each { |e| items << e } unless extras.nil?
     items.sort.each do |e|
       if File.exists?(e)
         puts "Deleting #{File.basename(e)}"
@@ -922,11 +921,20 @@ class TS
     # the given arguments. If it is a suite name, run the suite. Otherwise, show
     # usage info and exit with error.
 
-    cmd="gen_baseline" if cmd=="gen-baseline"
-    cmd="use_baseline" if cmd=="use-baseline"
-    okargs=["clean","gen_baseline","help","run","show","use_baseline","version"]
+    cmd||="help"
+    cmd.gsub!(/-/,"_")
+    okargs=[
+      "clean",
+      "gen_baseline",
+      "help",
+      "make_app",
+      "run",
+      "show",
+      "use_baseline",
+      "version"
+    ]
     suites=Dir.glob(File.join(suite_configs,"*")).map { |e| File.basename(e) }
-    unless ["help","version"].include?(cmd)
+    unless ["help","make_app","version"].include?(cmd)
       unless Dir.exist?($DDTSAPP)
         die "Application directory '#{$DDTSAPP}' not found"
       end
@@ -1091,6 +1099,7 @@ class TS
     puts "       #{pre} gen-baseline <directory> <suite>"
     puts "       #{pre} use-baseline <directory> <suite>"
     puts "       #{pre} clean"
+    puts "       #{pre} make-app <path>"
     puts "       #{pre} help"
     puts "       #{pre} run [ gen-baseline <dir> ] <run>"
     puts "       #{pre} run [ use-baseline <dir> ] <run>"
@@ -1106,6 +1115,41 @@ class TS
     puts
     exit status
 
+  end
+
+  def make_app(args)
+    help(args,1) if args.size>1
+    approot=args.first||File.join(home_dir,"app")
+    configs=File.join(approot,"configs")
+    die "Directory '#{approot}' already exists" if File.exist?(approot)
+    dirs=[approot]
+    ["builds","runs","suites"].each { |dir| dirs.push(File.join(configs,dir)) }
+    dirs.each do |dir|
+      begin
+        FileUtils.mkdir_p(dir)
+      rescue
+        die "Unable to create directory '#{dir}'"
+      end
+    end
+    begin
+      src=File.join(home_dir,"defaults.rb")
+      dst=File.join(approot,"library.rb")
+      FileUtils.cp(src,dst)
+    rescue
+      die "Unable to copy '#{src}' to '#{dst}'"
+    end
+    def write_config(configs,sub,name,str)
+      config=File.join(configs,sub,name)
+      begin
+        File.open(config,"w") { |f| f.write(str) }
+      rescue
+        die "Unable to write to '#{config}'"
+      end
+    end
+    write_config(configs,"builds","build1","set: me")
+    write_config(configs,"runs","run1","build: build1\n")
+    write_config(configs,"suites","suite1","group1:\n  - run1\n")
+    puts"\nCreated application skeletion in #{approot}\n\n"
   end
 
   def run(args=nil)
