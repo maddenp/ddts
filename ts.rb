@@ -999,6 +999,11 @@ class TS
       sanity_checks(gen_baseline_dir)
       build_init(runs_all)
       suitespec.each do |group,runs|
+        runs.each do |run|
+          if runs.count(run)>1
+            die "Run '#{run}' is duplicated in group '#{group}'"
+          end
+        end
         group_hash=runs.reduce({}) do |m,e|
           (e.is_a?(Hash))?(m.merge(runs.delete(e))):(m)
         end
