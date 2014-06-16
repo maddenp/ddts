@@ -1296,7 +1296,7 @@ class TS
       puts
       puts pp(spec)
       puts
-    elsif ["builds","runs","suites"].include?(type)
+    elsif ["builds","runs","suites"].include?(type) and name.nil?
       dir=get_dir(type)
       puts
       configs=Dir.glob("#{dir}/*").sort
