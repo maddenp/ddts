@@ -26,6 +26,12 @@ Quick Start
   each containing appropriate definition files, as its value) to run ddts. See
   the 'Definitions' section, below, for details.
 
+  The 'make-app' command-line option can be used to generate an application
+  skeleton suitable for extension. The option's argument is the name of a
+  directory, which must not already exist, in which to create the skeleton. If
+  no argument is supplied, an 'app' directory will be created in the current
+  directory.
+
 --------------------------------------------------------------------------------
 1. Baseline Creation / Comparison
 --------------------------------------------------------------------------------
