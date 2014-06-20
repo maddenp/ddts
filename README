@@ -22,8 +22,9 @@ Quick Start
 
 * Note that either an 'app' directory must exist alongside the 'ddts' wrapper
   script, or the environment variable DDTSAPP must be defined (with the path to
-  a directory containing the required configuration files as its value) to run
-  ddts. See the 'Configuration' section, below, for details.
+  a directory containing the required 'build', 'run' and 'suite' subdirectories,
+  each containing appropriate definition files, as its value) to run ddts. See
+  the 'Definitions' section, below, for details.
 
 --------------------------------------------------------------------------------
 1. Baseline Creation / Comparison
@@ -33,7 +34,7 @@ Run 'ddts gen-baseline <dir> <suite>' to create a baseline image of the named
 suite ('ddts show suites' lists valid names). A set of output from the suite's
 runs will be written to the directory named by <dir>, which will be created if
 necessary. One subdirectory will be created under <dir> for each unique
-'baseline' value specified in the configs of the suite's various runs. These
+'baseline' value specified in the definitions of the suite's various runs. These
 subdirectories must not already exist.
 
 Run 'ddts use-baseline <dir> <suite>' to compare the output produced by a new
@@ -56,7 +57,7 @@ suite start time. Logfiles are created under $DDTSAPP/logs (see the next section
 for information on DDTSAPP).
 
 --------------------------------------------------------------------------------
-3. Configuration
+3. Definitions
 --------------------------------------------------------------------------------
 
 A DDTS application requires, in addition to the core driver in ts.rb, the
@@ -67,48 +68,49 @@ following, which must appear either in a (possibly symlinked) directory named
 - An implementation of library.rb. See below, and the example application in
   the directory 'ex', for reference.
 
-- YAML build, run and suite configuration files, in the 'builds', 'runs', and
-  'suites' subdirectories, respectively, of the $DDTSAPP/configs directory.
+- YAML build, run and suite definition files, in the 'builds', 'runs', and
+  'suites' subdirectories, respectively, of the $DDTSAPP/defs directory.
 
-The configuration files in the 'builds', 'runs' and 'suites' directories are
+The definition files in the 'builds', 'runs' and 'suites' directories are
 expressed in YAML. They are parsed by the core driver and instantiated as hash
 and array containers. An 'env' environment object is passed in as the first
 argument to each library method (see section 5). The 'build', 'run' and 'suite'
-members of the env object expose the contents of their respective configs -- as
-well as items that may be added by the library implementer -- as OpenStruct
+members of the env object expose the contents of their respective definitions --
+as well as items that may be added by the library implementer -- as OpenStruct
 objects, for easy access.
 
-3.1 Build Configs
------------------
+3.1 Build Definitions
+---------------------
 
-Build configs contain the information necessary to construct a command to
+Build definitions contain the information necessary to construct a command to
 perform a build via the external build-automation system. Their content, then,
 depends on the requirements of that system and the interface to it defined in
-library methods. Like run configs (see section 3.2, below), build configs can be
-composed via the 'extends' key.
+library methods. Like run definitions (see section 3.2, below), build
+definitions can be composed via the 'extends' key.
 
 Keys prefixed with 'lib_' are reserved, and provide a per-build mechanism for
 overriding library methods.
 
-3.2 Run Configs
----------------
+3.2 Run Definitions
+-------------------
 
-Run configs contain the information necessary to prepare, configure, execute and
-verify runs; to associate them with baseline images; etc. Config contents will
-depend on the model and platform, but several top-level keys are reserved:
+Run definitions contain the information necessary to prepare, configure, execute
+and verify runs; to associate them with baseline images; etc. Definition
+contents will depend on the model and platform, but several top-level keys are
+reserved:
 
 - [optional] The 'baseline' key specifies the name of the baseline image into
   which this run's output should be copied (when baseline generation is
   requested), or against which it should be verified (when baseline comparison
   is requested). Runs whose output is expected to be identical should share a
-  common 'baseline' value. Run configs with no 'baseline' key do not participate
-  in baseline generation or comparison.
+  common 'baseline' value. Run definitions with no 'baseline' key do not
+  participate in baseline generation or comparison.
 
 - [required] The 'build' key specifies the name of the build (i.e. the filename
-  of a build config) to use for this run.
+  of a build definition) to use for this run.
 
-- [optional] The 'extends' key specifies the name of a run config from which
-  the current config should inherit, and which it may override. Recursion is
+- [optional] The 'extends' key specifies the name of a run definition from which
+  the current definition should inherit, and which it may override. Recursion is
   supported, but loops are fatal errors.
 
 - [optional] The 'require' key specifies the name of a run or the names of runs
@@ -124,15 +126,15 @@ depend on the model and platform, but several top-level keys are reserved:
 - Keys prefixed with 'lib_', which provide a per-run mechanism for overriding
   library methods, are reserved.
 
-3.3 Suite Configs
------------------
+3.3 Suite Definitions
+---------------------
 
-Each outer, array element in a suite config names a group of runs expected to
-produce identical output, whose output will be compared together via some
+Each outer, array element in a suite definition names a group of runs expected
+to produce identical output, whose output will be compared together via some
 comparison criterion (bitwise identity, by default). Inner array elements
-are the names of runs (i.e. filenames of run configs).
+are the names of runs (i.e. filenames of run definitions).
 
-Each outer, scalar element in a suite config represents a suite-level
+Each outer, scalar element in a suite definition represents a suite-level
 configuration parameter.
 
 The following reserved keys (suite-level configuration paramters) are available:
@@ -152,7 +154,7 @@ The following reserved keys (suite-level configuration paramters) are available:
 - Keys prefixed with 'lib_', which provide a per-suite (or per-comparison-group)
   mechanism for overriding library methods, are reserved.
 
-NOTE that any suite-config items whose values are arrays will be interpreted
+NOTE that any suite-definition items whose values are arrays will be interpreted
 as run group definitions. Those whose values are scalars will be interpreted
 as suite-level configuration parameters. Custom parameters may be be added, and
 will appear in the env.suite object passed into library methods.
@@ -226,18 +228,18 @@ nil values).
 ------------------------------------------
 
 By default, the 'extends' mechanism merges Array and Hash objects. For example,
-given config c0
+given definition c0
 
   key: [1,2]
 
-and config c1
+and definition c1
 
   extends: c0
   key: [3,4]
 
 The value of 'key' in c1 will be [1,2,3,4], as 'key' in c1 will extend 'key' in
 c0. Similarly, Hash values will be merged, will key-value paris from ancestor
-configs perserved unless specifically overridden.
+definitions perserved unless specifically overridden.
 
 Alternatively, the YAML tag !replace can be used to suppress this behavior,
 allowing the descendant's value to simply replace any ancestors'. Applied to the
@@ -270,18 +272,18 @@ caveats:
 - YAML casts some unquoted strings to primitive data types. For example, the
   unquoted word 'yes' will be instantiated as a Ruby 'true' boolean. There are
   a number of similar cases. When casting yields unwated behavior, explicitly
-  quote the problematic value in the config. A conservative solution is to
+  quote the problematic value in the definition. A conservative solution is to
   quote all strings.
 
 - The YAML library would normally print Ruby string objects without enclosing
-  quotes, whether or not they are quoted in the config. For example, values
+  quotes, whether or not they are quoted in the definition. For example, values
   abc, 'abc' and "abc" would all be printed without quotes. The core driver
   adds single quotes around all String values when writing Fortran namelists
   so that, for the previous example, all three values would appear as 'abc'
   (i.e. in single quotes). Sometimes this isn't what's needed. For example,
   the Fortran primitive value .true. will be recognized by YAML as a string,
   but must appear unquoted in a namelist. To support this, a value may be
-  preceded by the tag !unquoted in a YAML config to suppress quoting of that
+  preceded by the tag !unquoted in a YAML definition to suppress quoting of that
   value. For example, the YAML entries
 
     gribout: !unquoted  .true.
@@ -293,7 +295,7 @@ caveats:
     gribout=.true.
 
 - Values recognized as numbers will be written without quotes. If quotes are
-  desired, explicitly quote the value in the config so that it is recognized
+  desired, explicitly quote the value in the definition so that it is recognized
   as a string.
 
 --------------------------------------------------------------------------------
@@ -309,8 +311,8 @@ driver or with other library methods should be done either via the passed-in
 'env' object, or via the objects returned by certain library methods. Section
 5.1 discusses the return values expected from library methods and how they are
 used by the core driver. The 'env' OpenStruct object has .build, .run and .suite
-members that expose the contents of the respective configs. New members may be
-added to env.[build|run|suite], or to env itself, as needed. Note that, while
+members that expose the contents of the respective definitions. New members may
+be added to env.[build|run|suite], or to env itself, as needed. Note that, while
 changes made to the top-level env object and its .suite member from TS objects
 (see call-order table in section 5.1) are visible in the subordinate Comparison
 and Run objects, changes made by Comparison and Run objects are confined to
@@ -328,7 +330,7 @@ methods is provided by defaults.rb, which is loaded automatically by the core
 driver for all applications. If $DDTSAPP/library.rb exists, it will also be
 loaded, with the methods contained in its Library module overriding those in
 defaults.rb. Finally, as described below for each library method, special keys
-in suite, run and build configs may override both library.rb and defaults.rb
+in suite, run and build definitions may override both library.rb and defaults.rb
 definitions, specifying alternate method names for each standard library method
 name. See the 'ex' application for examples.
 
@@ -363,7 +365,7 @@ lib_build(env)
   type and value should be determined by the needs of that method.
 
   May be aliased to an alternate library method via the 'lib_build' key in a run
-  config.
+  definition.
 
 lib_build_post(env,buildkit)
 
@@ -380,7 +382,7 @@ lib_build_post(env,buildkit)
   symbol.
 
   May be aliased to an alternate library method via the 'lib_build_post' key in
-  a run config.
+  a run definition.
 
 lib_build_prep(env)
 
@@ -389,7 +391,7 @@ lib_build_prep(env)
   Return value is unused.
   
   May be aliased to an alternate library method via the 'lib_build_prep' key in
-  a run config.
+  a run definition.
 
 lib_comp(env,file1,file2)
 
@@ -398,9 +400,9 @@ lib_comp(env,file1,file2)
   Returns true if comparison was deemed successful, false otherwise.
 
   May be aliased to an alternate library method via the 'lib_comp' key in a run
-  or suite config. If lib_comp is left undefined, FileUtils.compare_file is
-  to test for bitwise identity. NOTE: In a suite config, the 'lib_comp' key must
-  be specified in each comparison group that requires a special comparator,
+  or suite definition. If lib_comp is left undefined, FileUtils.compare_file is
+  to test for bitwise identity. NOTE: In a suite definition, the 'lib_comp' key
+  must be specified in each comparison group that requires a special comparator,
   inline with the run names.
 
 lib_data(env)
@@ -411,7 +413,7 @@ lib_data(env)
   Return value is unused.
   
   May be aliased to an alternate library method via the 'lib_data' key in a run
-  config.
+  definition.
 
 lib_outfiles(env,path)
 
@@ -426,7 +428,7 @@ lib_outfiles(env,path)
   baseline image.
 
   May be aliased to an alternate library method via the 'lib_outfiles' key in a
-  run config.
+  run definition.
 
 lib_queue_del_cmd(env)
 
@@ -434,7 +436,7 @@ lib_queue_del_cmd(env)
   a job from the queue system, given its ID as an argument.
 
   May be aliased to an alternate library method via the 'lib_queue_del_cmd' key
-  in a run config.
+  in a run definition.
 
 lib_run(env,rundir)
 
@@ -444,7 +446,7 @@ lib_run(env,rundir)
   type and value should be determined by the needs of that method.
 
   May be aliased to an alternate library method via the 'lib_run' key in a run
-  config.
+  definition.
 
 lib_run_check(env,postkit)
 
@@ -453,7 +455,7 @@ lib_run_check(env,postkit)
   method.
 
   May be aliased to an alternate library method via the 'lib_run_check' key in
-  a run config.
+  a run definition.
 
 lib_run_post(env,runkit)
 
@@ -466,7 +468,7 @@ lib_run_post(env,runkit)
   identified by the library implementer.
 
   May be aliased to an alternate library method via the 'lib_run_post' key in a
-  run config.
+  run definition.
 
 lib_run_prep(env,rundir)
 
@@ -478,7 +480,7 @@ lib_run_prep(env,rundir)
   was passed in, or something else.
 
   May be aliased to an alternate library method via the 'lib_run_prep' key in a
-  run config.
+  run definition.
 
 lib_suite_post(env)
 
@@ -488,7 +490,7 @@ lib_suite_post(env)
   Return value is unused.
 
   May be aliased to an alternate library method via the 'lib_suite_post' key in
-  a suite config.
+  a suite definition.
 
 lib_suite_prep(env)
 
@@ -499,11 +501,11 @@ lib_suite_prep(env)
   Return value is unused.
 
   May be aliased to an alternate library method via the 'lib_suite_prep' key in
-  a suite config.
+  a suite definition.
 
 Other methods useful to a specific model or platform may be provided by the
 library implementer as needed. See uses of Utility#invoke in ts.rb for examples
-of how to override such custom methods via build, run and suite configs.
+of how to override such custom methods via build, run and suite definitions.
 
 5.2 Utility Methods
 -------------------
@@ -557,12 +559,12 @@ home_dir
 invoke(std,key,*args)
 
   Symbol argument 'std' names a library method. Symbol argument 'key' names a
-  config type. The *args are the arguments to be passed to the named library
-  method (the first of *args MUST be the 'env' object). If the config named by
-  'key' defines an alias for the method named by 'std', it is called; otherwise,
-  'std' is called. In either case, *args are passed as arguments. For example,
-  'invoke(:lib_comp,:run,env,x)' would result in the call 'lib_comp_alt(env,x)'
-  if the run config contained 'lib_comp: lib_comp_alt'.
+  definition type. The *args are the arguments to be passed to the named library
+  method (the first of *args MUST be the 'env' object). If the definition named
+  by 'key' defines an alias for the method named by 'std', it is called;
+  otherwise, 'std' is called. In either case, *args are passed as arguments. For
+  example, 'invoke(:lib_comp,:run,env,x)' would result in the call
+  'lib_comp_alt(env,x)' if the run definition contained 'lib_comp: lib_comp_alt'.
 
 job_activate(jobid,run)
 

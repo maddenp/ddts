@@ -196,24 +196,24 @@ module Common
 
   include Utility
 
-  # Config directories
+  # Definition directories
 
-  def configdir()     File.join($DDTSAPP,"configs") end
-  def build_configs() File.join(configdir,"builds") end
-  def run_configs()   File.join(configdir,"runs")   end
-  def suite_configs() File.join(configdir,"suites") end
+  def defsdir()    File.join($DDTSAPP,"defs")   end
+  def build_defs() File.join(defsdir,"builds")  end
+  def run_defs()   File.join(defsdir,"runs")    end
+  def suite_defs() File.join(defsdir,"suites")  end
 
   # Runtime directories
 
-  def builds_dir()    File.join($DDTSOUT,"builds")  end
-  def logs_dir()      File.join($DDTSOUT,"logs")    end
-  def runs_dir()      File.join($DDTSOUT,"runs")    end
+  def builds_dir() File.join($DDTSOUT,"builds") end
+  def logs_dir()   File.join($DDTSOUT,"logs")   end
+  def runs_dir()   File.join($DDTSOUT,"runs")   end
 
   # Various methods
 
   def ancestry(file,chain=nil)
 
-    # Return an array containing the ancestry of the given configuration file
+    # Return an array containing the ancestry of the given definition file
     # (including the file itself), determined by following the chain of
     # 'extends' properties.
 
@@ -336,9 +336,11 @@ module Common
     die "Circular dependency detected for #{file}" if specs.include?(file)
     specs << file
     me=parse(file,quiet)
-    die "No valid config found in '#{file}'" unless me
+    die "No valid definition found in '#{file}'" unless me
     ancestor=me["extends"]
-    me=loadspec(File.join(File.dirname(file),ancestor),quiet,me,specs) if ancestor
+    if ancestor
+      me=loadspec(File.join(File.dirname(file),ancestor),quiet,me,specs)
+    end
     me=mergespec(me,descendant) unless descendant.nil?
     me
 
@@ -377,7 +379,7 @@ module Common
 
   def parse(file,quiet=false)
 
-    # Instantiate a Ruby object from a YAML config file.
+    # Instantiate a Ruby object from a YAML definition file.
 
     file=File.expand_path(file)
     o=nil
@@ -390,8 +392,8 @@ module Common
     end
     if @dlog and not quiet
       c=File.basename(file)
-      logd "Read config '#{c}':"
-      die "Config '#{c}' is invalid" unless o
+      logd "Read definition '#{c}':"
+      die "Definition '#{c}' is invalid" unless o
       pp(o).each_line { |e| logd e }
     end
     o
@@ -573,7 +575,7 @@ class Run
       # Otherwise, perform the run.
 
       @env=OpenStruct.new(@ts.env.marshal_dump) # private copy
-      @env.run=loadenv(File.join(run_configs,@r))
+      @env.run=loadenv(File.join(run_defs,@r))
       logd_flush
       self.extend(Library)
       @env.run._name=@r
@@ -751,7 +753,7 @@ class Run
     end
 
     b=@env.run.build
-    @env.build=loadenv(File.join(build_configs,b))
+    @env.build=loadenv(File.join(build_defs,b))
     logd_flush
     @env.build._root=File.join(builds_dir,b)
     @ts.buildmaster.synchronize do
@@ -782,7 +784,7 @@ class Run
 
   def mod_namelist_file(nlfile,nlenv)
 
-    # Modify a namelist file with values supplied by a config.
+    # Modify a namelist file with values supplied by a definition.
 
     nlspec=convert_o2h(nlenv)
     nlh=NamelistHandler.new(nlfile)
@@ -842,9 +844,10 @@ class TS
   def baseline_gen
 
     # Generate a baseline. For each set of runs sharing a common value for the
-    # 'baseline' key in their configs, copy the output of one run (the one that
-    # managed to insert its result data in the baseline-sources array first) to
-    # the subdirectory of baseline/<suite> named by that common 'baseline' key.
+    # 'baseline' key in their definitions, copy the output of one run (the one
+    # that managed to insert its result data in the baseline-sources array
+    # first) to the subdirectory of baseline/<suite> named by that common
+    # 'baseline' key.
 
     baselinesrcs.each do |r,src|
       logi "Creating #{r} baseline..."
@@ -866,15 +869,15 @@ class TS
   def build_init(run_or_runs)
 
     # If the builds directory does not exist, simply create it. Otherwise,
-    # exctract the set of unique 'build' keys from the supplied run config(s)
+    # exctract the set of unique 'build' keys from the supplied run def(s)
     # and remove any build directories with the same names. NB: This assumes
-    # that build directories are named identically to build config names!
+    # that build directories are named identically to build definition names!
 
     logd "build_init:"
     logd "----"
     runs=(run_or_runs.respond_to?(:each))?(run_or_runs):([run_or_runs])
     builds=runs.reduce(Set.new) do |m,e|
-      m.add(File.join(builds_dir,loadspec(File.join(run_configs,e),true)["build"]))
+      m.add(File.join(builds_dir,loadspec(File.join(run_defs,e),true)["build"]))
       logd "----"
       m
     end
@@ -933,7 +936,7 @@ class TS
       "use_baseline",
       "version"
     ]
-    suites=Dir.glob(File.join(suite_configs,"*")).map { |e| File.basename(e) }
+    suites=Dir.glob(File.join(suite_defs,"*")).map { |e| File.basename(e) }
     unless ["help","make_app","version"].include?(cmd)
       unless Dir.exist?($DDTSAPP)
         die "Application directory '#{$DDTSAPP}' not found"
@@ -971,7 +974,7 @@ class TS
 
     @suite=suite
     setup
-    f=File.join(suite_configs,suite)
+    f=File.join(suite_defs,suite)
     unless File.exists?(f)
       die "Suite '#{suite}' not found"
     end
@@ -1125,10 +1128,10 @@ class TS
   def make_app(args)
     help(args,1) if args.size>1
     approot=args.first||File.join(home_dir,"app")
-    configs=File.join(approot,"configs")
+    defs=File.join(approot,"defs")
     die "Directory '#{approot}' already exists" if File.exist?(approot)
     dirs=[approot]
-    ["builds","runs","suites"].each { |dir| dirs.push(File.join(configs,dir)) }
+    ["builds","runs","suites"].each { |dir| dirs.push(File.join(defs,dir)) }
     dirs.each do |dir|
       begin
         FileUtils.mkdir_p(dir)
@@ -1143,17 +1146,17 @@ class TS
     rescue
       die "Unable to copy '#{src}' to '#{dst}'"
     end
-    def write_config(configs,sub,name,str)
-      config=File.join(configs,sub,name)
+    def write_definition(defs,sub,name,str)
+      definition=File.join(defs,sub,name)
       begin
-        File.open(config,"w") { |f| f.write(str) }
+        File.open(definition,"w") { |f| f.write(str) }
       rescue
-        die "Unable to write to '#{config}'"
+        die "Unable to write to '#{definition}'"
       end
     end
-    write_config(configs,"builds","build1","set: me")
-    write_config(configs,"runs","run1","build: build1\n")
-    write_config(configs,"suites","suite1","group1:\n  - run1\n")
+    write_definition(defs,"builds","build1","set: me")
+    write_definition(defs,"runs","run1","build: build1\n")
+    write_definition(defs,"suites","suite1","group1:\n  - run1\n")
     puts"\nCreated application skeletion in #{approot}\n\n"
   end
 
@@ -1201,11 +1204,11 @@ class TS
     baseline_conflict=false
     unsatisfied_require=false
 
-    builds_all=Dir.glob(File.join(build_configs,"*")).map { |e| File.basename(e) }
+    builds_all=Dir.glob(File.join(build_defs,"*")).map { |e| File.basename(e) }
 
     runs_all.each do |run|
 
-      spec=loadspec(File.join(run_configs,run),true)
+      spec=loadspec(File.join(run_defs,run),true)
 
       # If a baseline is being generated, check for any pre-existing baseline-
       # image directories that would potentially be clobbered if we continue.
@@ -1260,32 +1263,32 @@ class TS
 
   def show(args)
 
-    # Pretty-print a fully composed run or suite configuration.
+    # Pretty-print a fully composed run or suite definition.
 
     def get_dir(type)
       case
       when type=~/build(s?)/
-        unless Dir.exist?(d=build_configs)
-          die "Build configurations directory '#{d}' not found"
+        unless Dir.exist?(d=build_defs)
+          die "Build definitions directory '#{d}' not found"
         end
         d
       when type=~/run(s?)/
-        unless Dir.exist?(d=run_configs)
-          die "Run configurations directory '#{d}' not found"
+        unless Dir.exist?(d=run_defs)
+          die "Run definitions directory '#{d}' not found"
         end
         d
       when type=~/suite(s?)/
-        unless Dir.exist?(d=suite_configs)
-          die "Suite configurations directory '#{d}' not found"
+        unless Dir.exist?(d=suite_defs)
+          die "Suite definitions directory '#{d}' not found"
         end
         d
       else
-        die "Unrecognized config type '#{type}'"
+        die "Unrecognized definition type '#{type}'"
       end
     end
 
-    unless Dir.exist?(configdir)
-      die "Configuration directory '#{configdir}' not found"
+    unless Dir.exist?(defsdir)
+      die "Definition directory '#{defsdir}' not found"
     end
     type=args[0]
     name=args[1]
@@ -1304,11 +1307,11 @@ class TS
     elsif ["builds","runs","suites"].include?(type) and name.nil?
       dir=get_dir(type)
       puts
-      configs=Dir.glob("#{dir}/*").sort
-      puts (configs.empty?)?("No #{type} found"):("Available #{type}:")
+      defs=Dir.glob("#{dir}/*").sort
+      puts (defs.empty?)?("No #{type} found"):("Available #{type}:")
       puts
-      configs.each { |item| puts "  #{File.basename(item)}" }
-      puts unless configs.empty?
+      defs.each { |item| puts "  #{File.basename(item)}" }
+      puts unless defs.empty?
     else
       help(args,1)
     end
