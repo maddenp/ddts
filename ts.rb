@@ -1112,11 +1112,8 @@ class TS
     puts "       #{pre} run [ gen-baseline <dir> ] <run>"
     puts "       #{pre} run [ use-baseline <dir> ] <run>"
     puts "       #{pre} show build <build>"
-    puts "       #{pre} show builds"
     puts "       #{pre} show run <run>"
-    puts "       #{pre} show runs"
     puts "       #{pre} show suite <suite>"
-    puts "       #{pre} show suites"
     puts "       #{pre} version"
     puts
     puts "See the README for more information."
@@ -1267,17 +1264,17 @@ class TS
 
     def get_dir(type)
       case
-      when type=~/build(s?)/
+      when type=="build"
         unless Dir.exist?(d=build_defs)
           die "Build definitions directory '#{d}' not found"
         end
         d
-      when type=~/run(s?)/
+      when type=="run"
         unless Dir.exist?(d=run_defs)
           die "Run definitions directory '#{d}' not found"
         end
         d
-      when type=~/suite(s?)/
+      when type=="suite"
         unless Dir.exist?(d=suite_defs)
           die "Suite definitions directory '#{d}' not found"
         end
@@ -1304,14 +1301,6 @@ class TS
       puts
       puts pp(spec)
       puts
-    elsif ["builds","runs","suites"].include?(type) and name.nil?
-      dir=get_dir(type)
-      puts
-      defs=Dir.glob("#{dir}/*").sort
-      puts (defs.empty?)?("No #{type} found"):("Available #{type}:")
-      puts
-      defs.each { |item| puts "  #{File.basename(item)}" }
-      puts unless defs.empty?
     else
       help(args,1)
     end

@@ -13,11 +13,8 @@ Quick Start
   ddts run [ gen-baseline <dir> ] <run> : do <run>, write baseline to <dir>
   ddts run [ use-baseline <dir> ] <run> : do <run>, compare to baseline <dir>
   ddts show build <build>               : show details of the build <build>
-  ddts show builds                      : show valid build names
   ddts show run <run>                   : show details of the run <run>
-  ddts show runs                        : show valid run names
   ddts show suite <suite>               : show details of the suite <suite>
-  ddts show suites                      : show valid suite names
   ddts version                          : print version number and exit
 
 * Note that either an 'app' directory must exist alongside the 'ddts' wrapper
@@ -37,11 +34,11 @@ Quick Start
 --------------------------------------------------------------------------------
 
 Run 'ddts gen-baseline <dir> <suite>' to create a baseline image of the named
-suite ('ddts show suites' lists valid names). A set of output from the suite's
-runs will be written to the directory named by <dir>, which will be created if
-necessary. One subdirectory will be created under <dir> for each unique
-'baseline' value specified in the definitions of the suite's various runs. These
-subdirectories must not already exist.
+suite. A set of output from the suite's runs will be written to the directory
+named by <dir>, which will be created if necessary. One subdirectory will be
+created under <dir> for each unique 'baseline' value specified in the
+definitions of the suite's various runs. These subdirectories must not already
+exist.
 
 Run 'ddts use-baseline <dir> <suite>' to compare the output produced by a new
 suite invocation to the existing baseline in <dir>.
