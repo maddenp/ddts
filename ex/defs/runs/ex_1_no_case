@@ -1,0 +1,4 @@
+extends: 'ex_1'
+message:
+  - !delete 'case'
+  - 'now'

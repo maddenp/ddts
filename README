@@ -227,8 +227,8 @@ nil values).
   lib_suite_post library method, and only for suite (not single-run)
   invocations.
 
-3.4 Merge vs Replace for Arrays and Hashes
-------------------------------------------
+3.4 Controlling Array/Hash Inheritance
+--------------------------------------
 
 By default, the 'extends' mechanism merges Array and Hash objects. For example,
 given definition c0
@@ -241,12 +241,12 @@ and definition c1
   key: [3,4]
 
 The value of 'key' in c1 will be [1,2,3,4], as 'key' in c1 will extend 'key' in
-c0. Similarly, Hash values will be merged, will key-value paris from ancestor
+c0. Similarly, Hash values will be merged, with key-value paris from ancestor
 definitions perserved unless specifically overridden.
 
-Alternatively, the YAML tag !replace can be used to suppress this behavior,
-allowing the descendant's value to simply replace any ancestors'. Applied to the
-previous example, c1 might be specified as
+Alternatively, the YAML tag !replace can be used to suppress merging, allowing
+the descendant's value to simply replace any ancestors'. Applied to the previous
+example, c1 might be specified as
 
   key: !replace [3,4]
 
@@ -256,13 +256,37 @@ or
     - 3
     - 4
 
-The value of 'key' in c1 will now be [3,4].
+so that the final value of 'key' in c1 will be [3,4].
 
 The YAML tag !delete can be used to suppress inheritance. For example,
 
   key: !delete
 
-will delete any 'key' that would otherwise be inherited from an ancestor.
+will delete a 'key' that would otherwise be inherited from an ancestor.
+
+Also,
+
+  key:
+    - !delete value
+
+will delete 'value' from an inherited array. For example, for c0
+
+  key:
+    - a
+    - b
+    - c
+
+and c1
+
+  extends: c0
+  key:
+    - !delete b
+
+the final value of c1 will be
+
+  key:
+    - a
+    - c
 
 --------------------------------------------------------------------------------
 4. Quoting Rules for Fortran Namelists

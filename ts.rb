@@ -366,9 +366,21 @@ module Common
       elsif v.is_a?(YAML_Replace)
         me[k]=v.obj
       elsif v.is_a?(Hash)
+        unless v.is_a?(Hash)
+          die "Cannot merge Hash '#{me[k]}' with #{v.class} '#{v}'"
+        end
         me[k]=mergespec(me[k],v)
       elsif v.is_a?(Array)
+        unless v.is_a?(Array)
+          die "Cannot merge Array '#{me[k]}' with #{v.class} '#{v}'"
+        end
         me[k]=(me[k].nil?)?(v):(me[k]+v)
+        me[k].each do |e|
+          if e.is_a?(YAML_Delete)
+            me[k].delete(e.obj)
+            me[k].delete(e)
+          end
+        end
       else
         me[k]=v
       end
@@ -1338,6 +1350,10 @@ class YAML_Delete
   # To delete inherited keys/values.
 
   attr_accessor :obj
+
+  def <=>(other_obj)
+    "#{obj}"<=>"#{other_obj}"
+  end
 
   def init_with(coder)
     @obj=coder.send(coder.type)
