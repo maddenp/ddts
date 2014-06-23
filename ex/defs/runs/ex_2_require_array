@@ -1,5 +1,5 @@
-extends: 'ex_base'
+ddts_extends: 'ex_base'
+ddts_require:
+  - 'ex_1'
 sleep: 2
 tasks: 2
-require:
-  - ex_1

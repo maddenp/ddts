@@ -1,4 +1,5 @@
-extends: ex_suite_base
+ddts_extends: ex_suite_base
+ddts_continue: true
 group_ex_a:
   - ex_1
   - lib_comp: lib_comp_alt
@@ -6,4 +7,3 @@ group_ex_a:
 group_ex_b:
   - ex_4
   - ex_fail
-continue: true

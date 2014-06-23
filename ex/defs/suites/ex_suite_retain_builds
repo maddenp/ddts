@@ -1,2 +1,2 @@
-extends: ex_suite
-retain_builds: true
+ddts_extends: ex_suite
+ddts_retain_builds: true

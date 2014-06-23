@@ -1,4 +1,4 @@
-extends: 'ex_1'
+ddts_extends: 'ex_1'
 message:
   - !delete 'case'
   - 'now'

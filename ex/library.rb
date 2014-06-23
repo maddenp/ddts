@@ -6,19 +6,19 @@ module Library
     bindir=env.build.bindir
     binname=env.run.binname
     compiler=env.build.compiler
-    srcdir=env.build._root
+    srcdir=env.build.ddts_root
     srcfile=env.build.srcfile
     cmd="cd #{srcdir} && #{compiler} #{srcfile} -o #{bindir}/#{binname}"
     ext(cmd,{:msg=>"Build failed, see #{logfile}"})
   end
 
   def lib_build_post(env,buildkit)
-    File.join(env.build._root,env.build.bindir,env.build.binname)
+    File.join(env.build.ddts_root,env.build.bindir,env.build.binname)
   end
 
   def lib_build_prep(env)
-    FileUtils.cp(File.join(app_dir,env.build.srcfile),env.build._root)
-    FileUtils.mkdir_p(File.join(env.build._root,env.build.bindir))
+    FileUtils.cp(File.join(app_dir,env.build.srcfile),env.build.ddts_root)
+    FileUtils.mkdir_p(File.join(env.build.ddts_root,env.build.bindir))
   end
 
   def lib_outfiles_ex(env,path)
@@ -76,7 +76,7 @@ module Library
   def lib_run_prep(env,rundir)
     binname=env.run.binname
     conffile=env.run.conffile
-    FileUtils.cp(env.build._result,rundir)
+    FileUtils.cp(env.build.ddts_result,rundir)
     FileUtils.chmod(0755,File.join(rundir,binname))
     a=env.run.a
     b=env.run.b
@@ -92,10 +92,10 @@ module Library
   end
 
   def lib_suite_post_ex(env)
-    buildfails=env.suite._builds.reduce(0) { |m,(k,v)| (v.failed)?(m+1):(m) }
-    logi "build fail rate = #{Float(buildfails)/env.suite._builds.size}"
-    runfails=env.suite._runs.reduce(0) { |m,(k,v)| (v.failed)?(m+1):(m) }
-    logi "run fail rate = #{Float(runfails)/env.suite._runs.size}"
+    buildfails=env.suite.ddts_builds.reduce(0) { |m,(k,v)| (v.failed)?(m+1):(m) }
+    logi "build fail rate = #{Float(buildfails)/env.suite.ddts_builds.size}"
+    runfails=env.suite.ddts_runs.reduce(0) { |m,(k,v)| (v.failed)?(m+1):(m) }
+    logi "run fail rate = #{Float(runfails)/env.suite.ddts_runs.size}"
     logi "[ custom post action ]"
   end
 

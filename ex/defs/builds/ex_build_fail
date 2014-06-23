@@ -1,4 +1,4 @@
-extends: 'ex_base'
+ddts_extends: 'ex_base'
 bindir: 'bin'
 binname: 'integrate'
 compiler: '/bin/false'

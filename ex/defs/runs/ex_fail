@@ -1,4 +1,4 @@
-extends: 'ex_base'
+ddts_extends: 'ex_base'
+n: 0
 sleep: 0
 tasks: 4
-n: 0

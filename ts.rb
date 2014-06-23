@@ -215,13 +215,13 @@ module Common
 
     # Return an array containing the ancestry of the given definition file
     # (including the file itself), determined by following the chain of
-    # 'extends' properties.
+    # 'ddts_extends' properties.
 
     dir,base=File.split(file)
     chain=[] if chain.nil?
     chain << base
     me=parse(file)
-    ancestor=me["extends"]
+    ancestor=me["ddts_extends"]
     ancestry(File.join(dir,ancestor),chain) if ancestor
     chain
 
@@ -229,8 +229,8 @@ module Common
 
   def comp(runs,env,continue=false)
 
-    # Compare the output files for a set of runs (a 'run' may be a baseline
-    # image). Each element in the passed-in array is an OpenStruct object with
+    # Compare the output files for a set of runs (a 'run' may be a baseline).
+    # Each element in the passed-in array is an OpenStruct object with
     # .name and .files members. The .name member specifies the name of the
     # run for display/logging purposes. The .files member contains a filenames
     # array-of-arrays, each element of which is composed of a prefix path and
@@ -337,7 +337,7 @@ module Common
     specs << file
     me=parse(file,quiet)
     die "No valid definition found in '#{file}'" unless me
-    ancestor=me["extends"]
+    ancestor=me["ddts_extends"]
     if ancestor
       me=loadspec(File.join(File.dirname(file),ancestor),quiet,me,specs)
     end
@@ -462,7 +462,7 @@ module Common
     # discarding each as it finishes. Consider threads that raised exceptions
     # (indicated by nil status) to be failures. Join each thread if either (a)
     # it did not raise an exception, or (b) we are running in 'fail early' mode
-    # (i.e. 'continue' is false).
+    # (i.e. 'ddts_continue' is false).
 
     live=[].replace(threads)
     failures=0
@@ -511,15 +511,15 @@ class Comparison
     threads=[]
     set=a.join(", ")
     a.each { |e| threads << Thread.new { runs << Run.new(e,@ts).result } }
-    @failruns=threadmon(threads,@ts.env.suite.continue)
+    @failruns=threadmon(threads,@ts.env.suite.ddts_continue)
     @comp_ok=true # hope for the best
-    return if @ts.env.suite.build_only
+    return if @ts.env.suite.ddts_build_only
     if @totalruns-@failruns > 1
       runs.delete_if { |e| e.failed }
       set=runs.reduce([]) { |m,e| m.push(e.name) }.sort.join(", ")
       logi "#{set}: Checking..."
       sorted_runs=runs.sort { |r1,r2| r1.name <=> r2.name }
-      @comp_ok=comp(sorted_runs,env,@ts.env.suite.continue)
+      @comp_ok=comp(sorted_runs,env,@ts.env.suite.ddts_continue)
       logi "#{set}: OK" if @comp_ok
     else
       unless @totalruns==1
@@ -590,16 +590,16 @@ class Run
       @env.run=loadenv(File.join(run_defs,@r))
       logd_flush
       self.extend(Library)
-      @env.run._name=@r
-      @bline=@env.run.baseline
+      @env.run.ddts_name=@r
+      @bline=@env.run.ddts_baseline
 
       # Wait on required runs.
 
-      if (require=@env.run.require)
+      if (require=@env.run.ddts_require)
         require=[require] unless require.is_a?(Array)
         suffix=(require.size==1)?(""):("(s)")
         logi "Waiting on required run#{suffix}: #{require.join(', ')}"
-        @env.run._require_results={}
+        @env.run.ddts_require_results={}
         until require.empty?
           @ts.runmaster.synchronize do
             require.each do |e|
@@ -607,7 +607,7 @@ class Run
                 if result.failed
                   die "Run '#{@r}' depends on failed run '#{e}'"
                 end
-                @env.run._require_results[e]=result
+                @env.run.ddts_require_results[e]=result
                 require.delete(e)
               end
             end
@@ -626,7 +626,7 @@ class Run
 
       build
 
-      if @env.suite.build_only
+      if @env.suite.ddts_build_only
 
         # If this suite is only performing builds, set the run's result to the
         # symbol :build_only.
@@ -758,16 +758,16 @@ class Run
     def update_builds(build,failed,result)
       @ts.buildmaster.synchronize do
         x=OpenStruct.new({:failed=>failed,:result=>result})
-        @env.suite._builds||={}
-        @env.suite._builds[build]=x
+        @env.suite.ddts_builds||={}
+        @env.suite.ddts_builds[build]=x
         @ts.builds[build]=x
       end
     end
 
-    b=@env.run.build
+    b=@env.run.ddts_build
     @env.build=loadenv(File.join(build_defs,b))
     logd_flush
-    @env.build._root=File.join(builds_dir,b)
+    @env.build.ddts_root=File.join(builds_dir,b)
     @ts.buildmaster.synchronize do
       @ts.buildlocks[b]=Mutex.new unless @ts.buildlocks.has_key?(b)
     end
@@ -789,7 +789,7 @@ class Run
     die "Required build unavailable" if @ts.builds[b].failed
     @ts.buildmaster.synchronize do
       x=@ts.builds[b]
-      @env.build._result=(x.failed)?(:build_failed):(x.result)
+      @env.build.ddts_result=(x.failed)?(:build_failed):(x.result)
     end
 
   end
@@ -889,12 +889,13 @@ class TS
     logd "----"
     runs=(run_or_runs.respond_to?(:each))?(run_or_runs):([run_or_runs])
     builds=runs.reduce(Set.new) do |m,e|
-      m.add(File.join(builds_dir,loadspec(File.join(run_defs,e),true)["build"]))
+      build_name=loadspec(File.join(run_defs,e),true)["ddts_build"]
+      m.add(File.join(builds_dir,build_name))
       logd "----"
       m
     end
     if Dir.exist?(builds_dir)
-      if not env.suite.retain_builds
+      if not env.suite.ddts_retain_builds
         builds.each do |build|
           if Dir.exist?(build)
             FileUtils.rm_rf(build)
@@ -1002,9 +1003,9 @@ class TS
         # defined suite-level settings.
         eval "env.suite.#{k}=suitespec.delete(k)" unless v.is_a?(Array)
       end
-      env.suite._totalruns=0
-      env.suite._totalfailures=0
-      env.suite._suitename=suite
+      env.suite.ddts_totalruns=0
+      env.suite.ddts_totalfailures=0
+      env.suite.ddts_suitename=suite
       self.extend(Library)
       FileUtils.mkdir_p(tmp_dir)
       invoke(:lib_suite_prep,:suite,env)
@@ -1025,18 +1026,19 @@ class TS
         group_env=OpenStruct.new(group_hash)
         if runs
           threads << Thread.new do
-            Thread.current[:comparison]=Comparison.new(runs.sort.uniq,group_env,self)
+            comparison=Comparison.new(runs.sort.uniq,group_env,self)
+            Thread.current[:comparison]=comparison
             raise DDTSException if Thread.current[:comparison].failruns > 0
           end
         else
           logi "Suite group #{group} empty, ignoring..."
         end
       end
-      failgroups=threadmon(threads,env.suite.continue)
-      if env.suite.continue
+      failgroups=threadmon(threads,env.suite.ddts_continue)
+      if env.suite.ddts_continue
         threads.each do |e|
-          env.suite._totalruns+=e[:comparison].totalruns
-          env.suite._totalfailures+=e[:comparison].failruns
+          env.suite.ddts_totalruns+=e[:comparison].totalruns
+          env.suite.ddts_totalfailures+=e[:comparison].failruns
           failgroups+=1 unless e[:comparison].comp_ok
         end
         logi "Suite stats: Failure in #{failgroups} of #{threads.size} group(s)"
@@ -1057,13 +1059,14 @@ class TS
       end
     end
     if failgroups>0
-      msg="#{env.suite._totalfailures} of #{env.suite._totalruns} TEST(S) FAILED"
+      msg="#{env.suite.ddts_totalfailures} of #{env.suite.ddts_totalruns} "+
+        "TEST(S) FAILED"
     else
       msg="ALL TESTS PASSED"
       msg+=" -- but note WARNING(s) above!" if ilog.warned
     end
     logi msg
-    env.suite._runs=runs_completed.reduce({}) do |m,(k,v)|
+    env.suite.ddts_runs=runs_completed.reduce({}) do |m,(k,v)|
       if v==:build_only
         h={:failed=>false,:files=>[],:result=>nil}
       elsif v==:incomplete
@@ -1164,7 +1167,7 @@ class TS
       end
     end
     write_definition(defs,"builds","build1","set: me")
-    write_definition(defs,"runs","run1","build: build1\n")
+    write_definition(defs,"runs","run1","ddts_build: build1\n")
     write_definition(defs,"suites","suite1","group1:\n  - run1\n")
     puts"\nCreated application skeletion in #{approot}\n\n"
   end
@@ -1219,10 +1222,10 @@ class TS
 
       spec=loadspec(File.join(run_defs,run),true)
 
-      # If a baseline is being generated, check for any pre-existing baseline-
-      # image directories that would potentially be clobbered if we continue.
+      # If a baseline is being generated, check for any pre-existing baseline
+      # directories that would potentially be clobbered if we continue.
 
-      if check_baseline_conflicts and (b=spec["baseline"])
+      if check_baseline_conflicts and (b=spec["ddts_baseline"])
         if Dir.exist?(File.join(gen_baseline_dir,b))
           logi "ERROR: Run '#{run}' could overwrite baseline '#{b}'"
           baseline_conflict=true
@@ -1231,7 +1234,7 @@ class TS
 
       # Check that all run dependencies are satisfied by scheduled runs.
 
-      unless (r=spec["require"])==nil
+      unless (r=spec["ddts_require"])==nil
         r=[r] unless r.is_a?(Array)
         r.each do |e|
           unless runs_all.include?(e)
@@ -1243,7 +1246,7 @@ class TS
 
       # Check that all runs have defined 'build'.
 
-      unless build=spec["build"]
+      unless build=spec["ddts_build"]
         die "Run '#{run}' not associated with any build, aborting..."
       end
       unless builds_all.include?(build)
@@ -1261,8 +1264,8 @@ class TS
     # Perform common tasks needed for either full-suite or single-run
     # invocations.
 
-    env._ilog=(@ilog=Xlog.new(logs_dir,uniq))
-    env._dlog=(@dlog=XlogBuffer.new(ilog))
+    env.ddts_ilog=(@ilog=Xlog.new(logs_dir,uniq))
+    env.ddts_dlog=(@dlog=XlogBuffer.new(ilog))
     trap("INT") do
       logi "Interrupted"
       raise Interrupt
@@ -1307,7 +1310,7 @@ class TS
       file=File.join(dir,name)
       die "'#{name}' not found in #{dir}" unless File.exist?(file)
       spec=loadspec(file)
-      spec.delete("extends")
+      spec.delete("ddts_extends")
       puts
       puts "# #{ancestry(file).join(' < ')}"
       puts

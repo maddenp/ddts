@@ -1,4 +1,4 @@
-extends: ex_suite_base
+ddts_extends: ex_suite_base
 group_ex:
   - ex_1
   - ex_2_require_array
