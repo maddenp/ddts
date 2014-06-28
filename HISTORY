@@ -4,6 +4,28 @@ Version numbers are in major.minor form, where changes to the minor component
 indicate bugfixes and similar non-breaking enhanements, and changes to the major
 component indicate breaking changes.
 
+3.0
+
+Changed app/configs to app/defs to align with DDTS design terminology. Changed
+references to 'config' to 'definition' in documentation and comments.
+
+Removed 'show [builds|runs|suites]' commands, as these show definition fragments
+that are not buildable or runnable. Users need to know via other means which
+suites are defined for their use. The 'show suite' command, with a valid suite
+name as its argument, will show a list of runnable runs, and 'show run' will
+show buildable builds. The 'show [builds|runs|suites' commands would only have
+been useful to application developers, and they can use 'ls' to achieve the same
+goal (i.e. they must already be aware of the directory structure under app/defs.
+
+Changed lib_run* rooutine arguments lists to align with lib_build* routines',
+and replaced 'rundir' argument to lib_run* routines with env.run.ddts_root. See
+the README for more information.
+
+Renamed reserved definition keys with a 'ddts_' prefix, to avoid conflicts. For
+example, 'extends' becomes 'ddts_extends'. See the README for more information.
+
+Added ability, via !delete YAML tag, to delete an inherited array entry.
+
 2.4
 
 Add support for YAML tag !delete, to suppress inheritance of a key.
