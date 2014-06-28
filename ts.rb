@@ -657,19 +657,17 @@ class Run
         # ...and perform the run.
 
         logi "Started"
-        @rundir=File.join(runs_dir,"#{@r}.#{@ts.uniq}")
-        FileUtils.mkdir_p(@rundir) unless Dir.exist?(@rundir)
+        rundir=@env.run.ddts_root=File.join(runs_dir,"#{@r}.#{@ts.uniq}")
+        FileUtils.mkdir_p(rundir) unless Dir.exist?(rundir)
         logd "* Output from run prep:"
-        @rundir=invoke(:lib_run_prep,:run,@env,@rundir)
+        prepkit=invoke(:lib_run_prep,:run,@env)
         logd_flush
         logd "* Output from run:"
-        runkit=invoke(:lib_run,:run,@env,@rundir)
+        runkit=invoke(:lib_run,:run,@env,prepkit)
         postkit=invoke(:lib_run_post,:run,@env,runkit)
-        success=invoke(:lib_run_check,:run,@env,postkit)
-        files=invoke(:lib_outfiles,:run,@env,@rundir)
-
-        # Record final result value.
-
+        output_path=invoke(:lib_run_check,:run,@env,postkit)
+        success=(output_path)?(true):(false)
+        files=(success)?(invoke(:lib_outfiles,:run,@env,output_path)):([])
         update_runs_completed(!success,files,@r,postkit)
 
         # If the run succeeded, (potentially) compare the run's output to its
@@ -784,10 +782,10 @@ class Run
         update_builds(b,true,nil) # assume the worst
         logi "Build #{b} started"
         logd "* Output from build #{b} prep:"
-        invoke(:lib_build_prep,:run,@env)
+        prepkit=invoke(:lib_build_prep,:run,@env)
         logd_flush
         logd "* Output from build #{b}:"
-        buildkit=invoke(:lib_build,:run,@env)
+        buildkit=invoke(:lib_build,:run,@env,prepkit)
         logd_flush
         result=invoke(:lib_build_post,:run,@env,buildkit)
         update_builds(b,false,result)

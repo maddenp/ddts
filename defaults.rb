@@ -1,6 +1,6 @@
 module Library
 
-  def lib_build(env)
+  def lib_build(env,prepkit)
     true
   end
 
@@ -20,7 +20,7 @@ module Library
     true
   end
 
-  def lib_run(env,rundir)
+  def lib_run(env,prepkit)
     true
   end
 
@@ -32,7 +32,7 @@ module Library
     true
   end
 
-  def lib_run_prep(env,rundir)
+  def lib_run_prep(env)
     true
   end
 
