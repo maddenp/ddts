@@ -421,7 +421,15 @@ module Common
     end
 
     def ppsort(o)
-      o.sort_by { |e| ((e.is_a?(Hash))?(e.keys.first):(e)) }
+      o.sort_by do |e|
+        if e.is_a?(Hash)
+          e.keys.first
+        elsif e.is_a?(YAML_Delete)
+          e.obj
+        else
+          e
+        end
+      end
     end
 
     s=""
@@ -1353,10 +1361,6 @@ class YAML_Delete
   # To delete inherited keys/values.
 
   attr_accessor :obj
-
-  def <=>(other_obj)
-    "#{obj}"<=>"#{other_obj}"
-  end
 
   def init_with(coder)
     @obj=coder.send(coder.type)
