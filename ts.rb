@@ -327,7 +327,8 @@ module Common
       k,x,v=first.strip.partition(/\s*=\s*/)
       v=YAML.load(v)
       if k.include?(":") and (a=k.split(/\s*:\s*/))
-        h[a[0]]=a[1...-1].reverse.reduce({a[-1]=>v}) { |m,e| m={e=>m} }
+        g=(h[a[0]]||={})
+        g.merge!(a[1...-1].reverse.reduce({a[-1]=>v}) { |m,e| m={e=>m} })
       else
         h[k]=v
       end
