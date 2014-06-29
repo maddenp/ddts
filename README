@@ -487,7 +487,7 @@ lib_run_check(env,postkit)
 
   If the run succeeded, returns the path to a directory under which the run's
   output can be found. The actual path returned should depend on what will be
-  most useful to routine lib_outfiles. If the run failed, returns false.
+  most useful to routine lib_outfiles. If the run failed, returns nil.
 
   The 'postkit' argument contains the object returned by the lib_run_post
   routine.

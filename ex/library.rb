@@ -69,7 +69,7 @@ module Library
     unless (lines=File.open(stdout).read)=~/SUCCESS/
       lines.each_line { |line| logi line.chomp }
     end
-    (job_check(stdout,"SUCCESS"))?(env.run.ddts_root):(false)
+    (job_check(stdout,"SUCCESS"))?(env.run.ddts_root):(nil)
   end
 
   def lib_run_post(env,runkit)
