@@ -275,6 +275,22 @@ exe("ex_1_no_case !delete test (no 'case' in message)","run ex_1_no_case",
   "Running ex_1 now",
   )
 
+# Override run test
+
+exe("ex_1 with override","run ex_1/sleep=0,message='Sleeping 0'",
+  "ex_1_v1: Sleeping 0",
+  "ex_1_v1: Completed"
+  )
+
+# Override suite test
+
+exe("ex_suite_override (ex_1 overridden two ways)","ex_suite_override",
+  "Sleeping 0",
+  "Sleeping 1",
+  "Comparison: ex_1_v1, ex_1_v2: OK",
+  "ALL TESTS PASSED"
+  )
+
 # Remove output directory.
 
 FileUtils.rm_rf($OUT)

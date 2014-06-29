@@ -56,7 +56,7 @@ module Library
     sleep=env.run.sleep
     tasks=env.run.tasks
     if message=env.run.message
-      logi message.join(" ")
+      logi (message.is_a?(Array))?(message.join(" ")):(message)
     end
     cmd="cd #{rundir} && #{run} #{tasks} #{bin} >stdout 2>&1 && sleep #{sleep}"
     logd "Running: #{cmd}"
