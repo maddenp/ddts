@@ -322,7 +322,7 @@ module Common
     return [s,{}] if run.empty? or not list.include?('=')
     h={}
     until list.empty?
-      re=/\s*[\w:]+\s*=\s*([^,'"\[\]\{\}]+|('.*?')|(".*?")|(\[.*?\]))/
+      re=/\s*[\w:]+\s*=\s*([^,'"\[\]\{\}]+|('.*?')|(".*?")|(\[[\[\]]*?\]))/
       x,first,list=list.partition(re)
       return [s,{}] unless x=~/^,?$/
       k,x,v=first.strip.partition(/\s*=\s*/)
@@ -594,8 +594,9 @@ class Run
     name,override=destruct(@r)
     unless name==@r
       @ts.runmaster.synchronize do
-        @@variant=0 unless defined?(@@variant)
-        @r="#{name}_v#{@@variant+=1}"
+        @@variant={} unless defined?(@@variant)
+        @@variant[name]||=0
+        @r="#{name}_v#{@@variant[name]+=1}"
       end
       logd "Assigning name '#{name}' to run '#{r}'"
     end
