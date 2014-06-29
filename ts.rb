@@ -449,11 +449,13 @@ module Common
     s=""
     if o.is_a?(Array)
       ppsort(o).each do |e|
+        next if e.is_a?(YAML_Delete)
         s+="  "*level+"- "
         s+=pp(e,level,(a_or_h(e))?(false):(true),false)
       end
     elsif o.is_a?(Hash)
       ppsort(o).each do |k,v|
+        next if v.is_a?(YAML_Delete)
         s+="  "*level if indent
         s+=k+((a_or_h(v))?(":\n"):(": "))+pp(v,level+1,true)
       end
