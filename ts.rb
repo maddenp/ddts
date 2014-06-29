@@ -586,9 +586,17 @@ class Run
 
     @r=r
     @ts=ts
+    @dlog=XlogBuffer.new(@ts.ilog)
+    name,override=destruct(@r)
+    unless name==@r
+      @ts.runmaster.synchronize do
+        @@variant=0 unless defined?(@@variant)
+        @r="#{name}_v#{@@variant+=1}"
+      end
+      logd "Assigning name '#{name}' to run '#{r}'"
+    end
     @activejobs=@ts.activejobs
     @activemaster=@ts.activemaster
-    @dlog=XlogBuffer.new(@ts.ilog)
     @pre="Run #{@r}"
 
     # Create a lock for this run unless one already exists.
@@ -608,7 +616,7 @@ class Run
       # Otherwise, perform the run.
 
       @env=OpenStruct.new(@ts.env.marshal_dump) # private copy
-      @env.run=loadenv(run_defs,@r)
+      @env.run=loadenv(run_defs,r)
       logd_flush
       self.extend(Library)
       @env.run.ddts_name=@r
