@@ -211,18 +211,16 @@ module Common
 
   # Various methods
 
-  def ancestry(file,chain=nil)
+  def ancestry(dir,name,chain=nil)
 
-    # Return an array containing the ancestry of the given definition file
-    # (including the file itself), determined by following the chain of
-    # 'ddts_extends' properties.
+    # Return an array containing the ancestry of the given definition (including
+    # the definition itself), by following the chain of 'ddts_extends' keys.
 
-    dir,base=File.split(file)
-    chain=[] if chain.nil?
-    chain << base
-    me=parse(file)
+    name,override=destruct(name)
+    (chain||=[]).push(name)
+    me=parse(File.join(dir,name))
     ancestor=me["ddts_extends"]
-    ancestry(File.join(dir,ancestor),chain) if ancestor
+    ancestry(dir,ancestor,chain) if ancestor
     chain
 
   end
@@ -319,30 +317,45 @@ module Common
 
   end
 
-  def loadenv(file,descendant=nil,specs=nil)
+  def destruct(s)
+    run,sep,list=s.partition('/')
+    return [s,{}] if run.empty? or not list.include?('=')
+    h={}
+    until list.empty?
+      x,first,list=list.partition(/\s*[\w:]+\s*=\s*([^,'"]+|('.*?')|(".*?"))/)
+      return [s,{}] unless x=~/^,?$/
+      k,x,v=first.strip.partition(/\s*=\s*/)
+      v=YAML.load(v)
+      if k.include?(":") and (a=k.split(/\s*:\s*/))
+        h[a[0]]=a[1...-1].reverse.reduce({a[-1]=>v}) { |m,e| m={e=>m} }
+      else
+        h[k]=v
+      end
+    end
+    [run,h]
+  end
 
-    logd "Loading env from #{file}"
-    convert_h2o(loadspec(file))
+  def loadenv(dir,name)
+
+    convert_h2o(loadspec(dir,name))
 
   end
 
-  def loadspec(file,quiet=false,descendant=nil,specs=nil)
+  def loadspec(dir,name,quiet=false,descendant=nil,seen=[])
 
     # Parse YAML spec from file, potentially using recursion to merge the
     # current spec onto a specified ancestor. Keep track of spec files already
     # processed to avoid graph cycles.
 
-    specs=[] if specs.nil?
-    die "Circular dependency detected for #{file}" if specs.include?(file)
-    specs << file
-    me=parse(file,quiet)
-    die "No valid definition found in '#{file}'" unless me
+    name,override=destruct(name)
+    die "Circular dependency detected for '#{name}'" if seen.include?(name)
+    seen << name
+    me=parse(File.join(dir,name),quiet)
+    die "No valid definition found for '#{name}'" unless me
     ancestor=me["ddts_extends"]
-    if ancestor
-      me=loadspec(File.join(File.dirname(file),ancestor),quiet,me,specs)
-    end
-    me=mergespec(me,descendant) unless descendant.nil?
-    me
+    me=loadspec(dir,ancestor,quiet,me,seen) if ancestor
+    me=mergespec(me,descendant) if descendant
+    me.merge(override)
 
   end
 
@@ -595,7 +608,7 @@ class Run
       # Otherwise, perform the run.
 
       @env=OpenStruct.new(@ts.env.marshal_dump) # private copy
-      @env.run=loadenv(File.join(run_defs,@r))
+      @env.run=loadenv(run_defs,@r)
       logd_flush
       self.extend(Library)
       @env.run.ddts_name=@r
@@ -771,7 +784,7 @@ class Run
     end
 
     b=@env.run.ddts_build
-    @env.build=loadenv(File.join(build_defs,b))
+    @env.build=loadenv(build_defs,b)
     logd_flush
     @env.build.ddts_root=File.join(builds_dir,b)
     @ts.buildmaster.synchronize do
@@ -895,7 +908,7 @@ class TS
     logd "----"
     runs=(run_or_runs.respond_to?(:each))?(run_or_runs):([run_or_runs])
     builds=runs.reduce(Set.new) do |m,e|
-      build_name=loadspec(File.join(run_defs,e),true)["ddts_build"]
+      build_name=loadspec(run_defs,e,true)["ddts_build"]
       m.add(File.join(builds_dir,build_name))
       logd "----"
       m
@@ -993,15 +1006,14 @@ class TS
 
     @suite=suite
     setup
-    f=File.join(suite_defs,suite)
-    unless File.exists?(f)
+    unless File.exists?(File.join(suite_defs,suite))
       die "Suite '#{suite}' not found"
     end
     logi "Running test suite '#{suite}'"
     threads=[]
     begin
-      logd "Loading suite spec #{f}"
-      suitespec=loadspec(f)
+      logd "Loading suite spec '#{suite}'"
+      suitespec=loadspec(suite_defs,suite)
       logd_flush
       suitespec.each do |k,v|
         # Assume that array values are run groups and move all scalar values
@@ -1226,7 +1238,7 @@ class TS
 
     runs_all.each do |run|
 
-      spec=loadspec(File.join(run_defs,run),true)
+      spec=loadspec(run_defs,run,true)
 
       # If a baseline is being generated, check for any pre-existing baseline
       # directories that would potentially be clobbered if we continue.
@@ -1313,12 +1325,10 @@ class TS
     if ["build","run","suite"].include?(type)
       die "No #{type} specified" unless name
       dir=get_dir(type)
-      file=File.join(dir,name)
-      die "'#{name}' not found in #{dir}" unless File.exist?(file)
-      spec=loadspec(file)
+      spec=loadspec(dir,name)
       spec.delete("ddts_extends")
       puts
-      puts "# #{ancestry(file).join(' < ')}"
+      puts "# #{ancestry(dir,name).join(' < ')}"
       puts
       puts pp(spec)
       puts
