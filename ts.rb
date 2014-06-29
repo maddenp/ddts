@@ -322,7 +322,8 @@ module Common
     return [s,{}] if run.empty? or not list.include?('=')
     h={}
     until list.empty?
-      x,first,list=list.partition(/\s*[\w:]+\s*=\s*([^,'"]+|('.*?')|(".*?"))/)
+      re=/\s*[\w:]+\s*=\s*([^,'"\[\]\{\}]+|('.*?')|(".*?")|(\[.*?\]))/
+      x,first,list=list.partition(re)
       return [s,{}] unless x=~/^,?$/
       k,x,v=first.strip.partition(/\s*=\s*/)
       v=YAML.load(v)
