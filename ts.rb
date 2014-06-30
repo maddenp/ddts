@@ -216,7 +216,7 @@ module Common
     # Return an array containing the ancestry of the given definition (including
     # the definition itself), by following the chain of 'ddts_extends' keys.
 
-    name,override=destruct(name)
+    name,override,hash=destruct(name)
     (chain||=[]).push(name)
     me=parse(File.join(dir,name))
     ancestor=me["ddts_extends"]
@@ -318,23 +318,24 @@ module Common
   end
 
   def destruct(s)
-    run,sep,list=s.partition('/')
-    return [s,{}] if run.empty? or not list.include?('=')
-    h={}
+    name,sep,override=s.partition('/')
+    list=override.dup
+    return [s,"",{}] if name.empty? or not list.include?('=')
+    hash={}
     until list.empty?
       re=/\s*[\w:]+\s*=\s*([^,'"\[\]\{\}]+|('.*?')|(".*?")|(\[[\[\]]*?\]))/
       x,first,list=list.partition(re)
-      return [s,{}] unless x=~/^,?$/
+      return [s,"",{}] unless x=~/^,?$/
       k,x,v=first.strip.partition(/\s*=\s*/)
       v=YAML.load(v)
       if k.include?(":") and (a=k.split(/\s*:\s*/))
-        g=(h[a[0]]||={})
+        g=(hash[a[0]]||={})
         g.merge!(a[1...-1].reverse.reduce({a[-1]=>v}) { |m,e| m={e=>m} })
       else
-        h[k]=v
+        hash[k]=v
       end
     end
-    [run,h]
+    [name,override,hash]
   end
 
   def loadenv(dir,name)
@@ -349,7 +350,7 @@ module Common
     # current spec onto a specified ancestor. Keep track of spec files already
     # processed to avoid graph cycles.
 
-    name,override=destruct(name)
+    name,override,hash=destruct(name)
     die "Circular dependency detected for '#{name}'" if seen.include?(name)
     seen << name
     me=parse(File.join(dir,name),quiet)
@@ -357,7 +358,7 @@ module Common
     ancestor=me["ddts_extends"]
     me=loadspec(dir,ancestor,quiet,me,seen) if ancestor
     me=mergespec(me,descendant) if descendant
-    me.merge(override)
+    me.merge(hash)
 
   end
 
@@ -592,7 +593,7 @@ class Run
     @ts=ts
     @pre="Run #{@r}"
     @dlog=XlogBuffer.new(@ts.ilog)
-    name,override=destruct(@r)
+    name,override,hash=destruct(@r)
     unless name==@r
       @ts.runmaster.synchronize do
         @@variant={} unless defined?(@@variant)
@@ -600,7 +601,7 @@ class Run
         @r="#{name}_v#{@@variant[name]+=1}"
       end
       @pre="Run #{@r}"
-      logd "Assigning name '#{@r}' to run '#{r}'"
+      logi "Assigning name '#{@r}' to run '#{r}'"
     end
     @activejobs=@ts.activejobs
     @activemaster=@ts.activemaster
