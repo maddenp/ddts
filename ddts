@@ -14,4 +14,4 @@ fi
 
 export DDTSHOME=$d
 
-ulimit -St unlimited -Su unlimited && java -jar $jruby --1.9 -I. $d/ts.rb $b "$@"
+ulimit -St unlimited -Su 512 && java -jar $jruby --1.9 -I. $d/ts.rb $b "$@"

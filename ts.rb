@@ -590,6 +590,7 @@ class Run
 
     @r=r
     @ts=ts
+    @pre="Run #{@r}"
     @dlog=XlogBuffer.new(@ts.ilog)
     name,override=destruct(@r)
     unless name==@r
@@ -598,11 +599,11 @@ class Run
         @@variant[name]||=0
         @r="#{name}_v#{@@variant[name]+=1}"
       end
-      logd "Assigning name '#{name}' to run '#{r}'"
+      @pre="Run #{@r}"
+      logd "Assigning name '#{@r}' to run '#{r}'"
     end
     @activejobs=@ts.activejobs
     @activemaster=@ts.activemaster
-    @pre="Run #{@r}"
 
     # Create a lock for this run unless one already exists.
 
