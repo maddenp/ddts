@@ -1,0 +1,8 @@
+TODO
+
+- Allow strings/arrays/hashes on same level in Common#pp.
+
+- Provide a mechanism (with exactly-once semantics) for runs to associate with
+  specific data sets.
+
+- Document override syntax.
