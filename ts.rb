@@ -594,8 +594,7 @@ class Run
     @pre="Run #{@r}"
     @dlog=XlogBuffer.new(@ts.ilog)
     name,override,hash=destruct(@r)
-    unless name==@r
-      n_and_o=[name,override]
+    unless override.empty?
       @ts.runmaster.synchronize do
         @@variant={} unless defined?(@@variant)
         @@variant[name]||=0
@@ -628,9 +627,9 @@ class Run
       logd_flush
       self.extend(Library)
       @env.run.ddts_name=@r
-      if defined?(n_and_o)
-        @env.run.ddts_basename=n_and_o.first
-        @env.run.ddts_override=n_and_o.last
+      unless override.empty?
+        @env.run.ddts_basename=name
+        @env.run.ddts_override=override
       end
       @bline=@env.run.ddts_baseline
 
