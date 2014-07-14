@@ -323,7 +323,7 @@ module Common
     return [s,"",{}] if name.empty? or not list.include?('=')
     hash={}
     until list.empty?
-      re=/\s*[\w:]+\s*=\s*([^,'"\[\]\{\}]+|('.*?')|(".*?")|(\[[\[\]]*?\]))/
+      re=/\s*[\w:]+\s*=\s*([^,'"\[\]\{\}]+|('.*?')|(".*?")|(\[[^\[\]]*?\]))/
       x,first,list=list.partition(re)
       return [s,"",{}] unless x=~/^,?$/
       k,x,v=first.strip.partition(/\s*=\s*/)
