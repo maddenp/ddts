@@ -860,7 +860,7 @@ class TS
   :pre,:runlocks,:runmaster,:runs_all,:runs_completed,:suite,:uniq,
   :use_baseline_dir
 
-  def initialize(tsname,cmd,rest)
+  def initialize(tsname,args)
 
     # The test-suite class. Provide a number of instance variables used
     # throughout the test suite, then branch to the appropriate method.
@@ -887,7 +887,7 @@ class TS
     @ts=self
     @uniq=Time.now.to_i
     @use_baseline_dir=nil
-    dispatch(cmd,rest)
+    dispatch(args)
 
   end
 
@@ -969,12 +969,14 @@ class TS
 
   end
 
-  def dispatch(cmd,args)
+  def dispatch(args)
 
     # If the given method is approved as a command-line action, call it with
     # the given arguments. If it is a suite name, run the suite. Otherwise, show
     # usage info and exit with error.
 
+    suite=args.join(" ")
+    cmd=args.shift
     cmd||="help"
     cmd.gsub!(/-/,"_")
     okargs=[
@@ -1000,10 +1002,8 @@ class TS
     end
     if okargs.include?(cmd)
       send(cmd,args)
-    elsif suites.include?(cmd)
-      dosuite(cmd)
     else
-      help(args,1)
+      dosuite(suite)
     end
 
   end
@@ -1025,8 +1025,9 @@ class TS
 
     @suite=suite
     setup
-    unless File.exists?(File.join(suite_defs,suite))
-      die "Suite '#{suite}' not found"
+    name,override,hash=destruct(suite)
+    unless File.exists?(File.join(suite_defs,name))
+      die "Suite '#{name}' not found"
     end
     logi "Running test suite '#{suite}'"
     threads=[]
@@ -1123,10 +1124,9 @@ class TS
     # If 'gen-baseline' was supplied as the command-line argument, record the
     # specified baseline directory, then call dosuite with the suite name.
 
-    help(args,1) unless args.size==2
+    help(args,1) if args.size < 2
     @gen_baseline_dir=args.shift
-    help(args,1) if args.empty?
-    dosuite(args[0])
+    dosuite(args.join(" "))
 
   end
 
@@ -1213,10 +1213,6 @@ class TS
 
     # Handle the command-line "run" argument, to perform a single named run.
 
-    help(args,1) unless args.size==1 or args.size==3
-    help(args,1) unless args.size==1 or args.first=~/^(gen|use)-baseline$/
-    run=args.pop
-    runs_all.add(run)
     setup
     begin
       if args.first=="gen-baseline"
@@ -1229,6 +1225,8 @@ class TS
           die "Baseline directory #{use_baseline_dir} not found"
         end
       end
+      run=args.join(" ")
+      runs_all.add(run)
       sanity_checks(gen_baseline_dir)
     rescue Exception=>x
       exit 1
@@ -1363,13 +1361,12 @@ class TS
     # specified baseline directory, then set the suite name and call dosuite
     # with the suite name.
 
-    help(args,1) unless args.size==2
+    help(args,1) if  args.size < 2
     @use_baseline_dir=args.shift
     unless Dir.exist?(use_baseline_dir)
       die "Baseline directory #{use_baseline_dir} not found"
     end
-    help(args,1) if args.empty?
-    dosuite(args[0])
+    dosuite(args.join(" "))
 
   end
 
@@ -1524,7 +1521,7 @@ end # class XlogBuffer
 # Command-line invocation:
 
 if __FILE__==$0
-  TS.new(ARGV[0],ARGV[1],ARGV[2..-1])
+  TS.new(ARGV[0],ARGV[1..-1])
 end
 
 # paul.a.madden@noaa.gov
