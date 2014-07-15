@@ -358,7 +358,7 @@ module Common
     ancestor=me["ddts_extends"]
     me=loadspec(dir,ancestor,quiet,me,seen) if ancestor
     me=mergespec(me,descendant) if descendant
-    me.merge(hash)
+    mergespec(me,hash)
 
   end
 
