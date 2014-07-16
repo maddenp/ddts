@@ -456,7 +456,7 @@ module Common
 
     s=""
     if o.is_a?(Array)
-      ppsort(o).each do |e|
+      o.each do |e|
         next if e.is_a?(YAML_Delete)
         s+="  "*level+"- "
         s+=pp(e,level,(a_or_h(e))?(false):(true),false)
