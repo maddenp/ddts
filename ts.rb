@@ -1430,6 +1430,10 @@ class YAML_Unquoted
     @v
   end
 
+  def <=>(o)
+    "#{self}"<=>"#{o}"
+  end
+
 end # class YAML_Unquoted
 
 YAML.add_tag("!unquoted",YAML_Unquoted)
