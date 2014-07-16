@@ -1338,7 +1338,7 @@ class TS
       die "Definition directory '#{defsdir}' not found"
     end
     type=args[0]
-    name=args[1]
+    name=args[1..-1].join(" ")
     if ["build","run","suite"].include?(type)
       die "No #{type} specified" unless name
       dir=get_dir(type)
