@@ -1418,6 +1418,8 @@ class YAML_Unquoted
 
   # To suppress quoting Strings e.g. for Fortran namelist values.
 
+  include Comparable
+
   def initialize(v)
     @v=v
   end
