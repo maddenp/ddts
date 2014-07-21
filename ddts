@@ -1,6 +1,6 @@
 #!/bin/bash
 
-p=$(readlink -f $0)
+p=$(readlink -e $0)
 d=$(dirname     $p)
 b=$(basename    $p)
 
