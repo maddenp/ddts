@@ -1287,11 +1287,12 @@ class TS
 
       # Check that all runs have defined 'build'.
 
-      unless build=spec["ddts_build"]
+      unless name=spec["ddts_build"]
         die "Run '#{run}' not associated with any build, aborting..."
       end
-      unless builds_all.include?(build)
-        die "Run '#{run}' associated with unknown build '#{build}', aborting..."
+      name,override,hash=destruct(name)
+      unless builds_all.include?(name)
+        die "Run '#{run}' associated with unknown build '#{name}', aborting..."
       end
 
     end
