@@ -344,6 +344,12 @@ module Common
     [name,override,hash]
   end
 
+  def destruct_build(b)
+    name,override,hash=destruct(b)
+    uniq=(override.empty?)?(name):("#{name}_#{Digest::MD5.hexdigest(override)}")
+    [name,override,hash,uniq]
+  end
+
   def loadenv(dir,name)
 
     convert_h2o(loadspec(dir,name))
@@ -602,9 +608,9 @@ class Run
     name,override,hash=destruct(@r)
     unless override.empty?
       @ts.runmaster.synchronize do
-        @@variant={} unless defined?(@@variant)
-        @@variant[name]||=0
-        @r="#{name}_v#{@@variant[name]+=1}"
+        @@variant_run={} unless defined?(@@variant_run)
+        @@variant_run[name]||=0
+        @r="#{name}_v#{@@variant_run[name]+=1}"
       end
       @pre="Run #{@r}"
       logi "Assigning name '#{@r}' to run '#{r}'"
@@ -808,31 +814,33 @@ class Run
       end
     end
 
-    b=@env.run.ddts_build
-    @env.build=loadenv(build_defs,b)
+    build=@env.run.ddts_build
+    @env.build=loadenv(build_defs,build)
     logd_flush
-    @env.build.ddts_root=File.join(builds_dir,b)
+    name,override,hash,uniq=destruct_build(build)
+    logi "Assigning name '#{uniq}' to build '#{build}'" unless uniq==name
+    @env.build.ddts_root=File.join(builds_dir,uniq)
     @ts.buildmaster.synchronize do
-      @ts.buildlocks[b]=Mutex.new unless @ts.buildlocks.has_key?(b)
+      @ts.buildlocks[build]=Mutex.new unless @ts.buildlocks.has_key?(build)
     end
-    @ts.buildlocks[b].synchronize do
-      unless @ts.builds.has_key?(b)
-        update_builds(b,true,nil) # assume the worst
-        logi "Build #{b} started"
-        logd "* Output from build #{b} prep:"
+    @ts.buildlocks[build].synchronize do
+      unless @ts.builds.has_key?(build)
+        update_builds(build,true,nil) # assume the worst
+        logi "Build #{uniq} started"
+        logd "* Output from build #{uniq} prep:"
         prepkit=invoke(:lib_build_prep,:run,@env)
         logd_flush
-        logd "* Output from build #{b}:"
+        logd "* Output from build #{uniq}:"
         buildkit=invoke(:lib_build,:run,@env,prepkit)
         logd_flush
         result=invoke(:lib_build_post,:run,@env,buildkit)
-        update_builds(b,false,result)
-        logi "Build #{b} completed"
+        update_builds(build,false,result)
+        logi "Build #{uniq} completed"
       end
     end
-    die "Required build unavailable" if @ts.builds[b].failed
+    die "Required build unavailable" if @ts.builds[build].failed
     @ts.buildmaster.synchronize do
-      x=@ts.builds[b]
+      x=@ts.builds[build]
       @env.build.ddts_result=(x.failed)?(:build_failed):(x.result)
     end
 
@@ -934,7 +942,9 @@ class TS
     runs=(run_or_runs.respond_to?(:each))?(run_or_runs):([run_or_runs])
     builds=runs.reduce(Set.new) do |m,e|
       build_name=loadspec(run_defs,e,true)["ddts_build"]
-      m.add(File.join(builds_dir,build_name))
+      name,override,hash,uniq=destruct_build(build_name)
+      logd "Mapping build '#{build_name}' to '#{uniq}'" unless uniq==name
+      m.add(File.join(builds_dir,uniq))
       logd "----"
       m
     end
