@@ -1,4 +1,4 @@
 ddts_extends: ex_suite_base
 group_ex:
   - ex_1/sleep=0,message='Sleeping 0'
-  - ex_1/sleep=1,message='Sleeping 1'
+  - ex_1/sleep=1,message=!replace ['Sleeping','1']
