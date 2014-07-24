@@ -73,7 +73,7 @@ program tr
     ! output file containing a constant
     open (lun,file=outfile2,status='new',iostat=status)
     if (status.ne.0) then
-      write (*,'(a,a)') 'Error opening output file ',outfile1
+      write (*,'(a,a)') 'Error opening output file ',outfile2
       stop
     end if
     write (lun,'(i0)') 88
