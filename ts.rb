@@ -527,6 +527,7 @@ end # module Common
 class Comparison
 
   include Common
+  include Library
 
   attr_reader :comp_ok,:failruns,:totalruns
 
@@ -544,7 +545,6 @@ class Comparison
     @dlog=XlogBuffer.new(ts.ilog)
     @pre="Comparison"
     @totalruns=a.size
-    self.extend(Library)
     runs=[]
     threads=[]
     set=a.join(", ")
@@ -582,6 +582,7 @@ end
 class Run
 
   include Common
+  include Library
 
   attr_reader :result # because initialize()'s return value is the Run object
 
@@ -637,7 +638,6 @@ class Run
       @env=OpenStruct.new(@ts.env.marshal_dump) # private copy
       @env.run=loadenv(run_defs,r)
       logd_flush
-      self.extend(Library)
       @env.run.ddts_name=@r
       unless override.empty?
         @env.run.ddts_basename=name
@@ -868,6 +868,7 @@ end # class Run
 class TS
 
   include Common
+  include Library
 
   attr_accessor :activemaster,:activejobs,:baselinemaster,:baselinesrcs,
   :buildlocks,:buildmaster,:builds,:dlog,:env,:gen_baseline_dir,:havedata,:ilog,
@@ -1059,7 +1060,6 @@ class TS
       env.suite.ddts_totalruns=0
       env.suite.ddts_totalfailures=0
       env.suite.ddts_suitename=suite
-      self.extend(Library)
       FileUtils.mkdir_p(tmp_dir)
       invoke(:lib_suite_prep,:suite,env)
       suitespec.each do |k,v|
