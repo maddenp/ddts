@@ -992,9 +992,8 @@ class TS
     # usage info and exit with error.
 
     suite=args.join(" ")
-    cmd=args.shift.dup
-    cmd||="help"
-    cmd.gsub!(/-/,"_")
+    cmd=(x=args.shift)?(x):("help")
+    cmd=cmd.gsub(/-/,"_")
     okargs=[
       "clean",
       "gen_baseline",
