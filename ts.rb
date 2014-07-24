@@ -647,20 +647,20 @@ class Run
 
       # Wait on required runs.
 
-      if (require=@env.run.ddts_require)
-        require=[require] unless require.is_a?(Array)
-        suffix=(require.size==1)?(""):("(s)")
-        logi "Waiting on required run#{suffix}: #{require.join(', ')}"
+      if (req=@env.run.ddts_require)
+        req=[req] unless req.is_a?(Array)
+        suffix=(req.size==1)?(""):("(s)")
+        logi "Waiting on required run#{suffix}: #{req.join(', ')}"
         @env.run.ddts_require_results={}
-        until require.empty?
+        until req.empty?
           @ts.runmaster.synchronize do
-            require.each do |e|
+            req.each do |e|
               if (result=@ts.runs_completed[e] and result!=:incomplete)
                 if result.failed
                   die "Run '#{@r}' depends on failed run '#{e}'"
                 end
                 @env.run.ddts_require_results[e]=result
-                require.delete(e)
+                req.delete(e)
               end
             end
           end
