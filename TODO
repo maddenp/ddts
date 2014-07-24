@@ -6,3 +6,6 @@ TODO
   specific data sets.
 
 - Document override syntax.
+
+- Define logi_block (or similar) to handle e.g. logging stacktraces without
+  multiple logd commands.
