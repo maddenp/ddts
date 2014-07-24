@@ -874,7 +874,7 @@ class TS
   :pre,:runlocks,:runmaster,:runs_all,:runs_completed,:suite,:uniq,
   :use_baseline_dir
 
-  def initialize(tsname,args)
+  def initialize(invoked_as,args)
 
     # The test-suite class. Provide a number of instance variables used
     # throughout the test suite, then branch to the appropriate method.
@@ -892,7 +892,7 @@ class TS
     @gen_baseline_dir=nil
     @havedata=false
     @ilog=nil
-    @pre=tsname
+    @pre=invoked_as
     @runlocks={}
     @runmaster=Mutex.new
     @runs_all=SortedSet.new
@@ -992,7 +992,7 @@ class TS
     # usage info and exit with error.
 
     suite=args.join(" ")
-    cmd=args.shift
+    cmd=args.shift.dup
     cmd||="help"
     cmd.gsub!(/-/,"_")
     okargs=[
