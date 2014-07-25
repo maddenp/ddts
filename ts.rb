@@ -318,6 +318,7 @@ module Common
   end
 
   def destruct(s)
+
     name,sep,override=s.partition('/')
     list=override.dup
     return [s,"",{}] if name.empty? or not list.include?('=')
@@ -342,27 +343,24 @@ module Common
       end
     end
     [name,override,hash]
+
   end
 
   def destruct_build(b)
+
     name,override,hash=destruct(b)
     uniq=(override.empty?)?(name):("#{name}_#{Digest::MD5.hexdigest(override)}")
     [name,override,hash,uniq]
-  end
-
-  def loadenv(dir,name)
-
-    convert_h2o(loaddef(dir,name))
 
   end
 
-  def loaddef(dir,name,quiet=false,descendant=nil,seen=[])
+  def loaddef(dir,_def,quiet=false,descendant=nil,seen=[])
 
     # Parse YAML definition from file, potentially using recursion to merge the
     # current definition onto a specified ancestor. Keep track of definition
     # files already processed to avoid graph cycles.
 
-    name,override,hash=destruct(name)
+    name,override,hash=destruct(_def)
     die "Circular dependency detected for '#{name}'" if seen.include?(name)
     seen << name
     me=parse(File.join(dir,name),quiet)
@@ -370,7 +368,18 @@ module Common
     ancestor=me["ddts_extends"]
     me=loaddef(dir,ancestor,quiet,me,seen) if ancestor
     me=mergedef(me,descendant) if descendant
-    mergedef(me,hash)
+    final=mergedef(me,hash)
+    logd ""
+    logd "Final composed definition for #{_def}:"
+    logd ""
+    pp(final).each_line { |e| logd e }
+    final
+
+  end
+
+  def loadenv(dir,name)
+
+    convert_h2o(loaddef(dir,name))
 
   end
 
@@ -432,7 +441,9 @@ module Common
     end
     if @dlog and not quiet
       c=File.basename(file)
+      logd ""
       logd "Read definition '#{c}':"
+      logd ""
       die "Definition '#{c}' is invalid" unless o
       pp(o).each_line { |e| logd e }
     end
