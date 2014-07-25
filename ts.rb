@@ -352,15 +352,15 @@ module Common
 
   def loadenv(dir,name)
 
-    convert_h2o(loadspec(dir,name))
+    convert_h2o(loaddef(dir,name))
 
   end
 
-  def loadspec(dir,name,quiet=false,descendant=nil,seen=[])
+  def loaddef(dir,name,quiet=false,descendant=nil,seen=[])
 
-    # Parse YAML spec from file, potentially using recursion to merge the
-    # current spec onto a specified ancestor. Keep track of spec files already
-    # processed to avoid graph cycles.
+    # Parse YAML definition from file, potentially using recursion to merge the
+    # current definition onto a specified ancestor. Keep track of definition
+    # files already processed to avoid graph cycles.
 
     name,override,hash=destruct(name)
     die "Circular dependency detected for '#{name}'" if seen.include?(name)
@@ -368,9 +368,9 @@ module Common
     me=parse(File.join(dir,name),quiet)
     die "No valid definition found for '#{name}'" unless me
     ancestor=me["ddts_extends"]
-    me=loadspec(dir,ancestor,quiet,me,seen) if ancestor
-    me=mergespec(me,descendant) if descendant
-    mergespec(me,hash)
+    me=loaddef(dir,ancestor,quiet,me,seen) if ancestor
+    me=mergedef(me,descendant) if descendant
+    mergedef(me,hash)
 
   end
 
@@ -380,9 +380,9 @@ module Common
 
   end
 
-  def mergespec(me,descendant)
+  def mergedef(me,descendant)
 
-    # Merge two specs together, allowing descendant's settings to take
+    # Merge two definitions together, allowing descendant's settings to take
     # precedence. Top-level key-value pairs are set directly; arrays are
     # appended; nested hashes are handled via recursion.
 
@@ -397,7 +397,7 @@ module Common
         unless v.is_a?(Hash)
           die "Cannot merge Hash '#{me[k]}' with #{v.class} '#{v}'"
         end
-        me[k]=mergespec(me[k],v)
+        me[k]=mergedef(me[k],v)
       elsif v.is_a?(Array)
         unless v.is_a?(Array)
           die "Cannot merge Array '#{me[k]}' with #{v.class} '#{v}'"
@@ -802,8 +802,8 @@ class Run
     # will perform the actual build; threads that gain subsequent access to the
     # critical region will break out of the synchronize block and return
     # immediately. The thread that performs the build does so in an external
-    # shell after obtaining its build spec. It stores into a global hash the
-    # information required by its dependent runs.
+    # shell after obtaining its build definition. It stores into a global hash
+    # the information required by its dependent runs.
 
     def update_builds(build,failed,result)
       @ts.buildmaster.synchronize do
@@ -934,7 +934,7 @@ class TS
   def build_init(run_or_runs)
 
     # If the builds directory does not exist, simply create it. Otherwise,
-    # exctract the set of unique 'build' keys from the supplied run def(s)
+    # exctract the set of unique 'build' keys from the given run definition(s)
     # and remove any build directories with the same names. NB: This assumes
     # that build directories are named identically to build definition names!
 
@@ -942,7 +942,7 @@ class TS
     logd "----"
     runs=(run_or_runs.respond_to?(:each))?(run_or_runs):([run_or_runs])
     builds=runs.reduce(Set.new) do |m,e|
-      build_name=loadspec(run_defs,e,true)["ddts_build"]
+      build_name=loaddef(run_defs,e,true)["ddts_build"]
       name,override,hash,uniq=destruct_build(build_name)
       logd "Mapping build '#{build_name}' to '#{uniq}'" unless uniq==name
       m.add(File.join(builds_dir,uniq))
@@ -1048,26 +1048,26 @@ class TS
     logi "Running test suite '#{suite}'"
     threads=[]
     begin
-      logd "Loading suite spec '#{suite}'"
-      suitespec=loadspec(suite_defs,suite)
+      logd "Loading suite definition '#{suite}'"
+      suitedef=loaddef(suite_defs,suite)
       logd_flush
-      suitespec.each do |k,v|
+      suitedef.each do |k,v|
         # Assume that array values are run groups and move all scalar values
         # into env.suite, assuming that these are either reserved or user-
         # defined suite-level settings.
-        eval "env.suite.#{k}=suitespec.delete(k)" unless v.is_a?(Array)
+        eval "env.suite.#{k}=suitedef.delete(k)" unless v.is_a?(Array)
       end
       env.suite.ddts_totalruns=0
       env.suite.ddts_totalfailures=0
       env.suite.ddts_suitename=suite
       FileUtils.mkdir_p(tmp_dir)
       invoke(:lib_suite_prep,:suite,env)
-      suitespec.each do |k,v|
+      suitedef.each do |k,v|
         v.each { |x| runs_all.add(x) if x.is_a?(String) }
       end
       sanity_checks(gen_baseline_dir)
       build_init(runs_all)
-      suitespec.each do |group,runs|
+      suitedef.each do |group,runs|
         runs.each do |run|
           if runs.count(run)>1
             die "Run '#{run}' is duplicated in group '#{group}'"
@@ -1270,12 +1270,12 @@ class TS
 
     runs_all.each do |run|
 
-      spec=loadspec(run_defs,run,true)
+      rundef=loaddef(run_defs,run,true)
 
       # If a baseline is being generated, check for any pre-existing baseline
       # directories that would potentially be clobbered if we continue.
 
-      if check_baseline_conflicts and (b=spec["ddts_baseline"])
+      if check_baseline_conflicts and (b=rundef["ddts_baseline"])
         if Dir.exist?(File.join(gen_baseline_dir,b))
           logi "ERROR: Run '#{run}' could overwrite baseline '#{b}'"
           baseline_conflict=true
@@ -1284,7 +1284,7 @@ class TS
 
       # Check that all run dependencies are satisfied by scheduled runs.
 
-      unless (r=spec["ddts_require"])==nil
+      unless (r=rundef["ddts_require"])==nil
         r=[r] unless r.is_a?(Array)
         r.each do |e|
           unless runs_all.include?(e)
@@ -1296,7 +1296,7 @@ class TS
 
       # Check that all runs have defined 'build'.
 
-      unless name=spec["ddts_build"]
+      unless name=rundef["ddts_build"]
         die "Run '#{run}' not associated with any build, aborting..."
       end
       name,override,hash=destruct(name)
@@ -1358,12 +1358,12 @@ class TS
     if ["build","run","suite"].include?(type)
       die "No #{type} specified" unless name
       dir=get_dir(type)
-      spec=loadspec(dir,name)
-      spec.delete("ddts_extends")
+      _def=loaddef(dir,name)
+      _def.delete("ddts_extends")
       puts
       puts "# #{ancestry(dir,name).join(' < ')}"
       puts
-      puts pp(spec)
+      puts pp(_def)
       puts
     else
       help(args,1)
