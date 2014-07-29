@@ -9,7 +9,13 @@ $DDTSOUT=(d=ENV["DDTSOUT"])?(d):(File.join($DDTSAPP))
 
 $:.push($DDTSHOME).push($DDTSAPP)
 
-require "defaults"
+begin
+  require "library"
+rescue LoadError=>ex
+  puts "NOTE: No library.rb found, using defaults.rb"
+  require "defaults"
+end
+
 require "digest/md5"
 require "fileutils"
 require "find"
@@ -369,10 +375,12 @@ module Common
     me=loaddef(dir,ancestor,quiet,me,seen) if ancestor
     me=mergedef(me,descendant) if descendant
     final=mergedef(me,hash)
-    logd ""
-    logd "Final composed definition for #{_def}:"
-    logd ""
-    pp(final).each_line { |e| logd e }
+    unless quiet
+      logd ""
+      logd "Final composed definition for #{_def}:"
+      logd ""
+      pp(final).each_line { |e| logd e }
+    end
     final
 
   end
@@ -1021,11 +1029,6 @@ class TS
       unless Dir.exist?($DDTSAPP)
         die "Application directory '#{$DDTSAPP}' not found"
       end
-      begin
-        require "library"
-      rescue LoadError=>ex
-        puts "NOTE: No library.rb found, using defaults.rb"
-      end
     end
     if okargs.include?(cmd)
       send(cmd,args)
@@ -1369,7 +1372,7 @@ class TS
     if ["build","run","suite"].include?(type)
       die "No #{type} specified" unless name
       dir=get_dir(type)
-      _def=loaddef(dir,name)
+      _def=loaddef(dir,name,true)
       _def.delete("ddts_extends")
       puts
       puts "# #{ancestry(dir,name).join(' < ')}"
