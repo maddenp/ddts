@@ -9,13 +9,7 @@ $DDTSOUT=(d=ENV["DDTSOUT"])?(d):(File.join($DDTSAPP))
 
 $:.push($DDTSHOME).push($DDTSAPP)
 
-begin
-  require "library"
-rescue LoadError=>ex
-  puts "NOTE: No library.rb found, using defaults.rb"
-  require "defaults"
-end
-
+require "defaults"
 require "digest/md5"
 require "fileutils"
 require "find"
@@ -26,6 +20,12 @@ require "set"
 require "thread"
 require "time"
 require "yaml"
+
+begin
+  require "library"
+rescue LoadError=>ex
+  puts "NOTE: No library.rb found, using defaults.rb"
+end
 
 module Utility
 
