@@ -14,7 +14,6 @@ require "digest/md5"
 require "fileutils"
 require "find"
 require "logger"
-require "nl"
 require "ostruct"
 require "set"
 require "thread"
@@ -862,23 +861,6 @@ class Run
       x=@ts.builds[build]
       @env.build.ddts_result=(x.failed)?(:build_failed):(x.result)
     end
-
-  end
-
-  def mod_namelist_file(nlfile,nlenv)
-
-    # Modify a namelist file with values supplied by a definition.
-
-    nlspec=convert_o2h(nlenv)
-    nlh=NamelistHandler.new(nlfile)
-    nlspec.each do |nlk,nlv|
-      nlv.each do |k,v|
-        v=quote_string(v)
-        nlh.set!(nlk,k,v)
-        logd "Set namelist #{nlk}:#{k}=#{v}"
-      end
-    end
-    nlh.write
 
   end
 
