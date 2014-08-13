@@ -156,6 +156,16 @@ module Utility
 
   end
 
+  def logi_block(level,msg_block)
+
+    # Like logi, but takes an array of strings and logs them as a contiguous
+    # block in the log file.
+
+    msg_block=msg_block.map { |msg| "#{@pre}: #{msg}" }
+    @ts.ilog.logi_block(level,msg_block)
+
+  end
+
   def logw(msg)
 
     # A convenience wrapper that logs WARN-level messages to the 'immediate'
@@ -357,6 +367,15 @@ module Common
     uniq=(override.empty?)?(name):("#{name}_#{Digest::MD5.hexdigest(override)}")
     [name,override,hash,uniq]
 
+  end
+
+  def fatal_backtrace(backtrace,message=nil)
+    if message
+      backtrace.push("")
+      backtrace.push(message)
+    end
+    logi_block(:fatal,backtrace)
+    exit 1
   end
 
   def loaddef(dir,_def,quiet=false,descendant=nil,seen=[])
@@ -1096,9 +1115,7 @@ class TS
       threads.each { |e| e.kill if e.alive? }
       halt(x)
     rescue Exception=>x
-      logi x.message
-      x.backtrace.each { |e| logi e }
-      exit 1
+      fatal_backtrace(x.backtrace,x.message)
     end
     if gen_baseline_dir
       if failgroups>0
@@ -1154,7 +1171,6 @@ class TS
       end
     end
     logd x.message
-    logd "* Backtrace:"
     x.backtrace.each { |e| logd e }
     logd_flush
     pre=(suite.nil?)?("Run"):("Test suite '#{suite}'")
@@ -1250,9 +1266,7 @@ class TS
     rescue Interrupt,DDTSException=>x
       halt(x)
     rescue Exception=>x
-      logi x.message
-      x.backtrace.each { |e| logi e }
-      exit 1
+      fatal_backtrace(x.backtrace,x.message)
     end
 
   end
@@ -1458,13 +1472,10 @@ class Xlog
   # method_missing() passes calls to Logger methods like info(), debug(), etc.
   # directly on to the underlying Logger objects. It intercepts the flush() call
   # and sends the contents of the supplied array of priority-level / message
-  # pairs on to the screen and file loggers. A mutex protects access to the file
-  # and screen loggers so that buffered messages can be output in contiguous
-  # blocks. NB: method_missing() should be a prime suspect in any runtime
-  # mischief traceable to this class: Analyze its arguments carefully.
+  # pairs on to the screen and file loggers
 
   attr_accessor :warned
-  attr_reader :file
+  attr_reader   :file
 
   def initialize(dir,uniq)
 
@@ -1472,7 +1483,10 @@ class Xlog
 
     FileUtils.mkdir_p(dir)
     @file=File.join(dir,"log.#{uniq}")
-    FileUtils.rm_f(@file)
+    if File.exist?(@file)
+      puts "\nERROR: Log file '#{@file}' already exists, aborting...\n\n"
+      exit 1
+    end
     @flog=Logger.new(@file)
     @flog.level=Logger::DEBUG
     @flog.formatter=proc do |s,t,p,m|
@@ -1485,19 +1499,25 @@ class Xlog
     @slog=Logger.new(STDOUT)
     @slog.level=Logger::INFO
     @slog.formatter=proc { |s,t,p,m| "#{m}\n" }
+
     @warned=false
 
   end
 
+  def logi_block(level,msg_block)
+    formatted=msg_block.map { |msg| "  #{msg}" }.join("\n")
+    @flog.send(level,"\n\n#{formatted}\n")
+    msg_block.each { |msg| @slog.send(level,msg) }
+  end
+
   def method_missing(m,*a)
-
+    msg=a.first
     if m==:flush
-      @flog.debug("\n#{a.first}")
+      @flog.debug("\n\n#{msg}")
     else
-      @flog.send(m,"\n\n  #{a.first}\n")
-      @slog.send(m,a.first)
+      @flog.send(m,"\n\n  #{msg}\n")
+      @slog.send(m,msg)
     end
-
   end
 
 end # class Xlog
@@ -1509,29 +1529,21 @@ class XlogBuffer
   # buffer.
 
   def initialize(ilog)
-
     @ilog=ilog
     reset
-
   end
 
   def flush
-
-    @ilog.flush(@buffer)
+    @ilog.flush(@buffer) unless @buffer.empty?
     reset
-
   end
 
   def method_missing(m,*a)
-
     @buffer+="  #{a[0].chomp}\n"
-
   end
 
   def reset
-
-    @buffer="\n"
-
+    @buffer=""
   end
 
 end # class XlogBuffer
