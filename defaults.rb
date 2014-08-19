@@ -11,13 +11,13 @@ module Library
   def lib_build_prep(env)
     true
   end
+ 
+  def lib_data(env)
+    true
+  end
 
   def lib_outfiles(env,path)
     []
-  end
-
-  def lib_data(env)
-    true
   end
 
   def lib_run(env,prepkit)
