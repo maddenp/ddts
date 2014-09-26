@@ -1,6 +1,10 @@
 module Library
 
-  # REQUIRED METHODS (CALLED BY DRIVER)
+  # TODO Comments are needed here to explain how these routines use information
+  #      from the 'env' object and their arguments and how they satisfy return-
+  #      value requirements. For now, please consult Section 5 in ../README
+  #      when reading this code. Other sections of the README may be helpful,
+  #      too.
 
   def lib_build(env,prepkit)
     bindir=env.build.bindir
@@ -110,7 +114,5 @@ module Library
   def lib_suite_prep_ex(env)
     logi "[ custom prep action ]"
   end
-
-  # CUSTOM METHODS (NOT CALLED BY DRIVER)
 
 end
