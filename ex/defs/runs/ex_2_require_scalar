@@ -1,4 +1,2 @@
-ddts_extends: 'ex_base'
+ddts_extends: 'ex_2'
 ddts_require: 'ex_1'
-sleep: 2
-tasks: 2
