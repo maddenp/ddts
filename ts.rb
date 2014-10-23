@@ -1230,7 +1230,7 @@ class TS
         die "Unable to write to '#{definition}'"
       end
     end
-    write_definition(defs,"builds","build1","set: me")
+    write_definition(defs,"builds","build1","set: me\n")
     write_definition(defs,"runs","run1","ddts_build: build1\n")
     write_definition(defs,"suites","suite1","group1:\n  - run1\n")
     puts"\nCreated application skeletion in #{approot}\n\n"
