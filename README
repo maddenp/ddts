@@ -668,7 +668,7 @@ valid_file(file)
   Same as valid_dir(), but for a file argument.
 
 --------------------------------------------------------------------------------
-Environment Variables
+6. Environment Variables
 --------------------------------------------------------------------------------
 
 In addition to DDTSAPP, discussed above, the following environment variables are
