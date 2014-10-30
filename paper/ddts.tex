@@ -216,7 +216,7 @@ Third, by design least complex, and intended for modification by anyone who migh
 Two advantages of a declarative approach are, first, that it simplifies programming; and, second, that it is agnostic about execution order and so encourages parallelism. Both advantages can be explained in terms of Kowalski's \emph{algorithm = logic + control} concept \cite{logic-control}: A program's declarative logic component describes the problem to be solved, while its imperative control component prescribes the actual mechanics of execution. Different control components can be used to solve the same logically defined problem, and the logical declaration language can remain unaware of control details.
 
 \begin{figure}[!t]
-\begin{verbatim}
+{\small \begin{verbatim}
 $ ddts show suite zeus
 
 group_zeus_intel: 
@@ -226,7 +226,7 @@ group_zeus_intel:
   zeus_intel_serial
 group_zeus_lahey: 
   zeus_lahey_serial
-\end{verbatim}
+\end{verbatim} }
 \caption{A request to show a YAML suite definition, displaying two comparison groups, \emph{group\_zeus\_intel} and \emph{group\_zeus\_lahey}. The output of the four runs in \emph{group\_zeus\_intel} will be automatically inter-compared by the framework. Since the run \emph{zeus\_lahey\_serial} is alone in its group, its output can only be compared to a baseline, if the run is associated with one. The suite is considered successful if both comparison groups are successful, which requires that the output of the runs under each group are deemed equivalent by the defined comparator.}
 \label{figure:2}
 \end{figure}
@@ -238,7 +238,7 @@ The simplicity of YAML, examples of which can be seen in Figures \ref{figure:2} 
 DDTS supports very flexible run definitions. Except for the required \emph{build} and optional \emph{baseline} keys, the contents of a run definition depend only on what information the library implementer decides is required by the run-related library routines, and is made available to these via the passed-in \emph{env} object. But, generally speaking, a run definition poses the question ``If a run of the program-under-test, configured with these parameters, successfully runs to completion, what is its output and where can it be found?'' This is the information required, at the comparison-group level, to determine success or failure of a comparison group.
 
 \begin{figure}[!t]
-\begin{verbatim}
+{\small \begin{verbatim}
 $ ddts show run jet_pgi_cpu_nophys_10
 
 # jet_pgi_cpu_nophys_10 < jet_std < nim_base
@@ -257,7 +257,7 @@ namelists:
     computetasks: 10
   queuenamelist:
     maxqueuetime: 00:20:00
-\end{verbatim}
+\end{verbatim} }
 \caption{A request to show a run definition. The ancestry line, prefixed by \#, shows that the run was defined as an extension of run \emph{jet\_std}, which in turn extends \emph{nim\_base}. (See Figure \ref{figure:4} for an example of how definition information is actually reused via \emph{extends}.) The required \emph{build} and optional \emph{baseline} keys are defined here, and two library routines, \emph{lib\_build\_prep} and \emph{lib\_run\_prep}, are associated with specialized implementations. Since this is a run definition, the value of \emph{nz} (for example) would be obtained in a run-related library routine by referencing \emph{env.run.namelists.cntlnamelist.nz}.}
 \label{figure:3}
 \end{figure}
@@ -265,7 +265,7 @@ namelists:
 To honor the DRY principle and support code reuse, DDTS' build, run and suite definition files support an \emph{extends} key, whose value is the name of another definition, of the same type, to use as a base to build upon. This mechanism resembles single inheritance in object-oriented design. Final definitions are composed recursively, starting with each definition's \emph{extends} ancestor, then updating it dynamically with the keys/values from the current definition. Cycles in \emph{extends} ancestry chains are detected and treated as errors. DDTS provides a \emph{show} command (e.g. \emph{ddts show run run1}) that displays the fully-composed definition for a given build, run or suite, along with its ancestry -- see Figure \ref{figure:3} for an example.
 
 \begin{figure}[!t]
-\begin{verbatim}
+{\small \begin{verbatim}
 $ cat runs/run3
 build: build2
 key1: value1
@@ -281,13 +281,13 @@ $ ddts show run run4
 build: build2
 key1: value1
 key2: value2
-\end{verbatim}
+\end{verbatim} }
 \caption{The \emph{extends} keyword defines a new run based on another. Here, a new run, \emph{run4}, extends \emph{run3}, then adds a new key-value pair, \emph{key2: value2}. When the definition of \emph{run4} is displayed by DDTS' \emph{show} command, the composed result, as well as its ancestry, are shown.}
 \label{figure:4}
 \end{figure}
 
 \begin{figure}[!t]
-\begin{verbatim}
+{\small \begin{verbatim}
 $ cat suites/suite1
 group1:
   - run1
@@ -295,7 +295,7 @@ group1:
 group2:
   - run3
   - run4 # newly-added run
-\end{verbatim}
+\end{verbatim} }
 \caption{Once a new run definition file, e.g. \emph{runs/run4} is created, adding it to an existing comparison group (\emph{group2} here) triggers automatic execution of the run by the framework, and comparison of its output to that of the other runs in the group, when the suite is executed.}
 \label{figure:5}
 \end{figure}
@@ -474,10 +474,10 @@ T. L. Clune and R. B. Rood, ``Software Testing and Verification in Climate Model
 \bibitem{decl-advantages}
 J. W. Lloyd, ``Practical Advantages of Declarative Programming,'' in \emph{Joint Conf. on Declarative Programming}, Peniscola, Spain, 1994, pp. 18-30.
 
-\vspace{141mm}
-
 \bibitem{ruby}
 \emph{Ruby} [Online]. Available: \url{https://www.ruby-lang.org/}
+
+\vspace{150mm} % equalize columns
 
 \bibitem{jruby}
 \emph{JRuby} [Online]. Available: \url{http://jruby.org/}
