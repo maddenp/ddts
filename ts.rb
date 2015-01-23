@@ -810,7 +810,7 @@ class Run
         end
       end
     else
-      logd "No baseline specified for #{@r} disabled, skipping"
+      logd "No baseline specified for #{@r}, skipping comparison"
     end
 
   end
@@ -1153,9 +1153,14 @@ class TS
     # specified baseline directory, then call dosuite with the suite name.
 
     help(args,1) if args.size < 2
-    @gen_baseline_dir=args.shift
+    gen_baseline_common(args)
     dosuite(args.join(" "))
 
+  end
+
+  def gen_baseline_common(args)
+    @gen_baseline_dir=args.shift
+    logd "Using gen-baseline directory #{@gen_baseline_dir}"
   end
 
   def halt(x)
@@ -1244,13 +1249,10 @@ class TS
     begin
       if args.first=="gen-baseline"
         args.shift
-        @gen_baseline_dir=args.shift
+        gen_baseline_common(args)
       elsif args.first=="use-baseline"
         args.shift
-        @use_baseline_dir=args.shift
-        unless Dir.exist?(use_baseline_dir)
-          die "Baseline directory #{use_baseline_dir} not found"
-        end
+        use_baseline_common(args)
       end
       run=args.join(" ")
       runs_all.add(run)
@@ -1388,17 +1390,22 @@ class TS
     # with the suite name.
 
     help(args,1) if  args.size < 2
-    @use_baseline_dir=args.shift
-    unless Dir.exist?(use_baseline_dir)
-      die "Baseline directory #{use_baseline_dir} not found"
-    end
+    use_baseline_common(args)
     dosuite(args.join(" "))
 
   end
 
+  def use_baseline_common(args)
+    @use_baseline_dir=args.shift
+    unless Dir.exist?(use_baseline_dir)
+      die "Baseline directory #{use_baseline_dir} not found"
+    end
+    logd "Using use-baseline directory #{use_baseline_dir}"
+  end
+
   def version(args)
 
-    puts "3.0"
+    puts "3.1"
 
   end
 
