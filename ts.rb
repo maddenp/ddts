@@ -1160,7 +1160,7 @@ class TS
 
   def gen_baseline_common(args)
     @gen_baseline_dir=args.shift
-    logd "Using gen-baseline directory #{@gen_baseline_dir}"
+    logd "Using gen-baseline directory '#{@gen_baseline_dir}'"
   end
 
   def halt(x)
@@ -1400,7 +1400,7 @@ class TS
     unless Dir.exist?(use_baseline_dir)
       die "Baseline directory #{use_baseline_dir} not found"
     end
-    logd "Using use-baseline directory #{use_baseline_dir}"
+    logd "Using use-baseline directory '#{use_baseline_dir}'"
   end
 
   def version(args)
