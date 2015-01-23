@@ -19,4 +19,4 @@ fi
 
 export DDTSHOME=$d
 
-ulimit -St unlimited -Su unlimited && $engine $d/ts.rb $b "$@"
+$engine $d/ts.rb $b "$@"
