@@ -4,6 +4,11 @@ Version numbers are in major.minor form, where changes to the minor component
 indicate bugfixes and similar non-breaking enhanements, and changes to the major
 component indicate breaking changes.
 
+3.1
+
+Log user-specified directory arguments to gen-baseline and use-baseline options.
+Fix a typo in a log message.
+
 3.0
 
 Changed app/configs to app/defs to align with DDTS design terminology. Changed
