@@ -386,14 +386,14 @@ module Common
 
     name,override,hash=destruct(_def)
     die "Circular dependency detected for '#{name}'" if seen.include?(name)
-    seen << name
+    seen.push(name)
     me=parse(File.join(dir,name),quiet)
     die "No valid definition found for '#{name}'" unless me
     ancestor=me["ddts_extends"]
     me=loaddef(dir,ancestor,quiet,me,seen) if ancestor
     me=mergedef(me,descendant) if descendant
     final=mergedef(me,hash)
-    unless quiet
+    if ancestor and not quiet
       logd ""
       logd "Final composed definition for #{_def}:"
       logd ""
