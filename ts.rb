@@ -1423,6 +1423,10 @@ class YAML_Delete
     @obj=coder.send(coder.type)
   end
 
+  def to_s
+    "!delete #{obj}"
+  end
+
 end # class YAML_Delete
 
 YAML.add_tag("!delete",YAML_Delete)
@@ -1435,6 +1439,10 @@ class YAML_Replace
 
   def init_with(coder)
     @obj=coder.send(coder.type)
+  end
+
+  def to_s
+    "!replace #{obj}"
   end
 
 end # class YAML_Replace
