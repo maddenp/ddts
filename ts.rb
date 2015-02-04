@@ -391,14 +391,14 @@ module Common
     die "No valid definition found for '#{name}'" unless me
     ancestor=me["ddts_extends"]
     me=loaddef(dir,ancestor,quiet,me,seen) if ancestor
-    me=mergedef(me,descendant) if descendant
-    final=mergedef(me,hash)
     if ancestor and not quiet
       logd ""
       logd "Final composed definition for #{_def}:"
       logd ""
-      pp(final).each_line { |e| logd e }
+      pp(me).each_line { |e| logd e }
     end
+    me=mergedef(me,descendant) if descendant
+    final=mergedef(me,hash)
     final
 
   end
