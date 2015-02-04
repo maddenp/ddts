@@ -4,6 +4,11 @@ Version numbers are in major.minor form, where changes to the minor component
 indicate bugfixes and similar non-breaking enhanements, and changes to the major
 component indicate breaking changes.
 
+3.2
+
+Fix reporting of composed definitions, and of !delete and !replace values in log
+file.
+
 3.1
 
 Log user-specified directory arguments to gen-baseline and use-baseline options.
