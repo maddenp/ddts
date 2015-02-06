@@ -43,11 +43,11 @@ module Utility
     # exit.
 
     if @ts.ilog.nil?
-      puts "\n#{msg}\n\n"
+      puts "\nERROR: #{msg}\n\n"
       exit 1
     end
     logd_flush
-    @ts.ilog.fatal("#{@pre}: #{msg}") unless msg.nil?
+    @ts.ilog.fatal("#{@pre}: ERROR: #{msg}") unless msg.nil?
     raise DDTSException
 
   end
@@ -114,7 +114,7 @@ module Utility
     # string (converted to a regular expression).
 
     re=Regexp.new(restr)
-    die "Run failed: Could not find #{stdout}" unless File.exist?(stdout)
+    die "Run failed, could not find #{stdout}" unless File.exist?(stdout)
     File.open(stdout,"r") do |io|
       io.readlines.each { |e| return true if re.match(e) }
     end
@@ -233,7 +233,7 @@ module Common
 
     name,override,hash=destruct(name)
     (chain||=[]).push(name)
-    me=parse(File.join(dir,name))
+    me=parse(find_def(dir,name,true))
     ancestor=me["ddts_extends"]
     ancestry(dir,ancestor,chain) if ancestor
     chain
@@ -382,7 +382,20 @@ module Common
     exit 1
   end
 
-  def loaddef(dir,_def,quiet=false,descendant=nil,seen=[])
+  def find_def(dir,name,abstract_ok)
+
+    # Look for a definition file first in the directory corresponding to the
+    # definition type, then in its 'abstract' subdirectory.
+
+    def_file=File.join(dir,name)
+    return def_file if File.exist?(def_file)
+    def_file=File.join(dir,"abstract",name)
+    die "No definition '#{name}' found in #{dir}" unless File.exist?(def_file)
+    die "Definition '#{name}' is abstract" unless abstract_ok
+    def_file
+  end
+
+  def load_def(dir,_def,abstract_ok,quiet=false,descendant=nil,seen=[])
 
     # Parse YAML definition from file, potentially using recursion to merge the
     # current definition onto a specified ancestor. Keep track of definition
@@ -391,25 +404,25 @@ module Common
     name,override,hash=destruct(_def)
     die "Circular dependency detected for '#{name}'" if seen.include?(name)
     seen.push(name)
-    me=parse(File.join(dir,name),quiet)
+    me=parse(find_def(dir,name,abstract_ok),quiet)
     die "No valid definition found for '#{name}'" unless me
     ancestor=me["ddts_extends"]
-    me=loaddef(dir,ancestor,quiet,me,seen) if ancestor
+    me=load_def(dir,ancestor,true,quiet,me,seen) if ancestor
     if ancestor and not quiet
       logd ""
       logd "Final composed definition for #{_def}:"
       logd ""
       pp(me).each_line { |e| logd e }
     end
-    me=mergedef(me,descendant) if descendant
-    final=mergedef(me,hash)
+    me=merge_def(me,descendant) if descendant
+    final=merge_def(me,hash)
     final
 
   end
 
-  def loadenv(dir,name)
+  def load_env(dir,name)
 
-    convert_h2o(loaddef(dir,name))
+    convert_h2o(load_def(dir,name,false))
 
   end
 
@@ -419,7 +432,7 @@ module Common
 
   end
 
-  def mergedef(me,descendant)
+  def merge_def(me,descendant)
 
     # Merge two definitions together, allowing descendant's settings to take
     # precedence. Top-level key-value pairs are set directly; arrays are
@@ -436,7 +449,7 @@ module Common
         unless v.is_a?(Hash)
           die "Cannot merge Hash '#{me[k]}' with #{v.class} '#{v}'"
         end
-        me[k]=mergedef(me[k],v)
+        me[k]=merge_def(me[k],v)
       elsif v.is_a?(Array)
         unless v.is_a?(Array)
           die "Cannot merge Array '#{me[k]}' with #{v.class} '#{v}'"
@@ -467,7 +480,7 @@ module Common
     rescue Exception=>x
       logd x.message
       x.backtrace.each { |e| logd e }
-      die "Error parsing YAML from "+file
+      die "Cannot parse YAML from "+file
     end
     if @dlog and not quiet
       c=File.basename(file)
@@ -677,7 +690,7 @@ class Run
       # Otherwise, perform the run.
 
       @env=OpenStruct.new(@ts.env.marshal_dump) # private copy
-      @env.run=loadenv(run_defs,r)
+      @env.run=load_env(run_defs,r)
       logd_flush
       @env.run.ddts_name=@r
       unless override.empty?
@@ -769,7 +782,7 @@ class Run
           logd_flush
           logi "Completed"
         else
-          die "Run failed: See #{logfile}"
+          die "Run failed, see #{logfile}"
         end
 
       end
@@ -856,7 +869,7 @@ class Run
     end
 
     build=@env.run.ddts_build
-    @env.build=loadenv(build_defs,build)
+    @env.build=load_env(build_defs,build)
     logd_flush
     name,override,hash,unique_name=destruct_build(build)
     unless unique_name==name
@@ -968,7 +981,7 @@ class TS
     logd "----"
     runs=(run_or_runs.respond_to?(:each))?(run_or_runs):([run_or_runs])
     builds=runs.reduce(Set.new) do |m,e|
-      build_name=loaddef(run_defs,e,true)["ddts_build"]
+      build_name=load_def(run_defs,e,false,true)["ddts_build"]
       name,override,hash,unique_name=destruct_build(build_name)
       unless unique_name==name
         logd "Mapping build '#{build_name}' to '#{unique_name}'"
@@ -1072,7 +1085,7 @@ class TS
     threads=[]
     begin
       logd "Loading suite definition '#{suite}'"
-      suitedef=loaddef(suite_defs,suite)
+      suitedef=load_def(suite_defs,suite,false)
       logd_flush
       suitedef.each do |k,v|
         # Assume that array values are run groups and move all scalar values
@@ -1204,8 +1217,11 @@ class TS
     puts "       #{pre} run [ gen-baseline <dir> ] <run>"
     puts "       #{pre} run [ use-baseline <dir> ] <run>"
     puts "       #{pre} show build <build>"
+    puts "       #{pre} show builds"
     puts "       #{pre} show run <run>"
+    puts "       #{pre} show runs"
     puts "       #{pre} show suite <suite>"
+    puts "       #{pre} show suites"
     puts "       #{pre} version"
     puts
     puts "See the README for more information."
@@ -1290,7 +1306,7 @@ class TS
 
     runs_all.each do |run|
 
-      rundef=loaddef(run_defs,run,true)
+      rundef=load_def(run_defs,run,false,true)
 
       # If a baseline is being generated, check for any pre-existing baseline
       # directories that would potentially be clobbered if we continue.
@@ -1351,17 +1367,17 @@ class TS
 
     def get_dir(type)
       case
-      when type=="build"
+      when type=~/build[s]?/
         unless Dir.exist?(d=build_defs)
           die "Build definitions directory '#{d}' not found"
         end
         d
-      when type=="run"
+      when type=~/run[s]?/
         unless Dir.exist?(d=run_defs)
           die "Run definitions directory '#{d}' not found"
         end
         d
-      when type=="suite"
+      when type=~/suite[s]?/
         unless Dir.exist?(d=suite_defs)
           die "Suite definitions directory '#{d}' not found"
         end
@@ -1377,14 +1393,23 @@ class TS
     type=args[0]
     name=args[1..-1].join(" ")
     if ["build","run","suite"].include?(type)
-      die "No #{type} specified" unless name
+      die "No #{type} specified" unless name and not name.empty?
       dir=get_dir(type)
-      _def=loaddef(dir,name,true)
+      _def=load_def(dir,name,true,true)
       _def.delete("ddts_extends")
       puts
       puts "# #{ancestry(dir,name).join(' < ')}"
       puts
       puts pp(_def)
+      puts
+    elsif ["builds","runs","suites"].include?(type)
+      dir=get_dir(type)
+      puts
+      puts "Available #{type}:"
+      puts
+      Dir.glob(File.join(dir,"*")).reject { |x| File.directory?(x) }.each do |e|
+        puts "  #{File.basename(e)}"
+      end
       puts
     else
       help(args,1)

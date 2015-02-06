@@ -28,7 +28,7 @@ def exe(desc,suite,*expected)
       puts "FAILED\n"
       puts "\nCommand was:\n\n#{cmd}"
       puts "\nExpected to see:\n\n#{string}"
-      die "\nOutput was:\n\n#{out.join("\n")}"
+      die "\nIn output:\n\n#{out.join("\n")}"
     end
   end
   puts "ok"
@@ -59,7 +59,7 @@ exe("ex_suite_single","ex_suite_single",
 # ex_suite_fail executes the single ex_fail run, which is expected to fail.
 
 exe("ex_suite_fail","ex_suite_fail",
-  "Run ex_fail: Run failed",
+  "Run ex_fail: ERROR: Run failed",
   "Test suite 'ex_suite_fail' FAILED"
   )
 
@@ -145,7 +145,7 @@ exe("ex_suite_3p_1f","ex_suite_3p_1f",
 
 die "Cannot find 'baseline'" unless File.exist?(baseline)
 exe("ex_suite_mismatch_stop (with baseline)","use-baseline #{baseline} ex_suite_mismatch_stop",
-  "Run ex_4_bad: Comparison failed (ex_4_bad vs baseline ex_baseline)",
+  "Run ex_4_bad: ERROR: Comparison failed (ex_4_bad vs baseline ex_baseline)",
   "Test suite 'ex_suite_mismatch_stop' FAILED"
   )
 
@@ -153,14 +153,14 @@ exe("ex_suite_mismatch_stop (with baseline)","use-baseline #{baseline} ex_suite_
 # fails on run-vs-run comparison.
 
 exe("ex_suite_mismatch_stop (no baseline)","ex_suite_mismatch_stop",
-  "Comparison: Comparison failed (ex_2 vs ex_4_bad)",
+  "Comparison: ERROR: Comparison failed (ex_2 vs ex_4_bad)",
   "Test suite 'ex_suite_mismatch_stop' FAILED"
   )
 
 # Same as previous test, but 'continue' is true so that the suite completes.
 
 exe("ex_suite_mismatch_continue","ex_suite_mismatch_continue",
-  "Comparison failed (ex_2 vs ex_4_bad)",
+  "ERROR: Comparison failed (ex_2 vs ex_4_bad)",
   "Suite stats: Failure in 1 of 2 group(s)",
   "0 of 4 TEST(S) FAILED"
   )
