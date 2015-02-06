@@ -364,8 +364,12 @@ module Common
   def destruct_build(b)
 
     name,override,hash=destruct(b)
-    uniq=(override.empty?)?(name):("#{name}_#{Digest::MD5.hexdigest(override)}")
-    [name,override,hash,uniq]
+    if override.empty?
+      unique_name=name
+    else
+      unique_name="#{name}_#{Digest::MD5.hexdigest(override)}"
+    end
+    [name,override,hash,unique_name]
 
   end
 
@@ -738,7 +742,7 @@ class Run
         # ...and perform the run.
 
         logi "Started"
-        rundir=@env.run.ddts_root=File.join(runs_dir,"#{@r}.#{@ts.uniq}")
+        rundir=@env.run.ddts_root=File.join(runs_dir,"#{@r}.#{@ts.timestamp}")
         FileUtils.mkdir_p(rundir) unless Dir.exist?(rundir)
         logd "* Output from run prep:"
         prepkit=invoke(:lib_run_prep,:run,@env)
@@ -854,25 +858,27 @@ class Run
     build=@env.run.ddts_build
     @env.build=loadenv(build_defs,build)
     logd_flush
-    name,override,hash,uniq=destruct_build(build)
-    logi "Assigning name '#{uniq}' to build '#{build}'" unless uniq==name
-    @env.build.ddts_root=File.join(builds_dir,uniq)
+    name,override,hash,unique_name=destruct_build(build)
+    unless unique_name==name
+      logi "Assigning name '#{unique_name}' to build '#{build}'"
+    end
+    @env.build.ddts_root=File.join(builds_dir,unique_name)
     @ts.buildmaster.synchronize do
       @ts.buildlocks[build]=Mutex.new unless @ts.buildlocks.has_key?(build)
     end
     @ts.buildlocks[build].synchronize do
       unless @ts.builds.has_key?(build)
         update_builds(build,true,nil) # assume the worst
-        logi "Build #{uniq} started"
-        logd "* Output from build #{uniq} prep:"
+        logi "Build #{unique_name} started"
+        logd "* Output from build #{unique_name} prep:"
         prepkit=invoke(:lib_build_prep,:run,@env)
         logd_flush
-        logd "* Output from build #{uniq}:"
+        logd "* Output from build #{unique_name}:"
         buildkit=invoke(:lib_build,:run,@env,prepkit)
         logd_flush
         result=invoke(:lib_build_post,:run,@env,buildkit)
         update_builds(build,false,result)
-        logi "Build #{uniq} completed"
+        logi "Build #{unique_name} completed"
       end
     end
     die "Required build unavailable" if @ts.builds[build].failed
@@ -892,7 +898,7 @@ class TS
 
   attr_accessor :activemaster,:activejobs,:baselinemaster,:baselinesrcs,
   :buildlocks,:buildmaster,:builds,:dlog,:env,:gen_baseline_dir,:havedata,:ilog,
-  :pre,:runlocks,:runmaster,:runs_all,:runs_completed,:suite,:uniq,
+  :pre,:runlocks,:runmaster,:runs_all,:runs_completed,:suite,:timestamp,
   :use_baseline_dir
 
   def initialize(invoked_as,args)
@@ -919,8 +925,8 @@ class TS
     @runs_all=SortedSet.new
     @runs_completed={}
     @suite=nil
+    @timestamp=Time.now.to_i
     @ts=self
-    @uniq=Time.now.to_i
     @use_baseline_dir=nil
     dispatch(args)
 
@@ -963,9 +969,11 @@ class TS
     runs=(run_or_runs.respond_to?(:each))?(run_or_runs):([run_or_runs])
     builds=runs.reduce(Set.new) do |m,e|
       build_name=loaddef(run_defs,e,true)["ddts_build"]
-      name,override,hash,uniq=destruct_build(build_name)
-      logd "Mapping build '#{build_name}' to '#{uniq}'" unless uniq==name
-      m.add(File.join(builds_dir,uniq))
+      name,override,hash,unique_name=destruct_build(build_name)
+      unless unique_name==name
+        logd "Mapping build '#{build_name}' to '#{unique_name}'"
+      end
+      m.add(File.join(builds_dir,unique_name))
       logd "----"
       m
     end
@@ -1327,7 +1335,7 @@ class TS
     # Perform common tasks needed for either full-suite or single-run
     # invocations.
 
-    env.ddts_ilog=(@ilog=Xlog.new(logs_dir,uniq))
+    env.ddts_ilog=(@ilog=Xlog.new(logs_dir,timestamp))
     env.ddts_dlog=(@dlog=XlogBuffer.new(ilog))
     trap("INT") do
       logi "Interrupted"
@@ -1492,12 +1500,12 @@ class Xlog
   attr_accessor :warned
   attr_reader   :file
 
-  def initialize(dir,uniq)
+  def initialize(dir,timestamp)
 
     # File logger
 
     FileUtils.mkdir_p(dir)
-    @file=File.join(dir,"log.#{uniq}")
+    @file=File.join(dir,"log.#{timestamp}")
     if File.exist?(@file)
       puts "\nERROR: Log file '#{@file}' already exists, aborting...\n\n"
       exit 1
