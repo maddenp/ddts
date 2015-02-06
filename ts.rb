@@ -1337,6 +1337,7 @@ class TS
 
     env.ddts_ilog=(@ilog=Xlog.new(logs_dir,timestamp))
     env.ddts_dlog=(@dlog=XlogBuffer.new(ilog))
+    logi "Invocation timestamp is #{timestamp}"
     trap("INT") do
       logi "Interrupted"
       raise Interrupt
