@@ -13,8 +13,11 @@ Quick Start
   ddts run [ gen-baseline <dir> ] <run> : do <run>, write baseline to <dir>
   ddts run [ use-baseline <dir> ] <run> : do <run>, compare to baseline <dir>
   ddts show build <build>               : show details of the build <build>
+  ddts show builds                      : show names of available builds
   ddts show run <run>                   : show details of the run <run>
+  ddts show runs                        : show names of available runs
   ddts show suite <suite>               : show details of the suite <suite>
+  ddts show suites                      : show names of available suites
   ddts version                          : print version number and exit
 
 * Note that either an 'app' directory must exist alongside the 'ddts' wrapper
@@ -79,6 +82,11 @@ argument to each library routine (see section 5). The 'build', 'run' and 'suite'
 members of the env object expose the contents of their respective definitions --
 as well as items that may be added by the library developer -- as OpenStruct
 objects, for easy access.
+
+Files not containing usable definitions (e.g. ones defining base settings meant
+for extension) may be placed in 'abstract' subdirectories of 'builds', 'runs' or
+'suites' to prevent their direct use or appearance in the output of the commands
+'show builds', 'show runs' or 'show suites'.
 
 Keys prefixed with 'ddts_' are reserved by the framework. Keys prefixed with
 'lib_' are also reserved, and provide a mechanism for overriding library
