@@ -687,3 +687,68 @@ is set automatically by the 'ddts' wrapper script.
 
 DDTSOUT: Specifies the directory into which all automatically-generated test-
 suite output should be written. If DDTSOUT is not set, DDTSAPP's value is used.
+
+--------------------------------------------------------------------------------
+6. Override Syntax
+--------------------------------------------------------------------------------
+
+DDTS provides an experimental syntax, usable in YAML definition files or from
+the command line, for overriding elements of definitions without creating new
+definition files. In either context, a run or suite definition name may be
+followed by a slash character and a comma-separated list of key-value pairs
+specifying changes to be applied to definition after it is read from disk.
+
+For example, the invocation
+
+  % DDTSAPP=ex ddts run ex_1/n=20000,tasks=2
+
+would execute the 'ex' application's 'ex_1' run, but with the variable 'n' set
+to '20000' and 'tasks' set to '2', instead of '10000' and '1', respectively, as
+specificed in the run's on-disk definition.
+
+The !delete, !replace and !unqoted flags may be used. For example,
+
+  % DDTSAPP=ex ddts run ex_1/message='!replace ["Hello","World"]'
+
+would replace the 'message' variable's original value with the specified new
+array -- instead of merging the original and new arrays, as would otherwise
+happen.
+
+Standard disclaimers about shell interpretation of special characters and quotes
+on the command line apply. Some experimentation may be required for all but the
+simplest cases, so use of the DDTS 'show' command may be helpful. For example,
+
+  % DDTSAPP=ex ddts show suite ex_suite/ddts_continue=true
+
+would show that the override syntax correctly enables the ddts_continue option
+for the 'ex_suite' suite, suggesting that the invocation
+
+  % DDTSAPP=ex ddts ex_suite/ddts_continue=true
+
+would indeed execute 'ex_suite' in continue mode.
+
+Since an overridden definition should not be confused with its canonical form,
+the framework appends a unique suffix to overriden names:
+
+  % DDTSAPP=ex ddts run ex_1/n=20000,tasks=2
+  ddts: Invocation timestamp is 1423270682
+  Run ex_1_v1: Assigning name 'ex_1_v1' to run 'ex_1/n=20000,tasks=2'
+  Run ex_1_v1: Build ex_build started
+  Run ex_1_v1: Build ex_build completed
+  Run ex_1_v1: Started
+  Run ex_1_v1: Running case ex_1
+  Run ex_1_v1: Completed
+
+Here, the framework has named the overriden run 'ex_1_v1' and has reported this
+fact. This is necessary, in particular, for suite definitions of the form
+
+  group:
+    - some_run/n=1,s='a'
+    - some_run/n=2,s='b'
+    - some_run/n=3,s='c'
+
+Without the name change, a conflict between the names of the runs and, in turn,
+the names of the execution directories created for each of the (distinct) runs,
+would exist.
+
+NB: Some complex definitions may not be expressible in override syntax.
