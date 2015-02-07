@@ -248,13 +248,13 @@ exe("ex_suite_build_fail_continue","ex_suite_build_fail_continue",
 # Run with no build specified
 
 exe("ex_no_build","run ex_no_build",
-  "Run 'ex_no_build' not associated with any build, aborting..."
+  "ERROR: Run 'ex_no_build' not associated with any build"
   )
 
 # Run with non-existent build specified
 
 exe("ex_bad_build","run ex_bad_build",
-  "Run 'ex_bad_build' associated with unknown build 'no_such_build', aborting..."
+  "ERROR: Run 'ex_bad_build' associated with missing or abstract build 'no_such_build'"
   )
 
 # Test !replace yaml tag

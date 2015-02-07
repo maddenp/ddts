@@ -1333,11 +1333,11 @@ class TS
       # Check that all runs have defined 'build'.
 
       unless name=rundef["ddts_build"]
-        die "Run '#{run}' not associated with any build, aborting..."
+        die "Run '#{run}' not associated with any build"
       end
       name,override,hash=destruct(name)
       unless builds_all.include?(name)
-        die "Run '#{run}' associated with unknown build '#{name}', aborting..."
+        die "Run '#{run}' associated with missing or abstract build '#{name}'"
       end
 
     end
