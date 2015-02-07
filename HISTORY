@@ -4,6 +4,15 @@ Version numbers are in major.minor form, where changes to the minor component
 indicate bugfixes and similar non-breaking enhanements, and changes to the major
 component indicate breaking changes.
 
+3.3
+
+Add 'show builds', 'show runs' and 'show suites' commands. Recognize 'abstract'
+subdirectory of defs/builds, defs/runs and defs/suites, where incomplete
+definition fragments (e.g. meant for extension) may be kept to avoid their being
+reported in the above 'show' commands, and to prevent their direct use. Document
+override syntax in the README. Report to use the timestamp suffix used for each
+suite or run execution.
+
 3.2
 
 Fix reporting of composed definitions, and of !delete and !replace values in log
