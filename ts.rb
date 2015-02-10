@@ -1212,7 +1212,7 @@ class TS
     puts "       #{pre} gen-baseline <directory> <suite>"
     puts "       #{pre} use-baseline <directory> <suite>"
     puts "       #{pre} clean"
-    puts "       #{pre} make-app <path>"
+    puts "       #{pre} make-app [path]"
     puts "       #{pre} help"
     puts "       #{pre} run [ gen-baseline <dir> ] <run>"
     puts "       #{pre} run [ use-baseline <dir> ] <run>"

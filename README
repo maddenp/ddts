@@ -9,7 +9,7 @@ Quick Start
   ddts use-baseline <dir> <suite>       : run <suite>, compare to baseline <dir>
   ddts clean                            : remove most test-suite created items
   ddts help                             : shows this usage information
-  ddts make-app <path>                  : create an app skeleton in <path>
+  ddts make-app [path]                  : create empty app ('./app' by default)
   ddts run [ gen-baseline <dir> ] <run> : do <run>, write baseline to <dir>
   ddts run [ use-baseline <dir> ] <run> : do <run>, compare to baseline <dir>
   ddts show build <build>               : show details of the build <build>
