@@ -1404,13 +1404,20 @@ class TS
       puts
     elsif ["builds","runs","suites"].include?(type)
       dir=get_dir(type)
-      puts
-      puts "Available #{type}:"
-      puts
-      Dir.glob(File.join(dir,"*")).reject { |x| File.directory?(x) }.each do |e|
-        puts "  #{File.basename(e)}"
+      defns=Dir.glob(File.join(dir,"*")).reject { |x| File.directory?(x) }
+      if defns.empty?
+        puts
+        puts "No #{type} defined"
+        puts
+      else
+        puts
+        puts "Available #{type}:"
+        puts
+        defns.each do |e|
+          puts "  #{File.basename(e)}"
+        end
+        puts
       end
-      puts
     else
       help(args,1)
     end
