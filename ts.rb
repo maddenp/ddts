@@ -1413,9 +1413,7 @@ class TS
         puts
         puts "Available #{type}:"
         puts
-        defns.each do |e|
-          puts "  #{File.basename(e)}"
-        end
+        defns.sort.each { |e| puts "  #{File.basename(e)}" }
         puts
       end
     else
