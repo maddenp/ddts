@@ -1,11 +1,11 @@
-unless $DDTSHOME=ENV["DDTSHOME"]
-  puts "DDTSHOME not found in environment."
+unless ($DDTSHOME=ENV["DDTSHOME"])
+  puts "DDTSHOME not found in environment"
   exit 1
 end
 
 $DDTSHOME=File.expand_path($DDTSHOME)
-$DDTSAPP=(d=ENV["DDTSAPP"])?(d):(File.join($DDTSHOME,"app"))
-$DDTSOUT=(d=ENV["DDTSOUT"])?(d):(File.join($DDTSAPP))
+$DDTSAPP=(d=ENV["DDTSAPP"])?(File.expand_path(d)):(File.join($DDTSHOME,"app"))
+$DDTSOUT=(d=ENV["DDTSOUT"])?(File.expand_path(d)):($DDTSAPP)
 
 $:.push($DDTSHOME).push($DDTSAPP)
 
