@@ -4,8 +4,3 @@ TODO
 
 - Provide a mechanism (with exactly-once semantics) for runs to associate with
   specific data sets.
-
-- Document override syntax.
-
-- Define logi_block (or similar) to handle e.g. logging stacktraces without
-  multiple logd commands.
