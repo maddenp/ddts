@@ -49,7 +49,7 @@ This section discusses the several criteria that guided the design of DDTS.
 
 \subsection{Design criterion: The framework should organize test activities using the intuitive concepts of builds, runs, groups and suites.}
 
-A practical conceptual structure for the organization of test activities employs the ideas of \emph{builds}, \emph{runs}, \emph{groups} of runs, and \emph{suites} of groups. The build and run concepts map onto their obvious counterparts outside the framework: builds onto the executable programs and libraries created from source code, and runs onto individual executions, with specific configurations, of those programs. Groups represent sets of comparisons between runs' output, and exist to tie together runs expected to produce output that is ``equivalent'', in a sense described later. Suites represent collections of these comparison groups. Figure \ref{figure:1} shows an example hierarchy of builds, runs, groups under a suite.
+A practical conceptual structure for the organization of test activities employs the ideas of \emph{builds}, \emph{runs}, \emph{groups} of runs, and \emph{suites} of groups. The build and run concepts map onto their obvious counterparts outside the framework: builds onto the executable programs and libraries created from source code, and runs onto individual executions, with specific configurations, of those programs. Groups represent sets of comparisons between runs' output, and exist to tie together runs expected to produce output that is ``equivalent'', in a sense described later. Suites represent collections of these comparison groups. Figure \ref{figure:1} shows an example hierarchy of builds, runs, and groups under a suite.
 
 \begin{figure}[!t]
 \centering
@@ -76,13 +76,13 @@ Run-vs-run comparisons are useful for detecting cases where programming errors l
 
 \subsubsection{Run-vs-baseline comparisons}
 
-In a run-vs-baseline comparison, a run's output is tested for equivalence, in the sense described above, to that of a corresponding run executed by an earlier test-suite invocation and stored as part of a ``baseline'' collection of output from one or more runs. This method ensures against unexpected changes in the tested program's output. It is the standard generally adhered to by software engineers working on a scientific code, and ensures that refactoring and optimizations do not change results. The run-vs-baseline method helps domain experts to avoid unintended changes output.
+In a run-vs-baseline comparison, a run's output is tested for equivalence, in the sense described above, to that of a corresponding run executed by an earlier test-suite invocation and stored as part of a ``baseline'' collection of output from one or more runs. This method ensures against unexpected changes in the tested program's output. It is the standard generally adhered to by software engineers working on a scientific code, and ensures that refactoring and optimizations do not change results. The run-vs-baseline method also helps domain experts avoid unintended changes to output.
 
 Note that neither of these methods relate to output validation/verification (correctness of the output's \emph{meaning}), which must be established by other means.
 
 \subsection{Design criterion: Tests should be simple to run, and the summary report easy to interpret.}
 
-To support regular, consistent use of test suites as part of the development cycle, the framework should provide a simple means to execute test suites, with unambiguous pass/fail result messages. A test suite may execute any number of individual runs, each perhaps requiring the compilation of executable programs, provisioning of input data, creation of run-time directories, etc., as well as some number of comparisons to establish suite success or failure. End users (people simply running a test suite) benefit from the automation of these tedious tasks, and can be shielded from the details of their execution -- at least until tests fail. The potentially voluminous information collected during execution of a test suite should be retained, as it may be useful for post-mortem analysis and debugging.
+To support regular, consistent use of test suites as part of the development cycle, the framework should provide a simple means to execute test suites, with unambiguous pass/fail result messages. A test suite may execute any number of individual runs, each perhaps requiring the compilation of executable programs, provisioning of input data, creation of run-time directories, etc., as well as some number of comparisons to establish suite success or failure. End users (people simply running a test suite) benefit from the automation of these tedious tasks, and can be shielded from the details of their execution -- at least until tests fail. The potentially voluminous information collected during execution of a test suite should be retained, however, as it may be useful for post-mortem analysis and debugging.
 
 A balance should be maintained between terse progress information shown to the user, and verbose information collected in a log file.
 
@@ -90,7 +90,7 @@ A balance should be maintained between terse progress information shown to the u
 
 Many scientific-software development efforts are pursued on shared platforms (computer systems) where developers may not have permission to install new system software, establish network services, or communicate freely with remote systems. This is commonly the case on high-performance computing (HPC) platforms. The test framework should therefore be lightweight: It should rely on as few external components (e.g. web servers, databases) as possible, and should provide a command-line interface to support operation on restrictive platforms. A need to convince system-administration staff to install extra software components to support testing should be avoided.
 
-It may also be necessary to develop and test on multiple platforms. While the program-under-test might not change when moving to a new platform, resources like compilers, libraries and batch systems likely will. Some of this diversity may be hidden by the program's existing build- and run-automation systems (scripts, makefiles, etc.). The framework should make it simple to define test suites for each platform, reusing existing test-suite code and build/run automation utilities wherever possible. That is, once the interface between the framework, the program, and one platform is established, it should be straightforward to redefine pieces of this interface to support new platforms.
+It may also be necessary to develop and test on multiple platforms. While the program-under-test might not change when moving to a new platform, resources like compilers, libraries and batch systems likely will. Some of this diversity may be hidden by the program's existing build- and run-automation systems (scripts, makefiles, etc.). The framework should make it simple to define test suites for each platform, reusing existing test-suite code and external build/run automation utilities wherever possible. That is, once the interface between the framework, the program, and one platform is established, it should be straightforward to redefine pieces of this interface to support new platforms.
 
 \subsection{Design criterion: Configuration, extension and maintenance should be simple.}
 
@@ -106,7 +106,7 @@ The configuration space of a scientific code is often huge, and system tests typ
 
 \section{Implementation}
 
-This structure of this section mirrors that of the previous one to discuss how each of these design criteria is currently realized in DDTS.
+This structure of this section mirrors that of the previous one to discuss how each of the design criteria is currently realized in DDTS.
 
 \subsection{Implementation: The framework should organize test activities using the intuitive concepts of builds, runs, groups and suites.}
 
@@ -118,23 +118,23 @@ A typical DDTS invocation of a certain named suite would start by determining it
 
 In DDTS, a suite definition is composed of one or more named groups, each of which contains the names of one or more runs (actual syntax is shown in a later subsection). The presence of multiple runs in the same group directs DDTS to verify the equivalence of their output as a condition of test-suite success. This concise notation not only declares that the named runs must be (successfully) executed, but also implicitly requests performance of run-vs-run comparisons of their respective output files. No special command-line syntax is needed when invoking DDTS to obtain this essential behavior.
 
-DDTS' \emph{use-baseline} command-line option requests that run-vs-baseline comparisons also be performed when executing a test suite (or even a single run). The option's argument is a path to a directory containing a set of baseline output generated by a previous test-suite invocation. Any DDTS run's definition may include an optional \emph{baseline} key associating it with a specific named baseline, and the framework will compare the output of each run so defined with the matching set of baseline output in the specified directory.
+DDTS' \emph{use-baseline} command-line option requests that run-vs-baseline comparisons also be performed when executing a test suite (or even a single run). The option's argument is a path to a directory containing a set of baseline output generated by a previous test-suite invocation. Any DDTS run's definition may include an optional \emph{ddts_baseline} key associating it with a specific named baseline, and the framework will compare the output of each run so defined with the matching set of baseline output in the specified directory.
 
-Similarly, the \emph{gen-baseline} command-line option requests that a baseline be generated from the output of a suite (or single run). Its argument names a directory where the baseline should be stored. Since more than one run in a test-suite invocation may associate with the same baseline, only one should contribute its output to the baseline. The mechanism governing this is described in a later subsection.
+Similarly, the \emph{gen-baseline} command-line option requests that a baseline be generated from the output of a suite (or single run). Its argument names a directory where the baseline should be stored. Since more than one run in a test-suite invocation may associate with the same baseline, only one should contribute its output to the newly-generated baseline. The mechanism governing this is described in a later subsection.
 
-By default, DDTS uses a bitwise-exact comparator to judge whether output files are equivalent, but custom comparators may be specified in suite and run definition files. This is discussed further in a later subsection.
+By default, DDTS uses a bitwise-exact comparator to judge whether output files are equivalent, but custom comparators may be specified in suite and run definition files. This is further discussed in a later subsection.
 
 Note that, because runs need not associate with \emph{any} baseline, and because groups defined in suite definitions are allowed to contain only a single run, it is possible to define ``smoke test'' runs expected merely to run to completion, and whose output is not tested at all. These runs may, in fact, not exercise the primary program-under-test, but buttress the test suite's overall assurances by testing related code or even platform components.
 
 \subsection{Implementation: Tests should be simple to run, and the summary report easy to interpret.}
 
-In the most common use case, DDTS can be invoked with a single command-line argument: the name of a defined test suite to execute (e.g. \emph{ddts suite1}). As discussed above, a suite definition (usually) implies a set of run-vs-run comparisons, described as a comparison group, that test for equivalence of output within the group and for the ability to successfully build, configure and run the program-under-test to completion.
+In the most common use case, DDTS can be invoked with a single command-line argument: the name of a defined test suite to execute (e.g. \emph{ddts suite1}). As discussed above, a suite definition (usually) implies one or more sets of run-vs-run comparisons, each defined by a comparison group, that test equivalence of output within the group and, implicitly, the ability to successfully build, configure and run the program-under-test to completion.
 
 Execution of a single run (e.g. \emph{ddts run run1}) is also supported, and useful, for example, when iterating on a failed test, evaluating possible fixes, before executing the entire suite again.
 
 DDTS limits screen output, so as not to overwhelm the user with information. During execution, it prints basic progress messages when, for example, builds or runs start and finish, comparisons are performed, baselines are created, and in several other informational or warning cases. It reports errors as they occur and, if none are detected, prints a final definitive ``ALL TESTS PASSED'' message.
 
-Significantly more verbose output is collected in a unique log file created for each DDTS invocation. For example, the results of individual output file comparisons are logged, as is the entire output generated by external shell commands executed by the framework. All messages printed to the screen are also logged, so that the log file is a complete record of each DDTS invocation's activities.
+Significantly more verbose output is collected in a unique log file created for each DDTS invocation. For example, the results of individual output file comparisons are logged, as is the entire output generated by external shell commands executed by the framework. All messages printed to the screen are also logged, so that the log file is a superset of the console output, and a complete record of each DDTS invocation's activities.
 
 In case specific applications require more screen or log file output than is generated by default, DDTS provides routines to write to both the screen and the log file, callable by the code written by test-suite application implementers to interface DDTS to the platform and program-under-test.
 
