@@ -201,7 +201,7 @@ Note that the order in which the library routines are called is mainly determine
 DDTS' core driver calls library routines directly, so their argument lists and expected return values are defined and documented. Some arguments are flexibly defined, with details left to the discretion of the library implementer. For example, \emph{lib\_run} is allowed to return an arbitrary object that will later be passed to \emph{lib\_run\_post}. The library implementer, knowing from the documentation that \emph{lib\_run\_post} will be responsible for determining whether or not the run completed successfully, should determine the specific type and value of the returned object. On the other hand, the structure and contents of the return value required from \emph{lib\_outfiles} is precisely defined in the DDTS documentation.
 
 \subsubsection{The \emph{env} argument}
-The first argument to each of the library routines is an object called \emph{env}, which contains a structure initially reflecting only the build, run and suite definitions pertaining to this particular DDTS invocation, and appropriate to each of the test-suite execution phases. For example, in a library routine called from the context of a run, the \emph{env.run} substructure will contain keys and values from that run's definition file (e.g. \emph{env.run.ddts_build} will contain the name of the build used by this run, and \emph{env.run.ddts\_baseline}, if defined, will contain the name of the baseline with which this run is associated). The syntax of the build, run and suite definitions are discussed later, but it is useful to note here that the \emph{env} structure may be arbitrarily modified by library routines, according to the implementer's needs. In particular, it may be useful to pass information between library routines via the \emph{env} structure, beyond what is required or allowed by the routines' other arguments and return values.
+The first argument to each of the library routines is an object called \emph{env}, which contains a structure initially reflecting only the build, run and suite definitions pertaining to this particular DDTS invocation, and appropriate to each of the test-suite execution phases. For example, in a library routine called from the context of a run, the \emph{env.run} substructure will contain keys and values from that run's definition file (e.g. \emph{env.run.ddts\_build} will contain the name of the build used by this run, and \emph{env.run.ddts\_baseline}, if defined, will contain the name of the baseline with which this run is associated). The syntax of the build, run and suite definitions are discussed later, but it is useful to note here that the \emph{env} structure may be arbitrarily modified by library routines, according to the implementer's needs. In particular, it may be useful to pass information between library routines via the \emph{env} structure, beyond what is required or allowed by the routines' other arguments and return values.
 
 Returning now to the topic of portability, a particular DDTS application might require that, for example, the \emph{lib\_run} routine use a certain batch-submission command on one platform, and a different command on another. DDTS supports this requirement via its build, run and suite definition files: If a library routine name appears as a key in a definition file, that key's associated value names a routine to be called in place of the original. For example, if a run's definition file contains the key-value pair \emph{lib\_run}: \emph{lib\_run\_sge}, then the DDTS core driver will invoke \emph{lib\_run\_sge} for this run where it would normally have invoked \emph{lib\_run}. The \emph{lib\_run\_sge} routine must then be defined in \emph{library.rb} and would execute a job-submission command appropriate to the Sun Grid Engine (SGE) batch system. A run defined for a different platform might specify \emph{lib\_run}: \emph{lib\_run\_pbs} to submit a job to the Portable Batch System (PBS). This mechanism allows specialization of library routines for platform portability. Ruby, as a dynamic language, makes this aliasing feature trivial to implement.
 
@@ -470,13 +470,13 @@ T. L. Clune and R. B. Rood, ``Software Testing and Verification in Climate Model
 \bibitem{junit}
 \emph{JUnit} [Online]. Available: \url{http://junit.org/}
 
+\vspace{134mm} % equalize columns
+
 \bibitem{pfunit}
 \emph{pFUnit} [Online]. Available: \url{http://pfunit.sourceforge.net/}
 
 \bibitem{decl-advantages}
 J. W. Lloyd, ``Practical Advantages of Declarative Programming,'' in \emph{Joint Conf. on Declarative Programming}, Peniscola, Spain, 1994, pp. 18-30.
-
-\vspace{141mm} % equalize columns
 
 \bibitem{ruby}
 \emph{Ruby} [Online]. Available: \url{https://www.ruby-lang.org/}
