@@ -6,17 +6,8 @@ p=$(readlink -e $0)
 d=$(dirname     $p)
 b=$(basename    $p)
 
-engine=jruby # 'jruby' or 'ruby'
-
-test -z "$engine" && fail "No engine specified"
-
-if [[ "$engine" = "jruby" ]]
-then
-  jruby=$d/jruby-complete.jar
-  test -f "$jruby" || fail "Cannot find $jruby"
-  engine="java -jar $jruby --1.9"
-fi
-
 export DDTSHOME=$d
 
-$engine $d/ts.rb $b "$@"
+jruby=$d/jruby-complete.jar
+test -f "$jruby" || fail "Cannot find $jruby"
+java -jar $jruby --1.9 $d/ts.rb $b "$@"
