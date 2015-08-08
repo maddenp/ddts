@@ -4,4 +4,4 @@ before_install:
 language: ruby
 rvm:
   - jruby-19mode
-script: cd ex && ./tests
+script: cd ex && jruby --1.9 -I. ./tests.rb
