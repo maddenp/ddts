@@ -3,5 +3,5 @@ before_install:
   - sudo apt-get install -qq gfortran mpi-default-dev
 language: ruby
 rvm:
-  - jruby-19mode
-script: cd ex && jruby --1.9 -I. ./tests.rb
+  - jruby-1.7.19
+script: ex/tests

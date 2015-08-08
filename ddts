@@ -1,13 +1,9 @@
 #!/bin/bash
 
-fail() { echo -e "\n$1\n" && exit 1; }
-
 p=$(readlink -e $0)
 d=$(dirname     $p)
 b=$(basename    $p)
 
 export DDTSHOME=$d
 
-jruby=$d/jruby-complete.jar
-test -f "$jruby" || fail "Cannot find $jruby"
-java -jar $jruby --1.9 $d/ts.rb $b "$@"
+jruby --1.9 $d/ts.rb $b "$@"

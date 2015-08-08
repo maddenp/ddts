@@ -18,8 +18,9 @@ def exe(desc,suite,*expected)
 
   expected.map! { |e| [e,Regexp::escape(e)] }
   print "Testing: #{desc}"+" "*(78-desc.length)
-  ddts=File.join("..","ddts")
-  cmd="DDTSAPP=. DDTSOUT=#{$OUT} #{ddts} #{suite} 2>&1"
+  ddts=File.expand_path(File.join(File.dirname(__FILE__),"..","ddts"))
+  app=File.dirname(__FILE__)
+  cmd="DDTSAPP=#{app} DDTSOUT=#{$OUT} #{ddts} #{suite} 2>&1"
   out=`#{cmd}`.split("\n")
   expected.each do |pair|
     string=pair.first
@@ -36,7 +37,7 @@ end
 
 # Set some variables.
 
-$OUT="tests_out"
+$OUT=File.join(File.dirname(__FILE__),"tests_out")
 baseline=File.join($OUT,"baseline")
 sentinel=File.join($OUT,"builds","ex_build","sentinel")
 
