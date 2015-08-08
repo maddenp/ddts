@@ -1,5 +1,6 @@
 DDTS
 ====
+[![Build Status](https://travis-ci.org/maddenp/ddts.svg?branch=master)](https://travis-ci.org/maddenp/ddts)
 
 A Ruby-Based Dependency-Driven Test System
 ### Notes
