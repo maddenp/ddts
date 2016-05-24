@@ -6,4 +6,4 @@ b=$(basename    $p)
 
 export DDTSHOME=$d
 
-jruby --1.9 $d/ts.rb $b "$@"
+jruby $d/ts.rb $b "$@"

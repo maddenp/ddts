@@ -4,4 +4,4 @@ p=$(readlink $0) || p=$0
 d=$(dirname  $p)
 b=$(basename $p)
 
-jruby --1.9 -I. $d/tests.rb
+jruby -I. $d/tests.rb
