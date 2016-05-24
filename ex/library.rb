@@ -1,3 +1,5 @@
+# rubocop:disable Lint/UnusedMethodArgument, Metrics/AbcSize, Metrics/MethodLength
+
 module Library
 
   # TODO Comments are needed here to explain how these routines use information
