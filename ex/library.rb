@@ -60,7 +60,7 @@ module Library
     sleep = env.run.sleep
     tasks = env.run.tasks
     if message = env.run.message
-      logi (message.is_a?(Array)) ? (message.join(" ")) : (message)
+      logi message.is_a?(Array) ? message.join(" ") : message
     end
     cmd = "cd #{rundir} && #{run} #{tasks} #{bin} >stdout 2>&1 && sleep #{sleep}"
     logd "Running: #{cmd}"
@@ -73,7 +73,7 @@ module Library
     unless (lines = File.open(stdout).read) =~ /SUCCESS/
       lines.each_line { |line| logi line.chomp }
     end
-    (job_check(stdout, "SUCCESS")) ? (env.run.ddts_root) : (nil)
+    job_check(stdout, "SUCCESS") ? env.run.ddts_root : nil
   end
 
   def lib_run_post(env, runkit)
@@ -100,9 +100,9 @@ module Library
   end
 
   def lib_suite_post_ex(env)
-    buildfails = env.suite.ddts_builds.reduce(0) { |m, (k, v)| (v.failed) ? (m + 1) : (m) }
+    buildfails = env.suite.ddts_builds.reduce(0) { |m, (k, v)| v.failed ? (m + 1) : m }
     logi "build fail rate = #{Float(buildfails) / env.suite.ddts_builds.size}"
-    runfails = env.suite.ddts_runs.reduce(0) { |m, (k, v)| (v.failed) ? (m + 1) : (m) }
+    runfails = env.suite.ddts_runs.reduce(0) { |m, (k, v)| v.failed ? (m + 1) : m }
     logi "run fail rate = #{Float(runfails) / env.suite.ddts_runs.size}"
     logi "[ custom post action ]"
   end
