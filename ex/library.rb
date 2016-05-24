@@ -1,4 +1,8 @@
-# rubocop:disable Lint/UnusedMethodArgument, Metrics/AbcSize, Metrics/MethodLength
+# rubocop:disable Lint/UnusedMethodArgument
+# rubocop:disable Metrics/AbcSize
+# rubocop:disable Metrics/MethodLength
+# rubocop:disable Style/Documentation
+# rubocop:disable Style/EmptyLinesAroundModuleBody
 
 module Library
 
