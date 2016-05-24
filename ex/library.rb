@@ -33,7 +33,7 @@ module Library
   end
 
   def lib_data(env)
-    f = "data.tgz"
+    f = 'data.tgz'
     src = File.join(app_dir, f)
     dst = File.join(tmp_dir, f)
     cmd = "cp #{src} #{dst}"
@@ -47,7 +47,7 @@ module Library
     cmd = "cd #{tmp_dir} && tar xvzf #{f}"
     logd "Extracting data: #{cmd}"
     output, status = ext(cmd, {:msg => "Data extract failed, see #{logfile}"})
-    logd "Data extract complete"
+    logd 'Data extract complete'
   end
 
   def lib_outfiles_ex(env, path)
@@ -62,7 +62,7 @@ module Library
     sleep = env.run.sleep
     tasks = env.run.tasks
     if message = env.run.message
-      logi message.is_a?(Array) ? message.join(" ") : message
+      logi message.is_a?(Array) ? message.join(' ') : message
     end
     cmd = "cd #{rundir} && #{run} #{tasks} #{bin} >stdout 2>&1 && sleep #{sleep}"
     logd "Running: #{cmd}"
@@ -75,7 +75,7 @@ module Library
     unless (lines = File.open(stdout).read) =~ /SUCCESS/
       lines.each_line { |line| logi line.chomp }
     end
-    job_check(stdout, "SUCCESS") ? env.run.ddts_root : nil
+    job_check(stdout, 'SUCCESS') ? env.run.ddts_root : nil
   end
 
   def lib_run_post(env, runkit)
@@ -98,7 +98,7 @@ module Library
   end
 
   def lib_suite_post(env)
-    logi "[ default post action ]"
+    logi '[ default post action ]'
   end
 
   def lib_suite_post_ex(env)
@@ -106,15 +106,15 @@ module Library
     logi "build fail rate = #{Float(buildfails) / env.suite.ddts_builds.size}"
     runfails = env.suite.ddts_runs.reduce(0) { |m, (k, v)| v.failed ? (m + 1) : m }
     logi "run fail rate = #{Float(runfails) / env.suite.ddts_runs.size}"
-    logi "[ custom post action ]"
+    logi '[ custom post action ]'
   end
 
   def lib_suite_prep(env)
-    logi "[ default prep action ]"
+    logi '[ default prep action ]'
   end
 
   def lib_suite_prep_ex(env)
-    logi "[ custom prep action ]"
+    logi '[ custom prep action ]'
   end
 
 end
