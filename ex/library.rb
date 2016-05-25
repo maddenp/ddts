@@ -6,11 +6,11 @@
 
 module Library
 
-  # TODO Comments are needed here to explain how these routines use information
-  #      from the 'env' object and their arguments and how they satisfy return-
-  #      value requirements. For now, please consult Section 5 in ../README
-  #      when reading this code. Other sections of the README may be helpful,
-  #      too.
+  # TODO: Comments are needed here to explain how these routines use information
+  #       from the 'env' object and their arguments and how they satisfy return-
+  #       value requirements. For now, please consult Section 5 in ../README
+  #       when reading this code. Other sections of the README may be helpful,
+  #       too.
 
   def lib_build(env, prepkit)
     bindir = env.build.bindir
@@ -42,7 +42,7 @@ module Library
     dst = File.join(tmp_dir, f)
     cmd = "cp #{src} #{dst}"
     md5 = 'd49037f1ef796b8a7ca3906e713fc33b'
-    unless File.exists?(dst) and hash_matches(dst, md5)
+    unless File.exist?(dst) && hash_matches(dst, md5)
       logd "Getting data: #{cmd}"
       ext(cmd, msg: "Failed to get data, see #{logfile}")
       die "Data archive #{f} has incorrect md5 hash" unless hash_matches(dst, md5)
@@ -65,12 +65,12 @@ module Library
     run = env.run.runcmd
     sleep = env.run.sleep
     tasks = env.run.tasks
-    if message = env.run.message
+    if (message = env.run.message)
       logi message.is_a?(Array) ? message.join(' ') : message
     end
     cmd = "cd #{rundir} && #{run} #{tasks} #{bin} >stdout 2>&1 && sleep #{sleep}"
     logd "Running: #{cmd}"
-    IO.popen(cmd) { |io| io.readlines.each { |e| logd "#{e}" } }
+    IO.popen(cmd) { |io| io.readlines.each { |e| logd e.to_s } }
     File.join(rundir, 'stdout')
   end
 
@@ -105,9 +105,9 @@ module Library
   end
 
   def lib_suite_post_ex(env)
-    buildfails = env.suite.ddts_builds.reduce(0) { |m, (k, v)| v.failed ? (m + 1) : m }
+    buildfails = env.suite.ddts_builds.reduce(0) { |m, (_, v)| v.failed ? (m + 1) : m }
     logi "build fail rate = #{Float(buildfails) / env.suite.ddts_builds.size}"
-    runfails = env.suite.ddts_runs.reduce(0) { |m, (k, v)| v.failed ? (m + 1) : m }
+    runfails = env.suite.ddts_runs.reduce(0) { |m, (_, v)| v.failed ? (m + 1) : m }
     logi "run fail rate = #{Float(runfails) / env.suite.ddts_runs.size}"
     logi '[ custom post action ]'
   end
