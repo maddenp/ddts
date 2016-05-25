@@ -38,7 +38,7 @@ module Library
     dst = File.join(tmp_dir, f)
     cmd = "cp #{src} #{dst}"
     md5 = 'd49037f1ef796b8a7ca3906e713fc33b'
-    unless File.exist?(dst) && hash_matches(dst, md5)
+    unless File.exist?(dst) and hash_matches(dst, md5)
       logd "Getting data: #{cmd}"
       ext(cmd, msg: "Failed to get data, see #{logfile}")
       unless hash_matches(dst, md5)
