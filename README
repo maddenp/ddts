@@ -64,9 +64,9 @@ for information on DDTSAPP).
 3. Definitions
 --------------------------------------------------------------------------------
 
-A DDTS application requires, in addition to the core driver in ts.rb, the
+A DDTS application requires, in addition to the core driver in ddts.rb, the
 following, which must appear either in a (possibly symlinked) directory named
-'app', alongside ts.rb; or in a directory named by the environment variable
+'app', alongside ddts.rb; or in a directory named by the environment variable
 'DDTSAPP' (where the latter, if defined, takes precedence):
 
 - An implementation of library.rb. See below, and the example application in
@@ -555,7 +555,7 @@ lib_suite_prep(env)
   a suite definition.
 
 Other routines useful to a specific model or platform may be added to library.rb
-by the library developer, as needed. See uses of Utility#invoke in ts.rb for
+by the library developer, as needed. See uses of Utility#invoke in ddts.rb for
 examples of how to override such custom routines via build, run and suite
 definitions.
 
