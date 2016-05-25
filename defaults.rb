@@ -1,34 +1,36 @@
+# rubocop:disable Lint/UnusedMethodArgument
+
 module Library
 
-  def lib_build(env,prepkit)
+  def lib_build(env, prepkit)
     true
   end
 
-  def lib_build_post(env,buildkit)
+  def lib_build_post(env, buildkit)
     true
   end
 
   def lib_build_prep(env)
     true
   end
- 
+
   def lib_data(env)
     true
   end
 
-  def lib_outfiles(env,path)
+  def lib_outfiles(env, path)
     []
   end
 
-  def lib_run(env,prepkit)
+  def lib_run(env, prepkit)
     true
   end
 
-  def lib_run_check(env,postkit)
+  def lib_run_check(env, postkit)
     true
   end
 
-  def lib_run_post(env,runkit)
+  def lib_run_post(env, runkit)
     true
   end
 
