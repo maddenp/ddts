@@ -1,0 +1,12 @@
+Lint/UnusedMethodArgument:
+  Enabled: false
+Metrics/AbcSize:
+  Enabled: false
+Metrics/MethodLength:
+  Enabled: false
+Metrics/ModuleLength:
+  Enabled: false
+Style/Documentation:
+  Enabled: false
+Style/EmptyLinesAroundModuleBody:
+  Enabled: false
