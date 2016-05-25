@@ -19,7 +19,7 @@ module Library
     srcdir = env.build.ddts_root
     srcfile = env.build.srcfile
     cmd = "cd #{srcdir} && #{compiler} #{srcfile} -o #{bindir}/#{binname}"
-    ext(cmd, {msg: "Build failed, see #{logfile}"})
+    ext(cmd, msg: "Build failed, see #{logfile}")
   end
 
   def lib_build_post(env, buildkit)
@@ -44,13 +44,13 @@ module Library
     md5 = 'd49037f1ef796b8a7ca3906e713fc33b'
     unless File.exists?(dst) and hash_matches(dst, md5)
       logd "Getting data: #{cmd}"
-      ext(cmd, {msg: "Failed to get data, see #{logfile}"})
+      ext(cmd, msg: "Failed to get data, see #{logfile}")
       die "Data archive #{f} has incorrect md5 hash" unless hash_matches(dst, md5)
     end
     logd "Data archive #{f} ready"
     cmd = "cd #{tmp_dir} && tar xvzf #{f}"
     logd "Extracting data: #{cmd}"
-    ext(cmd, {msg: "Data extract failed, see #{logfile}"})
+    ext(cmd, msg: "Data extract failed, see #{logfile}")
     logd 'Data extract complete'
   end
 
