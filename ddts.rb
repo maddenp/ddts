@@ -7,7 +7,7 @@ $DDTSHOME = File.expand_path($DDTSHOME)
 $DDTSAPP = (d = ENV['DDTSAPP']) ? File.expand_path(d) : File.join($DDTSHOME, 'app')
 $DDTSOUT = (d = ENV['DDTSOUT']) ? File.expand_path(d) : $DDTSAPP
 
-$:.push($DDTSHOME).push($DDTSAPP)
+$LOAD_PATH.push($DDTSHOME).push($DDTSAPP)
 
 require 'defaults'
 require 'digest/md5'
@@ -59,12 +59,12 @@ module Utility
     # message keyed by property :msg, if any. If property :out is true, write
     # the collected stdout/stderr to the delayed log.
 
-    d = props.has_key?(:die) ? (props[:die]) : true
-    m = props.has_key?(:msg) ? (props[:msg]) : ''
-    o = props.has_key?(:out) ? (props[:out]) : true
+    d = props.key?(:die) ? (props[:die]) : true
+    m = props.key?(:msg) ? (props[:msg]) : ''
+    o = props.key?(:out) ? (props[:out]) : true
     output = []
     IO.popen("#{cmd} 2>&1") { |io| io.read.each_line { |x| output.push(x) } }
-    status = $?.exitstatus
+    status = $CHILD_STATUS.exitstatus
     if o
       logd "* Output from #{cmd} (status code=#{status}):"
       logd '---- 8< ----'
@@ -200,7 +200,7 @@ module Utility
     # Return the supplied file if it exists (otherwise die).
 
     file = File.expand_path(file)
-    die "File #{file} not found" unless File.exists?(file)
+    die "File #{file} not found" unless File.exist?(file)
     file
 
   end
@@ -214,14 +214,19 @@ module Common
   # Definition directories
 
   def defsdir()    File.join($DDTSAPP, 'defs')   end
+
   def build_defs() File.join(defsdir, 'builds')  end
+
   def run_defs()   File.join(defsdir, 'runs')    end
+
   def suite_defs() File.join(defsdir, 'suites')  end
 
   # Runtime directories
 
   def builds_dir() File.join($DDTSOUT, 'builds') end
+
   def logs_dir()   File.join($DDTSOUT, 'logs')   end
+
   def runs_dir()   File.join($DDTSOUT, 'runs')   end
 
   # Various methods
@@ -352,7 +357,7 @@ module Common
       v = YAML.load(v)
       if k.include?(':') and (a = k.split(/\s*:\s*/))
         g = (hash[a[0]] ||= {})
-        g.merge!(a[1...-1].reverse.reduce({ a[-1] => v }) { |m, e| m = { e => m } })
+        g.merge!(a[1...-1].reverse.reduce(a[-1] => v) { |m, e| m = { e => m } })
       else
         hash[k] = v
       end
@@ -560,14 +565,13 @@ module Common
     failures = 0
     until live.empty?
       live.each do |e|
-        unless e.alive?
-          live.delete(e)
-          failures += 1 if e.status.nil?
-          begin
-            e.join
-          rescue Exception => x
-            raise x unless x.is_a?(DDTSException) and continue
-          end
+        next if e.alive?
+        live.delete(e)
+        failures += 1 if e.status.nil?
+        begin
+          e.join
+        rescue Exception => x
+          raise x unless x.is_a?(DDTSException) and continue
         end
       end
       sleep 1
@@ -676,7 +680,7 @@ class Run
     # Create a lock for this run unless one already exists.
 
     @ts.runmaster.synchronize do
-      @ts.runlocks[@r] = Mutex.new unless @ts.runlocks.has_key?(@r)
+      @ts.runlocks[@r] = Mutex.new unless @ts.runlocks.key?(@r)
     end
 
     # Obtain the lock for this run and (maybe) perform it.
@@ -685,7 +689,7 @@ class Run
 
       # If the run has already performed, break out of this block.
 
-      break if @ts.runs_completed.has_key?(@r)
+      break if @ts.runs_completed.key?(@r)
 
       # Otherwise, perform the run.
 
@@ -709,13 +713,12 @@ class Run
         until req.empty?
           @ts.runmaster.synchronize do
             req.each do |e|
-              if (result = @ts.runs_completed[e] and result != :incomplete)
-                if result.failed
-                  die "Run '#{@r}' depends on failed run '#{e}'"
-                end
-                @env.run.ddts_require_results[e] = result
-                req.delete(e)
+              next unless (result = @ts.runs_completed[e] and result != :incomplete)
+              if result.failed
+                die "Run '#{@r}' depends on failed run '#{e}'"
               end
+              @env.run.ddts_require_results[e] = result
+              req.delete(e)
             end
           end
           sleep 3
@@ -802,7 +805,7 @@ class Run
     logd "Deleting job #{jobid}"
     qdel = invoke(:lib_queue_del_cmd, :run, @env)
     cmd = "#{qdel} #{jobid}"
-    output, status = ext(cmd, { die: false })
+    output, status = ext(cmd, die: false)
 
   end
 
@@ -840,7 +843,7 @@ class Run
 
     if @bline
       @ts.baselinemaster.synchronize do
-        unless @ts.baselinesrcs.has_key?(@bline)
+        unless @ts.baselinesrcs.key?(@bline)
           @ts.baselinesrcs[@bline] = @ts.runs_completed[@r]
         end
       end
@@ -861,7 +864,7 @@ class Run
 
     def update_builds(build, failed, result)
       @ts.buildmaster.synchronize do
-        x = OpenStruct.new({ failed: failed, result: result })
+        x = OpenStruct.new(failed: failed, result: result)
         @env.suite.ddts_builds ||= {}
         @env.suite.ddts_builds[build] = x
         @ts.builds[build] = x
@@ -877,10 +880,10 @@ class Run
     end
     @env.build.ddts_root = File.join(builds_dir, unique_name)
     @ts.buildmaster.synchronize do
-      @ts.buildlocks[build] = Mutex.new unless @ts.buildlocks.has_key?(build)
+      @ts.buildlocks[build] = Mutex.new unless @ts.buildlocks.key?(build)
     end
     @ts.buildlocks[build].synchronize do
-      unless @ts.builds.has_key?(build)
+      unless @ts.builds.key?(build)
         update_builds(build, true, nil) # assume the worst
         logi "Build #{unique_name} started"
         logd "* Output from build #{unique_name} prep:"
@@ -1019,7 +1022,7 @@ class TS
     items = [builds_dir, logs_dir, runs_dir, tmp_dir]
     Dir.glob(File.join($DDTSOUT, 'log.*')).each { |e| items << e }
     items.sort.each do |e|
-      if File.exists?(e)
+      if File.exist?(e)
         puts "Deleting #{File.basename(e)}"
         FileUtils.rm_rf(e)
       end
@@ -1035,7 +1038,7 @@ class TS
 
     suite = args.join(' ')
     cmd = (x = args.shift) ? x : 'help'
-    cmd = cmd.gsub(/-/, '_')
+    cmd = cmd.tr('-', '_')
     okargs = %w(
 clean
 gen_baseline
@@ -1077,7 +1080,7 @@ version)
     @suite = suite
     setup
     name, override, hash = destruct(suite)
-    unless File.exists?(File.join(suite_defs, name))
+    unless File.exist?(File.join(suite_defs, name))
       die "Suite '#{name}' not found"
     end
     logi "Running test suite '#{suite}'"
@@ -1603,8 +1606,6 @@ end # class XlogBuffer
 
 # Command-line invocation:
 
-if __FILE__ == $0
+if __FILE__ == $PROGRAM_NAME
   TS.new(ARGV[0], ARGV[1..-1])
 end
-
-# paul.a.madden@noaa.gov

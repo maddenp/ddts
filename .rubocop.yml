@@ -32,3 +32,5 @@ Style/Not:
   Enabled: false
 Style/SpaceAfterNot:
   Enabled: false
+Style/EachWithObject:
+  Enabled: false
