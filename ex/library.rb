@@ -44,13 +44,13 @@ module Library
     md5 = 'd49037f1ef796b8a7ca3906e713fc33b'
     unless File.exists?(dst) and hash_matches(dst, md5)
       logd "Getting data: #{cmd}"
-      output, status = ext(cmd, {msg: "Failed to get data, see #{logfile}"})
+      ext(cmd, {msg: "Failed to get data, see #{logfile}"})
       die "Data archive #{f} has incorrect md5 hash" unless hash_matches(dst, md5)
     end
     logd "Data archive #{f} ready"
     cmd = "cd #{tmp_dir} && tar xvzf #{f}"
     logd "Extracting data: #{cmd}"
-    output, status = ext(cmd, {msg: "Data extract failed, see #{logfile}"})
+    ext(cmd, {msg: "Data extract failed, see #{logfile}"})
     logd 'Data extract complete'
   end
 
@@ -83,13 +83,12 @@ module Library
   end
 
   def lib_run_post(env, runkit)
-    stdout = runkit
+    runkit
   end
 
   def lib_run_prep(env)
     rundir = env.run.ddts_root
     binname = env.run.binname
-    conffile = env.run.conffile
     FileUtils.cp(env.build.ddts_result, rundir)
     FileUtils.chmod(0755, File.join(rundir, binname))
     a = env.run.a
