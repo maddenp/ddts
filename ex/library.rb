@@ -1,6 +1,7 @@
 # rubocop:disable Lint/UnusedMethodArgument
 # rubocop:disable Metrics/AbcSize
 # rubocop:disable Metrics/MethodLength
+# rubocop:disable Metrics/ModuleLength
 # rubocop:disable Style/Documentation
 # rubocop:disable Style/EmptyLinesAroundModuleBody
 
@@ -45,7 +46,9 @@ module Library
     unless File.exist?(dst) && hash_matches(dst, md5)
       logd "Getting data: #{cmd}"
       ext(cmd, msg: "Failed to get data, see #{logfile}")
-      die "Data archive #{f} has incorrect md5 hash" unless hash_matches(dst, md5)
+      unless hash_matches(dst, md5)
+        die "Data archive #{f} has incorrect md5 hash"
+      end
     end
     logd "Data archive #{f} ready"
     cmd = "cd #{tmp_dir} && tar xvzf #{f}"
@@ -68,7 +71,8 @@ module Library
     if (message = env.run.message)
       logi message.is_a?(Array) ? message.join(' ') : message
     end
-    cmd = "cd #{rundir} && #{run} #{tasks} #{bin} >stdout 2>&1 && sleep #{sleep}"
+    cmd = "cd #{rundir} && #{run} #{tasks} #{bin} >stdout 2>&1 " \
+          "&& sleep #{sleep}"
     logd "Running: #{cmd}"
     IO.popen(cmd) { |io| io.readlines.each { |e| logd e.to_s } }
     File.join(rundir, 'stdout')
@@ -105,9 +109,13 @@ module Library
   end
 
   def lib_suite_post_ex(env)
-    buildfails = env.suite.ddts_builds.reduce(0) { |m, (_, v)| v.failed ? (m + 1) : m }
+    buildfails = env.suite.ddts_builds.reduce(0) do |m, (_, v)|
+      v.failed ? (m + 1) : m
+    end
     logi "build fail rate = #{Float(buildfails) / env.suite.ddts_builds.size}"
-    runfails = env.suite.ddts_runs.reduce(0) { |m, (_, v)| v.failed ? (m + 1) : m }
+    runfails = env.suite.ddts_runs.reduce(0) do |m, (_, v)|
+      v.failed ? (m + 1) : m
+    end
     logi "run fail rate = #{Float(runfails) / env.suite.ddts_runs.size}"
     logi '[ custom post action ]'
   end
