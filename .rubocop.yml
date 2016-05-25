@@ -6,5 +6,7 @@ Metrics/ModuleLength:
   Enabled: false
 Style/Documentation:
   Enabled: false
+Style/EmptyLinesAroundMethodBody:
+  Enabled: false
 Style/EmptyLinesAroundModuleBody:
   Enabled: false
