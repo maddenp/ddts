@@ -714,9 +714,7 @@ class Run
           @ts.runmaster.synchronize do
             req.each do |e|
               next unless (result = @ts.runs_completed[e] and result != :incomplete)
-              if result.failed
-                die "Run '#{@r}' depends on failed run '#{e}'"
-              end
+              die "Run '#{@r}' depends on failed run '#{e}'" if result.failed
               @env.run.ddts_require_results[e] = result
               req.delete(e)
             end
@@ -1389,9 +1387,7 @@ version)
       end
     end
 
-    unless Dir.exist?(defsdir)
-      die "Definition directory '#{defsdir}' not found"
-    end
+    die "Definition directory '#{defsdir}' not found" unless Dir.exist?(defsdir)
     type = args[0]
     name = args[1..-1].join(' ')
     if %w(build run suite).include?(type)
@@ -1508,8 +1504,8 @@ class YAMLUnquoted
     @v
   end
 
-  def <=>(o)
-    self.to_s <=> o.to_s
+  def <=>(other)
+    to_s <=> other.to_s
   end
 
 end # class YAML_Unquoted
@@ -1606,6 +1602,4 @@ end # class XlogBuffer
 
 # Command-line invocation:
 
-if __FILE__ == $PROGRAM_NAME
-  TS.new(ARGV[0], ARGV[1..-1])
-end
+TS.new(ARGV[0], ARGV[1..-1]) if __FILE__ == $PROGRAM_NAME
