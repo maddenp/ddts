@@ -263,11 +263,11 @@ module Common
     r1 = runs.shift
     r1_name = r1.name
     r1_files = r1.files
-    r1_bases = r1_files.collect { |a, b| b }.sort
+    r1_bases = r1_files.collect { |_a, b| b }.sort
     runs.each do |r2|
       r2_name = r2.name
       r2_files = r2.files
-      r2_bases = r2_files.collect { |a, b| b }.sort
+      r2_bases = r2_files.collect { |_a, b| b }.sort
       logd "Comparing #{r1_name} to #{r2_name}"
       m = "(#{r1_name} vs #{r2_name})"
       unless r1_bases == r2_bases
@@ -1100,7 +1100,7 @@ version)
       env.suite.ddts_suitename = suite
       FileUtils.mkdir_p(tmp_dir)
       invoke(:lib_suite_prep, :suite, env)
-      suitedef.each do |k, v|
+      suitedef.each do |_k, v|
         v.each { |x| runs_all.add(x) if x.is_a?(String) }
       end
       sanity_checks(gen_baseline_dir)
@@ -1334,7 +1334,7 @@ version)
 
       # Check that all runs have defined 'build'.
 
-      unless name = rundef['ddts_build']
+      unless (name = rundef['ddts_build'])
         die "Run '#{run}' not associated with any build"
       end
       name, override, hash = destruct(name)
@@ -1454,7 +1454,7 @@ end # class TS
 
 # Special YAML handling. See JRuby's lib/ruby/shared/psych/coder.rb.
 
-class YAML_Delete
+class YAMLDelete
 
   # To delete inherited keys/values.
 
@@ -1470,9 +1470,9 @@ class YAML_Delete
 
 end # class YAML_Delete
 
-YAML.add_tag('!delete', YAML_Delete)
+YAML.add_tag('!delete', YAMLDelete)
 
-class YAML_Replace
+class YAMLReplace
 
   # To to suppress Array/Hash merging.
 
@@ -1488,9 +1488,9 @@ class YAML_Replace
 
 end # class YAML_Replace
 
-YAML.add_tag('!replace', YAML_Replace)
+YAML.add_tag('!replace', YAMLReplace)
 
-class YAML_Unquoted
+class YAMLUnquoted
 
   # To suppress quoting Strings e.g. for Fortran namelist values.
 
@@ -1514,7 +1514,7 @@ class YAML_Unquoted
 
 end # class YAML_Unquoted
 
-YAML.add_tag('!unquoted', YAML_Unquoted)
+YAML.add_tag('!unquoted', YAMLUnquoted)
 
 # Logging
 
@@ -1545,7 +1545,7 @@ class Xlog
     end
     @flog = Logger.new(@file)
     @flog.level = Logger::DEBUG
-    @flog.formatter = proc do |s, t, p, m|
+    @flog.formatter = proc do |s, t, _p, m|
       timestr = "#{t.year}-#{t.month}-#{t.day} #{t.hour}:#{t.min}:#{t.sec}"
       "#{timestr} [#{s}] #{m}\n"
     end
@@ -1554,7 +1554,7 @@ class Xlog
 
     @slog = Logger.new(STDOUT)
     @slog.level = Logger::INFO
-    @slog.formatter = proc { |s, t, p, m| "#{m}\n" }
+    @slog.formatter = proc { |_s, _t, _p, m| "#{m}\n" }
 
     @warned = false
 
