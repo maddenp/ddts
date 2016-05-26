@@ -1,11 +1,23 @@
+# rubocop:disable Lint/RescueException
+
 unless ($DDTSHOME = ENV['DDTSHOME'])
   puts 'DDTSHOME not found in environment'
   exit 1
 end
 
 $DDTSHOME = File.expand_path($DDTSHOME)
-$DDTSAPP = (d = ENV['DDTSAPP']) ? File.expand_path(d) : File.join($DDTSHOME, 'app')
-$DDTSOUT = (d = ENV['DDTSOUT']) ? File.expand_path(d) : $DDTSAPP
+
+$DDTSAPP = if (d = ENV['DDTSAPP'])
+             File.expand_path(d)
+           else
+             File.join($DDTSHOME, 'app')
+           end
+
+$DDTSOUT = if (d = ENV['DDTSOUT'])
+             File.expand_path(d)
+           else
+             $DDTSAPP
+           end
 
 $LOAD_PATH.push($DDTSHOME).push($DDTSAPP)
 
@@ -22,7 +34,7 @@ require 'yaml'
 
 begin
   require 'library'
-rescue LoadError => ex
+rescue LoadError
   puts 'NOTE: No library.rb found, using defaults.rb'
 end
 
@@ -213,21 +225,35 @@ module Common
 
   # Definition directories
 
-  def defsdir()    File.join($DDTSAPP, 'defs')   end
+  def defsdir
+    File.join($DDTSAPP, 'defs')
+  end
 
-  def build_defs() File.join(defsdir, 'builds')  end
+  def build_defs
+    File.join(defsdir, 'builds')
+  end
 
-  def run_defs()   File.join(defsdir, 'runs')    end
+  def run_defs
+    File.join(defsdir, 'runs')
+  end
 
-  def suite_defs() File.join(defsdir, 'suites')  end
+  def suite_defs
+    File.join(defsdir, 'suites')
+  end
 
   # Runtime directories
 
-  def builds_dir() File.join($DDTSOUT, 'builds') end
+  def builds_dir
+    File.join($DDTSOUT, 'builds')
+  end
 
-  def logs_dir()   File.join($DDTSOUT, 'logs')   end
+  def logs_dir
+    File.join($DDTSOUT, 'logs')
+  end
 
-  def runs_dir()   File.join($DDTSOUT, 'runs')   end
+  def runs_dir
+    File.join($DDTSOUT, 'runs')
+  end
 
   # Various methods
 
@@ -236,7 +262,7 @@ module Common
     # Return an array containing the ancestry of the given definition (including
     # the definition itself), by following the chain of 'ddts_extends' keys.
 
-    name, override, hash = destruct(name)
+    name, = destruct(name)
     (chain ||= []).push(name)
     me = parse(find_def(dir, name, true))
     ancestor = me['ddts_extends']
@@ -284,8 +310,11 @@ module Common
           end
         end
       end
-      s1 = r1_files.sort { |a, b| a[1] <=> b[1] }.collect { |a, b| File.join(a, b) }
-      s2 = r2_files.sort { |a, b| a[1] <=> b[1] }.collect { |a, b| File.join(a, b) }
+      sort_join = proc do |files|
+        files.sort { |a, b| a[1] <=> b[1] }.collect { |a, b| File.join(a, b) }
+      end
+      s1 = sort_join.call(r1_files)
+      s2 = sort_join.call(r2_files)
       until s1.empty?
         f1 = s1.shift
         f2 = s2.shift
@@ -329,7 +358,7 @@ module Common
 
     # Convert a (possibly nested) OpenStruct instance into a hash.
 
-    h = Hash.new
+    h = {}
     o.marshal_dump.each do |k, v|
       h[k.to_s] = (v.is_a?(OpenStruct) ? convert_o2h(v) : v)
     end
@@ -339,7 +368,7 @@ module Common
 
   def destruct(s)
 
-    name, sep, override = s.partition('/')
+    name, _, override = s.partition('/')
     list = override.dup
     return [s, '', {}] if name.empty? or not list.include?('=')
     hash = {}
@@ -355,9 +384,9 @@ module Common
       return [s, '', {}] unless x =~ /^,?$/
       k, x, v = first.strip.partition(/\s*=\s*/)
       v = YAML.load(v)
-      if k.include?(':') and (a = k.split(/\s*:\s*/))
-        g = (hash[a[0]] ||= {})
-        g.merge!(a[1...-1].reverse.reduce(a[-1] => v) { |m, e| m = { e => m } })
+      if k.include?(':') and (ka = k.split(/\s*:\s*/))
+        g = (hash[ka[0]] ||= {})
+        g.merge!(ka[1...-1].reverse.reduce(ka[-1] => v) { |a, e| { e => a } })
       else
         hash[k] = v
       end
@@ -369,11 +398,11 @@ module Common
   def destruct_build(b)
 
     name, override, hash = destruct(b)
-    if override.empty?
-      unique_name = name
-    else
-      unique_name = "#{name}_#{Digest::MD5.hexdigest(override)}"
-    end
+    unique_name = if override.empty?
+                    name
+                  else
+                    "#{name}_#{Digest::MD5.hexdigest(override)}"
+                  end
     [name, override, hash, unique_name]
 
   end
@@ -400,13 +429,20 @@ module Common
     def_file
   end
 
-  def load_def(dir, _def, abstract_ok, quiet = false, descendant = nil, seen = [])
+  def load_def(
+        dir,
+        def2load,
+        abstract_ok,
+        quiet = false,
+        descendant = nil,
+        seen = []
+  )
 
     # Parse YAML definition from file, potentially using recursion to merge the
     # current definition onto a specified ancestor. Keep track of definition
     # files already processed to avoid graph cycles.
 
-    name, override, hash = destruct(_def)
+    name, _, hash = destruct(def2load)
     die "Circular dependency detected for '#{name}'" if seen.include?(name)
     seen.push(name)
     me = parse(find_def(dir, name, abstract_ok), quiet)
@@ -415,7 +451,7 @@ module Common
     me = load_def(dir, ancestor, true, quiet, me, seen) if ancestor
     if ancestor and not quiet
       logd ''
-      logd "Final composed definition for #{_def}:"
+      logd "Final composed definition for #{def2load}:"
       logd ''
       pp(me).each_line { |e| logd e }
     end
@@ -446,9 +482,9 @@ module Common
     me = {} if me.nil?
     descendant = {} if descendant.nil?
     descendant.each do |k, v|
-      if v.is_a?(YAML_Delete)
+      if v.is_a?(YAMLDelete)
         me.delete(k)
-      elsif v.is_a?(YAML_Replace)
+      elsif v.is_a?(YAMLReplace)
         me[k] = v.obj
       elsif v.is_a?(Hash)
         unless v.is_a?(Hash)
@@ -461,7 +497,7 @@ module Common
         end
         me[k] = me[k].nil? ? v : (me[k] + v)
         me[k].each do |e|
-          if e.is_a?(YAML_Delete)
+          if e.is_a?(YAMLDelete)
             me[k].delete(e.obj)
             me[k].delete(e)
           end
@@ -503,15 +539,15 @@ module Common
 
     # Pretty-print. Sorting provides diff-comparable output.
 
-    def a_or_h(o)
-      o.is_a?(Array) || o.is_a?(Hash)
+    a_or_h = lambda do |x|
+      x.is_a?(Array) || x.is_a?(Hash)
     end
 
-    def ppsort(o)
-      o.sort_by do |e|
+    ppsort = lambda do |x|
+      x.sort_by do |e|
         if e.is_a?(Hash)
           e.keys.first
-        elsif e.is_a?(YAML_Delete)
+        elsif e.is_a?(YAMLDelete)
           e.obj
         else
           e
@@ -522,15 +558,15 @@ module Common
     s = ''
     if o.is_a?(Array)
       o.each do |e|
-        next if e.is_a?(YAML_Delete)
+        next if e.is_a?(YAMLDelete)
         s += '  ' * level + '- '
-        s += pp(e, level, a_or_h(e) ? false : true, false)
+        s += pp(e, level, a_or_h.call(e) ? false : true, false)
       end
     elsif o.is_a?(Hash)
-      ppsort(o).each do |k, v|
-        next if v.is_a?(YAML_Delete)
+      ppsort.call(o).each do |k, v|
+        next if v.is_a?(YAMLDelete)
         s += '  ' * level if indent
-        s += k + (a_or_h(v) ? ":\n" : ': ') + pp(v, level + 1, true)
+        s += k + (a_or_h.call(v) ? ":\n" : ': ') + pp(v, level + 1, true)
       end
     else
       s += quote ? "#{quote_string(o)}\n" : "#{o}\n"
@@ -544,7 +580,7 @@ module Common
     # Wrap values instantiated as Ruby Strings in quotes, except for those
     # tagged '!unquoted'.
 
-    if s.is_a?(YAML_Unquoted)
+    if s.is_a?(YAMLUnquoted)
       s = s.to_s
     elsif s.is_a?(String)
       s = "'#{s}'"
@@ -1464,7 +1500,7 @@ class YAMLDelete
     "!delete #{obj}"
   end
 
-end # class YAML_Delete
+end # class YAMLDelete
 
 YAML.add_tag('!delete', YAMLDelete)
 
@@ -1482,7 +1518,7 @@ class YAMLReplace
     "!replace #{obj}"
   end
 
-end # class YAML_Replace
+end # class YAMLReplace
 
 YAML.add_tag('!replace', YAMLReplace)
 
@@ -1508,7 +1544,7 @@ class YAMLUnquoted
     to_s <=> other.to_s
   end
 
-end # class YAML_Unquoted
+end # class YAMLUnquoted
 
 YAML.add_tag('!unquoted', YAMLUnquoted)
 
