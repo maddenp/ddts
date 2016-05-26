@@ -849,10 +849,8 @@ class Run
         blinepair.files = invoke(:lib_outfiles, :run, @env, blinepath)
         comp([@ts.runs_completed[@r], blinepair], @env.run)
         logi 'Baseline comparison OK'
-      else
-        if Dir.exist?(@ts.use_baseline_dir)
-          logw "No baseline '#{@bline}' found, continuing..."
-        end
+      elsif Dir.exist?(@ts.use_baseline_dir)
+        logw "No baseline '#{@bline}' found, continuing..."
       end
     else
       logd "No baseline specified for #{@r}, skipping comparison"
@@ -887,19 +885,10 @@ class Run
     # shell after obtaining its build definition. It stores into a global hash
     # the information required by its dependent runs.
 
-    def update_builds(build, failed, result)
-      @ts.buildmaster.synchronize do
-        x = OpenStruct.new(failed: failed, result: result)
-        @env.suite.ddts_builds ||= {}
-        @env.suite.ddts_builds[build] = x
-        @ts.builds[build] = x
-      end
-    end
-
     build = @env.run.ddts_build
     @env.build = load_env(build_defs, build)
     logd_flush
-    name, override, hash, unique_name = destruct_build(build)
+    name, _override, _hash, unique_name = destruct_build(build)
     unless unique_name == name
       logi "Assigning name '#{unique_name}' to build '#{build}'"
     end
@@ -930,6 +919,15 @@ class Run
 
   end
 
+  def update_builds(build, failed, result)
+    @ts.buildmaster.synchronize do
+      x = OpenStruct.new(failed: failed, result: result)
+      @env.suite.ddts_builds ||= {}
+      @env.suite.ddts_builds[build] = x
+      @ts.builds[build] = x
+    end
+  end
+
   def update_runs_completed(failed, files, name, result, incomplete = false)
     if incomplete
       o = :incomplete
@@ -949,9 +947,25 @@ class TS
   include Common
   include Library
 
-  attr_accessor :activemaster, :activejobs, :baselinemaster, :baselinesrcs,
-                :buildlocks, :buildmaster, :builds, :dlog, :env, :gen_baseline_dir, :havedata, :ilog,
-                :pre, :runlocks, :runmaster, :runs_all, :runs_completed, :suite, :timestamp,
+  attr_accessor :activemaster,
+                :activejobs,
+                :baselinemaster,
+                :baselinesrcs,
+                :buildlocks,
+                :buildmaster,
+                :builds,
+                :dlog,
+                :env,
+                :gen_baseline_dir,
+                :havedata,
+                :ilog,
+                :pre,
+                :runlocks,
+                :runmaster,
+                :runs_all,
+                :runs_completed,
+                :suite,
+                :timestamp,
                 :use_baseline_dir
 
   def initialize(invoked_as, args)
@@ -1022,7 +1036,7 @@ class TS
     runs = run_or_runs.respond_to?(:each) ? run_or_runs : [run_or_runs]
     builds = runs.reduce(Set.new) do |m, e|
       build_name = load_def(run_defs, e, false, true)['ddts_build']
-      name, override, hash, unique_name = destruct_build(build_name)
+      name, _override, _hash, unique_name = destruct_build(build_name)
       unless unique_name == name
         logd "Mapping build '#{build_name}' to '#{unique_name}'"
       end
@@ -1031,7 +1045,7 @@ class TS
       m
     end
     if Dir.exist?(builds_dir)
-      if not env.suite.ddts_retain_builds
+      unless env.suite.ddts_retain_builds
         builds.each do |build|
           if Dir.exist?(build)
             FileUtils.rm_rf(build)
@@ -1051,7 +1065,7 @@ class TS
 
   end
 
-  def clean(args)
+  def clean(_)
 
     # Clean up items created by the test suite. As well as those defined here,
     # remove any items specified by the caller.
@@ -1077,15 +1091,15 @@ class TS
     cmd = (x = args.shift) ? x : 'help'
     cmd = cmd.tr('-', '_')
     okargs = %w(
-clean
-gen_baseline
-help
-make_app
-run
-show
-use_baseline
-version)
-    suites = Dir.glob(File.join(suite_defs, '*')).map { |e| File.basename(e) }
+      clean
+      gen_baseline
+      help
+      make_app
+      run
+      show
+      use_baseline
+      version
+    )
     unless %w(help make_app version).include?(cmd)
       unless Dir.exist?($DDTSAPP)
         die "Application directory '#{$DDTSAPP}' not found"
@@ -1116,7 +1130,7 @@ version)
 
     @suite = suite
     setup
-    name, override, hash = destruct(suite)
+    name, = destruct(suite)
     unless File.exist?(File.join(suite_defs, name))
       die "Suite '#{name}' not found"
     end
@@ -1193,13 +1207,13 @@ version)
     end
     logi msg
     env.suite.ddts_runs = runs_completed.reduce({}) do |m, (k, v)|
-      if v == :build_only
-        h = { failed: false, files: [], result: nil }
-      elsif v == :incomplete
-        h = { failed: true, files: [], result: nil }
-      else
-        h = { failed: v.failed, files: v.files, result: v.result }
-      end
+      h = if v == :build_only
+            { failed: false, files: [], result: nil }
+          elsif v == :incomplete
+            { failed: true, files: [], result: nil }
+          else
+            { failed: v.failed, files: v.files, result: v.result }
+          end
       m[k] = OpenStruct.new(h)
       m
     end
@@ -1223,6 +1237,27 @@ version)
     logd "Using gen-baseline directory '#{@gen_baseline_dir}'"
   end
 
+  def get_dir(type)
+    if type =~ /build[s]?/
+      unless Dir.exist?(d = build_defs)
+        die "Build definitions directory '#{d}' not found"
+      end
+      d
+    elsif type =~ /run[s]?/
+      unless Dir.exist?(d = run_defs)
+        die "Run definitions directory '#{d}' not found"
+      end
+      d
+    elsif type =~ /suite[s]?/
+      unless Dir.exist?(d = suite_defs)
+        die "Suite definitions directory '#{d}' not found"
+      end
+      d
+    else
+      die "Unrecognized definition type '#{type}'"
+    end
+  end
+
   def halt(x)
 
     # Terminate the test-suite run. First try to kill any submitted batch jobs
@@ -1244,7 +1279,7 @@ version)
 
   end
 
-  def help(args = nil, status = 0)
+  def help(_, status = 0)
 
     puts
     puts "usage: #{pre} <suite>"
@@ -1290,14 +1325,6 @@ version)
     rescue
       die "Unable to copy '#{src}' to '#{dst}'"
     end
-    def write_definition(defs, sub, name, str)
-      definition = File.join(defs, sub, name)
-      begin
-        File.open(definition, 'w') { |f| f.write(str) }
-      rescue
-        die "Unable to write to '#{definition}'"
-      end
-    end
     write_definition(defs, 'builds', 'build1', "set: me\n")
     write_definition(defs, 'runs', 'run1', "ddts_build: build1\n")
     write_definition(defs, 'suites', 'suite1', "group1:\n  - run1\n")
@@ -1320,7 +1347,7 @@ version)
       run = args.join(' ')
       runs_all.add(run)
       sanity_checks(gen_baseline_dir)
-    rescue Exception => x
+    rescue Exception
       exit 1
     end
     FileUtils.mkdir_p(tmp_dir)
@@ -1341,7 +1368,9 @@ version)
     baseline_conflict = false
     unsatisfied_require = false
 
-    builds_all = Dir.glob(File.join(build_defs, '*')).map { |e| File.basename(e) }
+    builds_all = Dir.glob(File.join(build_defs, '*')).map do |e|
+      File.basename(e)
+    end
 
     runs_all.each do |run|
 
@@ -1374,7 +1403,7 @@ version)
       unless (name = rundef['ddts_build'])
         die "Run '#{run}' not associated with any build"
       end
-      name, override, hash = destruct(name)
+      name, = destruct(name)
       unless builds_all.include?(name)
         die "Run '#{run}' associated with missing or abstract build '#{name}'"
       end
@@ -1404,55 +1433,31 @@ version)
 
     # Pretty-print a fully composed run or suite definition.
 
-    def get_dir(type)
-      case
-      when type =~ /build[s]?/
-        unless Dir.exist?(d = build_defs)
-          die "Build definitions directory '#{d}' not found"
-        end
-        d
-      when type =~ /run[s]?/
-        unless Dir.exist?(d = run_defs)
-          die "Run definitions directory '#{d}' not found"
-        end
-        d
-      when type =~ /suite[s]?/
-        unless Dir.exist?(d = suite_defs)
-          die "Suite definitions directory '#{d}' not found"
-        end
-        d
-      else
-        die "Unrecognized definition type '#{type}'"
-      end
-    end
-
     die "Definition directory '#{defsdir}' not found" unless Dir.exist?(defsdir)
     type = args[0]
     name = args[1..-1].join(' ')
     if %w(build run suite).include?(type)
       die "No #{type} specified" unless name and not name.empty?
       dir = get_dir(type)
-      _def = load_def(dir, name, true, true)
-      _def.delete('ddts_extends')
+      adef = load_def(dir, name, true, true)
+      adef.delete('ddts_extends')
       puts
       puts "# #{ancestry(dir, name).join(' < ')}"
       puts
-      puts pp(_def)
+      puts pp(adef)
       puts
     elsif %w(builds runs suites).include?(type)
       dir = get_dir(type)
       defns = Dir.glob(File.join(dir, '*')).reject { |x| File.directory?(x) }
+      puts
       if defns.empty?
-        puts
         puts "No #{type} defined"
-        puts
       else
-        puts
         puts "Available #{type}:"
         puts
         defns.sort.each { |e| puts "  #{File.basename(e)}" }
-        puts
       end
+      puts
     else
       help(args, 1)
     end
@@ -1479,10 +1484,19 @@ version)
     logd "Using use-baseline directory '#{use_baseline_dir}'"
   end
 
-  def version(args)
+  def version(_args)
 
     puts '3.4'
 
+  end
+
+  def write_definition(defs, sub, name, str)
+    definition = File.join(defs, sub, name)
+    begin
+      File.open(definition, 'w') { |f| f.write(str) }
+    rescue
+      die "Unable to write to '#{definition}'"
+    end
   end
 
 end # class TS
@@ -1629,7 +1643,7 @@ class XlogBuffer
     reset
   end
 
-  def method_missing(m, *a)
+  def method_missing(_m, *a)
     @buffer += "  #{a[0].chomp}\n"
   end
 

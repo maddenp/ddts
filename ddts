@@ -1,8 +1,7 @@
 #!/bin/bash
 
-p=$(readlink -e $0)
-d=$(dirname     $p)
-b=$(basename    $p)
+d=$(dirname  $0)
+b=$(basename $d)
 
 export DDTSHOME=$d
 
