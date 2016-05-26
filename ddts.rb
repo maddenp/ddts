@@ -1,4 +1,5 @@
 # rubocop:disable Lint/RescueException
+# rubocop:disable Style/GlobalVars
 
 unless ($DDTSHOME = ENV['DDTSHOME'])
   puts 'DDTSHOME not found in environment'
@@ -384,9 +385,9 @@ module Common
       return [s, '', {}] unless x =~ /^,?$/
       k, x, v = first.strip.partition(/\s*=\s*/)
       v = YAML.load(v)
-      if k.include?(':') and (ka = k.split(/\s*:\s*/))
-        g = (hash[ka[0]] ||= {})
-        g.merge!(ka[1...-1].reverse.reduce(ka[-1] => v) { |a, e| { e => a } })
+      if k.include?(':') and (a = k.split(/\s*:\s*/))
+        g = (hash[a[0]] ||= {})
+        g.merge!(a[1...-1].reverse.reduce(a[-1] => v) { |m, e| { e => m } })
       else
         hash[k] = v
       end
@@ -647,7 +648,7 @@ class Comparison
     @comp_ok = true # hope for the best
     return if @ts.env.suite.ddts_build_only
     if @totalruns - @failruns > 1
-      runs.delete_if { |e| e.failed }
+      runs.delete_if(&:failed)
       set = runs.reduce([]) { |m, e| m.push(e.name) }.sort.join(', ')
       logi "#{set}: Checking..."
       sorted_runs = runs.sort { |r1, r2| r1.name <=> r2.name }
@@ -682,25 +683,13 @@ class Run
 
   def initialize(r, ts)
 
-    def update_runs_completed(failed, files, name, result, incomplete = false)
-      if incomplete
-        o = :incomplete
-      else
-        h = { failed: failed, files: files, name: name, result: result }
-        o = OpenStruct.new(h)
-      end
-      @ts.runmaster.synchronize do
-        @ts.runs_completed[name] = o
-      end
-    end
-
     # Define a few things.
 
     @r = r
     @ts = ts
     @pre = "Run #{@r}"
     @dlog = XlogBuffer.new(@ts.ilog)
-    name, override, hash = destruct(@r)
+    name, override, = destruct(@r)
     unless override.empty?
       @ts.runmaster.synchronize do
         @@variant_run = {} unless defined?(@@variant_run)
@@ -749,7 +738,8 @@ class Run
         until req.empty?
           @ts.runmaster.synchronize do
             req.each do |e|
-              next unless (result = @ts.runs_completed[e] and result != :incomplete)
+              result = @ts.runs_completed[e]
+              next if not result or result == :incomplete
               die "Run '#{@r}' depends on failed run '#{e}'" if result.failed
               @env.run.ddts_require_results[e] = result
               req.delete(e)
@@ -792,7 +782,8 @@ class Run
         # ...and perform the run.
 
         logi 'Started'
-        rundir = @env.run.ddts_root = File.join(runs_dir, "#{@r}.#{@ts.timestamp}")
+        @env.run.ddts_root = File.join(runs_dir, "#{@r}.#{@ts.timestamp}")
+        rundir = @env.run.ddts_root
         FileUtils.mkdir_p(rundir) unless Dir.exist?(rundir)
         logd '* Output from run prep:'
         prepkit = invoke(:lib_run_prep, :run, @env)
@@ -839,7 +830,7 @@ class Run
     logd "Deleting job #{jobid}"
     qdel = invoke(:lib_queue_del_cmd, :run, @env)
     cmd = "#{qdel} #{jobid}"
-    output, status = ext(cmd, die: false)
+    ext(cmd, die: false)
 
   end
 
@@ -937,6 +928,18 @@ class Run
       @env.build.ddts_result = x.failed ? :build_failed : x.result
     end
 
+  end
+
+  def update_runs_completed(failed, files, name, result, incomplete = false)
+    if incomplete
+      o = :incomplete
+    else
+      h = { failed: failed, files: files, name: name, result: result }
+      o = OpenStruct.new(h)
+    end
+    @ts.runmaster.synchronize do
+      @ts.runs_completed[name] = o
+    end
   end
 
 end # class Run

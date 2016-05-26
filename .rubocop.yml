@@ -18,6 +18,8 @@ Metrics/PerceivedComplexity:
 
 Style/AndOr:
   Enabled: false
+Style/ClassVars:
+  Enabled: false
 Style/Documentation:
   Enabled: false
 Style/EmptyLinesAroundBlockBody:
@@ -29,6 +31,8 @@ Style/EmptyLinesAroundMethodBody:
 Style/EmptyLinesAroundModuleBody:
   Enabled: false
 Style/Not:
+  Enabled: false
+Style/SingleLineBlockParams:
   Enabled: false
 Style/SpaceAfterNot:
   Enabled: false
