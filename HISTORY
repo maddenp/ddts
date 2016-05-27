@@ -4,6 +4,11 @@ Version numbers are in major.minor form, where changes to the minor component
 indicate bugfixes and similar non-breaking enhanements, and changes to the major
 component indicate breaking changes.
 
+3.5
+
+Code cleanup directed by Rubocop. There should be no change in functionality.
+Please report any issues.
+
 3.4
 
 Clarify 'make-app' syntax in README and 'help' output. Show a better message if
