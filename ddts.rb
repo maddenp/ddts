@@ -1486,7 +1486,7 @@ class TS
 
   def version(_args)
 
-    puts '3.4'
+    puts '3.5'
 
   end
 
