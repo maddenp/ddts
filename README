@@ -133,6 +133,11 @@ keys are available to control framework behavior:
   Dependent runs should therefore only be executed via suites that also execute
   all required runs.
 
+Additionally, the suite-level keys 'ddts_build_only' and 'ddts_retain_builds'
+may be applied to a run definition via override syntax (see section 6) when a
+single run is being executed. See the following section for a description of
+these options.
+
 3.3 Suite Definitions
 ---------------------
 
@@ -156,7 +161,7 @@ The following reserved keys (suite-level configuration paramters) are available:
 
 - [optional] The 'ddts_retain_builds' key, defined with any true value, directs
   the core driver to rebuild over existing builds without deleting them first.
-  This should generally be considered unsafe.
+  This should generally be considered unsound testing practice.
 
 NOTE that any suite-definition items whose values are arrays will be interpreted
 as run group definitions. Those whose values are scalars will be interpreted as

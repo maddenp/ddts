@@ -1352,6 +1352,16 @@ class TS
     end
     FileUtils.mkdir_p(tmp_dir)
     begin
+
+      # Promote select suite-level options from the run definition to the suite
+      # section of the envrionment so that their functionality will be applied
+      # to the run.
+
+      rundef = load_def(run_defs, run, false, true)
+      [:ddts_build_only, :ddts_retain_builds].each do |suite_option|
+        env.suite[suite_option] = rundef[suite_option.to_s]
+      end
+
       build_init(run)
       Run.new(run, self)
       baseline_gen if gen_baseline_dir
@@ -1486,7 +1496,7 @@ class TS
 
   def version(_args)
 
-    puts '3.5'
+    puts '3.6'
 
   end
 

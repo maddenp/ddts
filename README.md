@@ -15,6 +15,6 @@ The system is adapted to a specific tested code and runtime platform by providin
 
 A simple example implementation (numerical integration using the trapezoid rule) is provided in the _ex_ directory, along with definition files and a full set of definitions in _ex/library.rb_ (a graph image showing the ancestry relationships between the run definitions can be found in _ex/rundefs.png_). In a Bourne-family shell, run `DDTSAPP=ex ddts ex_suite` to run the example suite. GNU `tar` and an MPI installation providing `mpif90` and `mpirun` on your path are required.
 
-DDTS has mostly recently been tested with JRuby Complete 1.7.19. Other versions may or may not work.
+DDTS is currently testing with JRuby Complete 9.1.5.0. Other versions may or may not work.
 
 See the README for detailed information on configuring DDTS.

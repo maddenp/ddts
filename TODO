@@ -4,3 +4,5 @@ TODO
 
 - Provide a mechanism (with exactly-once semantics) for runs to associate with
   specific data sets.
+
+- Factor calls to load_def() so that they occur once per definition per run.

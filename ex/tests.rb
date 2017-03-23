@@ -5,13 +5,13 @@ def die(msg)
   exit 1
 end
 
-def exe(out, desc, suite, *expected)
+def exe(out, desc, ddts_args, *expected)
 
   # Arguments are:
   #
   #   1. desc, a short description of the test to print on the console
-  #   2. suite, the full set of arguments to ddts
-  #   3.-? One or more strings expected to be found in the suite's output
+  #   2. ddts_args, the full set of arguments to ddts
+  #   3. expected, one or more strings expected to be found in the suite's output
   #
   # The 'expected' strings are escaped, so regexp characters will be
   # treated literally.
@@ -20,7 +20,7 @@ def exe(out, desc, suite, *expected)
   print "Testing: #{desc}" + ' ' * (78 - desc.length)
   ddts = File.expand_path(File.join(File.dirname(__FILE__), '..', 'ddts'))
   app = File.expand_path(File.dirname(__FILE__))
-  cmd = "DDTSAPP=#{app} DDTSOUT=#{out} #{ddts} #{suite} 2>&1"
+  cmd = "DDTSAPP=#{app} DDTSOUT=#{out} #{ddts} #{ddts_args} 2>&1"
   out = `#{cmd}`.split("\n")
   expected.each do |pair|
     string = pair.first
@@ -65,8 +65,8 @@ exe(out,
     'Run ex_fail: ERROR: Run failed',
     "Test suite 'ex_suite_fail' FAILED")
 
-# ex_suite_build_only uses the suite-level 'build_only' setting to perform only
-# the required build, without performing any runs.
+# ex_suite_build_only uses the suite-level 'ddts_build_only' setting to
+# perform only the required build, without performing any runs.
 
 exe(out,
     'ex_suite_build_only',
@@ -74,18 +74,36 @@ exe(out,
     'Build ex_build completed',
     'ALL TESTS PASSED')
 
-# ex_suite_retain_builds uses the suite-level 'retain_builds' setting to avoid
-# deleting existing builds. Create a sentinel file in the build directory, run
-# the suite, then check that the sentinel is still there to prove that the old
-# build was not deleted.
+# Test a single run with 'ddts_build_only' set via override syntax.
+
+exe(out,
+    'ex_1 (single run, build only)',
+    'run ex_1/ddts_build_only=true',
+    'Run ex_1_v1: Build ex_build completed')
+
+# ex_suite_retain_builds uses the suite-level 'ddts_retain_builds' setting to
+# avoid deleting existing builds. Create a sentinel file in the build directory,
+# run the suite, then check that the sentinel is still there to prove that the
+# old build was not deleted.
 
 FileUtils.touch(sentinel)
 die "Sentinel file '#{sentinel}' was not created" unless File.exist?(sentinel)
+
 exe(out,
     'ex_suite_retain_builds',
     'ex_suite_retain_builds',
     'Comparison: ex_1, ex_1_alt, ex_2, ex_4: OK',
     'ALL TESTS PASSED')
+
+die "Sentinel file '#{sentinel}' missing!" unless File.exist?(sentinel)
+
+# Test a single run with 'ddts_retain_builds' set via override syntax.
+
+exe(out,
+    'ex_1 (single run, retaining builds)',
+    'run ex_1/ddts_retain_builds=true',
+    'Run ex_1_v1: Completed')
+
 die "Sentinel file '#{sentinel}' missing!" unless File.exist?(sentinel)
 
 # ex_suite executes four runs -- also create a baseline here.
