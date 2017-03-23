@@ -4,6 +4,11 @@ Version numbers are in major.minor form, where changes to the minor component
 indicate bugfixes and similar non-breaking enhanements, and changes to the major
 component indicate breaking changes.
 
+3.6
+
+Allow the ddts_build_only and ddts_retain_builds keys to be specified (e.g. via
+override syntax) for a single run, not just for a suite.
+
 3.5
 
 Code cleanup directed by Rubocop. There should be no change in functionality.
