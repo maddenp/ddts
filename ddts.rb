@@ -301,6 +301,8 @@ module Common
         logd "File list matching failed #{m}, lists are:"
         logd "#{r1_name} files: #{r1_bases.join(' ')}"
         logd "#{r2_name} files: #{r2_bases.join(' ')}"
+        exclusives = (Set.new(r1_bases) ^ Set.new(r2_bases)).to_a.sort.join(' ')
+        logd "Exclusive files: #{exclusives}"
         begin
           ok = false
           die "File list matching failed #{m}, see #{logfile}"
@@ -1496,7 +1498,7 @@ class TS
 
   def version(_args)
 
-    puts '3.6'
+    puts '3.7'
 
   end
 
