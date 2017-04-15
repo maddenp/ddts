@@ -4,6 +4,10 @@ Version numbers are in major.minor form, where changes to the minor component
 indicate bugfixes and similar non-breaking enhanements, and changes to the major
 component indicate breaking changes.
 
+3.8
+
+Fix a bug whereby a Run object's 'result' member night be nil.
+
 3.7
 
 When file-list matching fails, in addition to the full file lists, show a list

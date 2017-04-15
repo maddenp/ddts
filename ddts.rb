@@ -689,6 +689,7 @@ class Run
 
     @r = r
     @ts = ts
+    @result = OpenStruct.new
     @pre = "Run #{@r}"
     @dlog = XlogBuffer.new(@ts.ilog)
     name, override, = destruct(@r)
@@ -1498,7 +1499,7 @@ class TS
 
   def version(_args)
 
-    puts '3.7'
+    puts '3.8'
 
   end
 
