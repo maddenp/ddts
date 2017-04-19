@@ -777,12 +777,14 @@ class Run
 
         # Otherwise, obtain the necessary data...
 
+        lib_data_routine = get_routine(:lib_data, :run, @env)
+
         @ts.runmaster.synchronize do
-          unless @ts.havedata
+          unless @ts.havedata[lib_data_routine]
             logd '* Preparing data for all test-suite runs...'
             invoke(:lib_data, :run, @env)
             logd_flush
-            @ts.havedata = true
+            @ts.havedata[lib_data_routine] = true
           end
         end
 
@@ -991,7 +993,7 @@ class TS
     @env = OpenStruct.new
     @env.suite = OpenStruct.new
     @gen_baseline_dir = nil
-    @havedata = false
+    @havedata = {}
     @ilog = nil
     @pre = invoked_as
     @runlocks = {}
