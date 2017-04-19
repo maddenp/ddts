@@ -89,9 +89,15 @@ module Utility
 
   end
 
-  def hash_matches(file, hash)
+  def get_routine(routine_name, key, env)
 
-    # Do they match?
+    section = env.marshal_dump[key]
+    alt = section.marshal_dump[routine_name]
+    alt || routine_name.to_s
+
+  end
+
+  def hash_matches(file, hash)
 
     Digest::MD5.file(file) == hash
 
@@ -103,12 +109,10 @@ module Utility
 
   end
 
-  def invoke(std, key, *args)
+  def invoke(routine_name, key, *args)
 
-    env = args.first
-    section = env.marshal_dump[key]
-    alt = section.marshal_dump[std]
-    method(alt || std.to_s).call(*args)
+    routine = get_routine(routine_name, key, args.first)
+    method(routine).call(*args)
 
   end
 
