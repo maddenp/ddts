@@ -241,22 +241,22 @@ recommended routines should handle errors (i.e. nil values).
 By default, the 'ddts_extends' mechanism merges Array and Hash objects. For
 example, given definition c0
 
-  key: [1,2]
+  key: [1, 2]
 
 and definition c1
 
   ddts_extends: c0
-  key: [3,4]
+  key: [3, 4]
 
-The value of 'key' in c1 will be [1,2,3,4], as 'key' in c1 will extend 'key' in
-c0. Similarly, Hash values will be merged, with key-value paris from ancestor
+The value of 'key' in c1 will be [1, 2, 3, 4], as 'key' in c1 will extend 'key'
+in c0. Similarly, Hash values will be merged, with key-value paris from ancestor
 definitions perserved unless specifically overridden.
 
 Alternatively, the YAML tag !replace can be used to suppress merging, allowing
 the descendant's value to simply replace any ancestors'. Applied to the previous
 example, c1 might be specified as
 
-  key: !replace [3,4]
+  key: !replace [3, 4]
 
 or
 
@@ -264,7 +264,7 @@ or
     - 3
     - 4
 
-so that the final value of 'key' in c1 will be [3,4].
+so that the final value of 'key' in c1 will be [3, 4].
 
 The YAML tag !delete can be used to suppress inheritance. For example,
 
@@ -395,7 +395,7 @@ failure.
 
 Description of library routines:
 
-lib_build(env,prepkit)
+lib_build(env, prepkit)
 
   Performs the build described by env.ddts_build.
 
@@ -407,7 +407,7 @@ lib_build(env,prepkit)
   May be aliased to an alternate library routine via the 'lib_build' key in a
   run definition.
 
-lib_build_post(env,buildkit)
+lib_build_post(env, buildkit)
 
   Performs any actions necessary after a build completes.
 
@@ -439,7 +439,7 @@ lib_build_prep(env)
   May be aliased to an alternate library routine via the 'lib_build_prep' key in
   a run definition.
 
-lib_comp(env,file1,file2)
+lib_comp(env, file1, file2)
 
   Performs a comparison between file1 and file2.
 
@@ -461,14 +461,14 @@ lib_data(env)
   May be aliased to an alternate library routine via the 'lib_data' key in a run
   definition.
 
-lib_outfiles(env,path)
+lib_outfiles(env, path)
 
   Returns an array containing the pathnames of the files that will be (1)
   added to this run's baseline if one is being produced; (2) compared against
   an existing baseline, if baseline comparison is being performed; and (3)
   compared against comparable runs. The 'path' argument specifies a directory
   under which the run's unique output can be found. Each entry in the returned
-  array is in the form [path1,path2], where path1+path2 forms the absolute
+  array is in the form [path1, path2], where path1+path2 forms the absolute
   path to an output file, and path2 is the suffix of the path that is (a) the
   same across runs in the comparison group; and (b) what should be stored in a
   baseline.
@@ -484,7 +484,7 @@ lib_queue_del_cmd(env)
   May be aliased to an alternate library routine via the 'lib_queue_del_cmd' key
   in a run definition.
 
-lib_run(env,prepkit)
+lib_run(env, prepkit)
 
   Performs a run.
 
@@ -496,7 +496,7 @@ lib_run(env,prepkit)
   May be aliased to an alternate library routine via the 'lib_run' key in a run
   definition.
 
-lib_run_check(env,postkit)
+lib_run_check(env, postkit)
 
   If the run succeeded, returns the path to a directory under which the run's
   output can be found. The actual path returned should depend on what will be
@@ -508,7 +508,7 @@ lib_run_check(env,postkit)
   May be aliased to an alternate library routine via the 'lib_run_check' key in
   a run definition.
 
-lib_run_post(env,runkit)
+lib_run_post(env, runkit)
 
   Takes any actions necessary following a successful run, before completion
   status is checked and the test suite proceeds to output comparision.
@@ -581,7 +581,7 @@ die(msg)
   'ddts_continue' mode is active) by raising an exception, and so does not
   return.
 
-ext(cmd,props)
+ext(cmd, props)
 
   Executes, in a subshell (/bin/sh under Linux), the command contained in the
   String 'cmd'. Returns a two-element Array composed of (1) an Array of the
@@ -605,7 +605,16 @@ ext(cmd,props)
     will be logged to the verbose logfile (but not to the screen). True by
     default.
 
-hash_matches(file,hash)
+get_routine(routine_name, key, env)
+
+  Symbol argument 'routine_name' specifies a library routine to enquire about.
+  Symbol argument 'key' names a definition type (e.g. :run). If the definition
+  named by 'key' defines an alias for the routine named by 'routine_name', the
+  name of that alias routine is returned; otherwise, 'routine_name' is returned.
+  For example, 'get_routine(:lib_comp, :run, env)' would return 'lib_comp_alt'
+  if the run definition contained 'lib_comp: lib_comp_alt'.
+
+hash_matches(file, hash)
 
   Returns true if the MD5 checksum of the file identified by the 'file' String
   matches the MD5 checksum contained in String 'hash', and false otherwise.
@@ -614,17 +623,24 @@ home_dir
 
   Returns the root path of the test-suite core driver.
 
-invoke(std,key,*args)
+invoke(routine_name, key, *args)
 
-  Symbol argument 'std' names a library routine. Symbol argument 'key' names a
-  definition type. The *args are the arguments to be passed to the named library
-  routine (the first of *args MUST be the 'env' object). If the definition named
-  by 'key' defines an alias for the routine named by 'std', it is called;
-  otherwise, 'std' is called. In either case, *args are passed as arguments. For
-  example, 'invoke(:lib_comp,:run,env,x)' would result in the call
-  'lib_comp_alt(env,x)' if the run definition contained 'lib_comp: lib_comp_alt'.
+  Symbol argument 'routine_name' specifies a library routine to be aliased.
+  Symbol argument 'key' names a definition type. The *args are the arguments
+  to be passed to the named library routine (the first of *args MUST be the
+  'env' object). If the definition named by 'key' defines an alias for the
+  routine named by 'routine_name', it is called; otherwise, 'routine_name' is
+  called. In either case, *args are passed as arguments. For example,
 
-job_activate(jobid,run)
+    invoke(:lib_comp, :run, env, x)
+
+  would result in the call
+
+    lib_comp_alt(env, x)
+
+  if the run definition contained 'lib_comp: lib_comp_alt'.
+
+job_activate(jobid, run)
 
   Register's the given 'jobid' as having been submitted to the batch system
   for the Run objet referenced by the 'run' argument. The list of registered
@@ -632,7 +648,7 @@ job_activate(jobid,run)
   fails. The supplied job ID should be the appropriate argument to the program
   identified by the lib_queue_del_cmd library routine.
 
-job_check(stdout,restr)
+job_check(stdout, restr)
 
   Returns true if a regular expression instantiated from the 'restr' String
   argument matches any line in the file identified by the 'stdout' argument,
@@ -672,7 +688,7 @@ valid_dir(dir)
 
   A convenience wrapper to ensure that the directory named by argument 'dir'
   actually exists. Calls die() with an appropriate message if the directory
-  does not exist. For example, 'd=valid_dir(File.join(a,b,c))' would set 'd'
+  does not exist. For example, 'd=valid_dir(File.join(a, b, c))' would set 'd'
   if the path constructed from 'a', 'b' and 'c' exists, and would otherwise
   die.
 
@@ -713,7 +729,7 @@ specificed in the run's on-disk definition.
 
 The !delete, !replace and !unqoted flags may be used. For example,
 
-  % DDTSAPP=ex ddts run ex_1/message='!replace ["Hello","World"]'
+  % DDTSAPP=ex ddts run ex_1/message='!replace ["Hello", "World"]'
 
 would replace the 'message' variable's original value with the specified new
 array -- instead of merging the original and new arrays, as would otherwise
