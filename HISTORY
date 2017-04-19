@@ -4,6 +4,11 @@ Version numbers are in major.minor form, where changes to the minor component
 indicate bugfixes and similar non-breaking enhanements, and changes to the major
 component indicate breaking changes.
 
+3.9
+
+Permit multiple invocations of lib_data via aliased alternates (one per routine
+name).
+
 3.8
 
 Fix a bug whereby a Run object's 'result' member night be nil.
