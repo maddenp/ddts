@@ -454,7 +454,8 @@ lib_comp(env, file1, file2)
 lib_data(env)
 
   Takes actions necessary to make input data available for the suite. Called
-  once per test-suite invocation.
+  once per test-suite invocation, per lib_data implementation (i.e. aliased
+  alternates).
 
   Return value is unused.
   
