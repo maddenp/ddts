@@ -1,4 +1,6 @@
 ddts_extends: 'ex_1'
 a: 6.283
 b: 16.283
+ddts_baseline: 'ex_baseline_alt'
+lib_baseline_post: 'lib_baseline_post_alt'
 message: !replace ['Running','case','ex_1_alt']

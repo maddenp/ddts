@@ -1,6 +1,18 @@
-Lint/Eval:
+Layout/EmptyLinesAroundBeginBody:
+  Enabled: false
+Layout/EmptyLinesAroundBlockBody:
+  Enabled: false
+Layout/EmptyLinesAroundClassBody:
+  Enabled: false
+Layout/EmptyLinesAroundMethodBody:
+  Enabled: false
+Layout/EmptyLinesAroundModuleBody:
+  Enabled: false
+Layout/SpaceAfterNot:
   Enabled: false
 
+Metrics/BlockLength:
+  Enabled: false
 Metrics/AbcSize:
   Enabled: false
 Metrics/ClassLength:
@@ -16,25 +28,22 @@ Metrics/ParameterLists:
 Metrics/PerceivedComplexity:
   Enabled: false
 
+Security/Eval:
+  Enabled: false
+Security/YAMLLoad:
+  Enabled: false
+
 Style/AndOr:
   Enabled: false
 Style/ClassVars:
   Enabled: false
 Style/Documentation:
   Enabled: false
-Style/EmptyLinesAroundBlockBody:
-  Enabled: false
-Style/EmptyLinesAroundClassBody:
-  Enabled: false
-Style/EmptyLinesAroundMethodBody:
-  Enabled: false
-Style/EmptyLinesAroundModuleBody:
+Style/MethodMissing:
   Enabled: false
 Style/Not:
   Enabled: false
 Style/SingleLineBlockParams:
-  Enabled: false
-Style/SpaceAfterNot:
   Enabled: false
 Style/EachWithObject:
   Enabled: false

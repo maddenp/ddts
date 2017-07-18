@@ -4,6 +4,11 @@ Version numbers are in major.minor form, where changes to the minor component
 indicate bugfixes and similar non-breaking enhanements, and changes to the major
 component indicate breaking changes.
 
+3.10
+
+Support application of an arbitrary function to the contents of a generated
+baseline, via the 'lib_baseline_post' library method.
+
 3.9
 
 Permit multiple invocations of lib_data via aliased alternates (one per routine

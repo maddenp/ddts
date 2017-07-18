@@ -8,6 +8,21 @@ module Library
   #       when reading this code. Other sections of the README may be helpful,
   #       too.
 
+  def lib_baseline_post(env, baseline_dir, baseline_files)
+    baseline_files.each do |f|
+      unless File.exist?(File.join(baseline_dir, f))
+        die "ERROR: Baseline file '#{f}' not found!"
+      end
+    end
+    FileUtils.touch(File.join(baseline_dir, 'non-baseline-file'))
+    logi 'Baseline post function OK'
+  end
+
+  def lib_baseline_post_alt(env, baseline_dir, baseline_files)
+    logi 'Alternate baseline post function called'
+    lib_baseline_post(env, baseline_dir, baseline_files)
+  end
+
   def lib_build(env, prepkit)
     bindir = env.build.bindir
     binname = env.run.binname
@@ -89,7 +104,7 @@ module Library
     rundir = env.run.ddts_root
     binname = env.run.binname
     FileUtils.cp(env.build.ddts_result, rundir)
-    FileUtils.chmod(0755, File.join(rundir, binname))
+    FileUtils.chmod(0o755, File.join(rundir, binname))
     a = env.run.a
     b = env.run.b
     n = env.run.n || 0

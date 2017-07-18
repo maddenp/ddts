@@ -11,7 +11,7 @@ def exe(out, desc, ddts_args, *expected)
   #
   #   1. desc, a short description of the test to print on the console
   #   2. ddts_args, the full set of arguments to ddts
-  #   3. expected, one or more strings expected to be found in the suite's output
+  #   3. expected, one or more strings expected in the suite's output
   #
   # The 'expected' strings are escaped, so regexp characters will be
   # treated literally.
@@ -111,7 +111,11 @@ die "Sentinel file '#{sentinel}' missing!" unless File.exist?(sentinel)
 exe(out,
     'ex_suite (gen baseline pass)',
     "gen-baseline #{baseline} ex_suite",
+    'Baseline post function OK',
+    'Run ex_1_alt: Alternate baseline post function called',
+    'Run ex_1_alt: Baseline post function OK',
     'Creating ex_baseline baseline: OK',
+    'Creating ex_baseline_alt baseline: OK',
     'ALL TESTS PASSED')
 
 # Retry baseline creation -- it should fail.

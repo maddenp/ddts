@@ -318,7 +318,7 @@ module Common
         end
       end
       sort_join = proc do |files|
-        files.sort { |a, b| a[1] <=> b[1] }.collect { |a, b| File.join(a, b) }
+        files.sort_by { |a| a[1] }.collect { |a, b| File.join(a, b) }
       end
       s1 = sort_join.call(r1_files)
       s2 = sort_join.call(r2_files)
@@ -657,7 +657,7 @@ class Comparison
       runs.delete_if(&:failed)
       set = runs.reduce([]) { |m, e| m.push(e.name) }.sort.join(', ')
       logi "#{set}: Checking..."
-      sorted_runs = runs.sort { |r1, r2| r1.name <=> r2.name }
+      sorted_runs = runs.sort_by(&:name)
       @comp_ok = comp(sorted_runs, env, @ts.env.suite.ddts_continue)
       logi "#{set}: OK" if @comp_ok
     else
@@ -673,7 +673,7 @@ class Comparison
 
 end # class Comparison
 
-class DDTSException < Exception
+class DDTSException < RuntimeError
 
   # An exception to raise for internal purposes, and to allow real runtime
   # errors to be handled separately.
@@ -739,7 +739,7 @@ class Run
 
       if (req = @env.run.ddts_require)
         req = [req] unless req.is_a?(Array)
-        suffix = (req.size == 1) ? '' : '(s)'
+        suffix = req.size == 1 ? '' : '(s)'
         logi "Waiting on required run#{suffix}: #{req.join(', ')}"
         @env.run.ddts_require_results = {}
         until req.empty?
@@ -941,7 +941,19 @@ class Run
     if incomplete
       o = :incomplete
     else
-      h = { failed: failed, files: files, name: name, result: result }
+      postfn_name = get_routine(:lib_baseline_post, :run, @env)
+      begin
+        postfn = method(postfn_name)
+      rescue
+        postfn = nil
+      end
+      h = {
+        failed: failed,
+        files: files,
+        name: name,
+        postfn: postfn,
+        result: result
+      }
       o = OpenStruct.new(h)
     end
     @ts.runmaster.synchronize do
@@ -1017,8 +1029,11 @@ class TS
     # 'baseline' key.
 
     baselinesrcs.each do |r, src|
+
       logi "Creating #{r} baseline..."
+
       dst = File.join(gen_baseline_dir, r)
+
       src.files.each do |p1, p2|
         fullpath = File.join(p1, p2)
         minipath = p2
@@ -1027,8 +1042,17 @@ class TS
         FileUtils.mkdir_p(dstdir) unless Dir.exist?(dstdir)
         FileUtils.cp(fullpath, File.join(dst, minipath))
       end
+
+      postfn = src.postfn
+      if postfn
+        logi "Calling post function '#{postfn.name}' on baseline #{r}..."
+        baseline_files = src.files.reduce([]) { |m, e| m.push(e.last) }
+        postfn.call(@env, dst, baseline_files)
+      end
+
       logd_flush
       logi "Creating #{r} baseline: OK"
+
     end
 
   end
@@ -1099,7 +1123,7 @@ class TS
     suite = args.join(' ')
     cmd = (x = args.shift) ? x : 'help'
     cmd = cmd.tr('-', '_')
-    okargs = %w(
+    okargs = %w[
       clean
       gen_baseline
       help
@@ -1108,8 +1132,8 @@ class TS
       show
       use_baseline
       version
-    )
-    unless %w(help make_app version).include?(cmd)
+    ]
+    unless %w[help make_app version].include?(cmd)
       unless Dir.exist?($DDTSAPP)
         die "Application directory '#{$DDTSAPP}' not found"
       end
@@ -1319,7 +1343,7 @@ class TS
     defs = File.join(approot, 'defs')
     die "Directory '#{approot}' already exists" if File.exist?(approot)
     dirs = [approot]
-    %w(builds runs suites).each { |dir| dirs.push(File.join(defs, dir)) }
+    %w[builds runs suites].each { |dir| dirs.push(File.join(defs, dir)) }
     dirs.each do |dir|
       begin
         FileUtils.mkdir_p(dir)
@@ -1337,7 +1361,7 @@ class TS
     write_definition(defs, 'builds', 'build1', "set: me\n")
     write_definition(defs, 'runs', 'run1', "ddts_build: build1\n")
     write_definition(defs, 'suites', 'suite1', "group1:\n  - run1\n")
-    puts"\nCreated application skeletion in #{approot}\n\n"
+    puts "\nCreated application skeleton in #{approot}\n\n"
   end
 
   def run(args = nil)
@@ -1367,7 +1391,7 @@ class TS
       # to the run.
 
       rundef = load_def(run_defs, run, false, true)
-      [:ddts_build_only, :ddts_retain_builds].each do |suite_option|
+      %i[ddts_build_only ddts_retain_builds].each do |suite_option|
         env.suite[suite_option] = rundef[suite_option.to_s]
       end
 
@@ -1378,6 +1402,7 @@ class TS
       halt(x)
     rescue Exception => x
       fatal_backtrace(x.backtrace, x.message)
+
     end
 
   end
@@ -1455,7 +1480,7 @@ class TS
     die "Definition directory '#{defsdir}' not found" unless Dir.exist?(defsdir)
     type = args[0]
     name = args[1..-1].join(' ')
-    if %w(build run suite).include?(type)
+    if %w[build run suite].include?(type)
       die "No #{type} specified" unless name and not name.empty?
       dir = get_dir(type)
       adef = load_def(dir, name, true, true)
@@ -1465,7 +1490,7 @@ class TS
       puts
       puts pp(adef)
       puts
-    elsif %w(builds runs suites).include?(type)
+    elsif %w[builds runs suites].include?(type)
       dir = get_dir(type)
       defns = Dir.glob(File.join(dir, '*')).reject { |x| File.directory?(x) }
       puts
@@ -1505,7 +1530,7 @@ class TS
 
   def version(_args)
 
-    puts '3.9'
+    puts '3.10'
 
   end
 
@@ -1674,4 +1699,4 @@ end # class XlogBuffer
 
 # Command-line invocation:
 
-TS.new(ARGV[0], ARGV[1..-1]) if __FILE__ == $PROGRAM_NAME
+TS.new(ARGV[0], ARGV[1..-1]) if $PROGRAM_NAME == __FILE__

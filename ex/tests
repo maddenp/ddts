@@ -1,6 +1,6 @@
 #!/bin/bash
 
 d=$(dirname  $0)
-b=$(basename $d)
+b=$(basename $0)
 
 jruby -I. $d/tests.rb
