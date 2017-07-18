@@ -1043,8 +1043,7 @@ class TS
         FileUtils.cp(fullpath, File.join(dst, minipath))
       end
 
-      postfn = src.postfn
-      if postfn
+      if (postfn = src.postfn)
         logi "Calling post function '#{postfn.name}' on baseline #{r}..."
         baseline_files = src.files.reduce([]) { |m, e| m.push(e.last) }
         postfn.call(@env, dst, baseline_files)
