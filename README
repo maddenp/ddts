@@ -407,6 +407,8 @@ lib_baseline_post(env, baseline_dir, baseline_files)
   This method need not be defined but, if it is, will be called once for each
   generated baseline.
 
+  Return value is unused.
+
   May be aliased to an alternate library routine via the 'lib_baseline_post' key
   in a run definition.
 
