@@ -423,7 +423,7 @@ lib_build(env, prepkit)
 
   Performs the build described by env.ddts_build.
 
-  The 'prepkit' argument contains the object returned by lib_run_prep.
+  The 'prepkit' argument contains the object returned by lib_build_prep.
 
   Returns an arbitrary object, which is passed to lib_build_post; the object's
   type and value should be determined by the needs of that routine.
@@ -513,7 +513,7 @@ lib_run(env, prepkit)
 
   Performs a run.
 
-  The 'prepkit' argument contains the object returned by lib_build_prep.
+  The 'prepkit' argument contains the object returned by lib_run_prep.
 
   Returns an arbitrary object, which is passed to lib_run_post; the object's
   type and value should be determined by the needs of that routine.
