@@ -295,7 +295,7 @@ exe(out,
 exe(out,
     'ex_no_build',
     'run ex_no_build',
-    "ERROR: Run 'ex_no_build' not associated with any build")
+    "No-build run OK")
 
 # Run with non-existent build specified
 

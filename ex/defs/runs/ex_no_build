@@ -1,1 +1,4 @@
-tasks: 1
+lib_run:        'lib_run_nobuild'
+lib_run_check:  'lib_run_check_nobuild'
+lib_run_post:   'lib_run_post_nobuild'
+lib_run_prep:   'lib_run_prep_nobuild'

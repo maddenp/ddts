@@ -106,25 +106,25 @@ definitions can be composed via the 'ddts_extends' key.
 
 Run definitions contain the information necessary to prepare, configure, execute
 and verify runs; to associate them with baselines; etc. Definition
-contents will depend on the model and platform, but several reserved top-level
-keys are available to control framework behavior:
+contents will depend on the model and platform, but several reserved, optional
+top-level keys are available to control framework behavior:
 
-- [optional] The 'ddts_baseline' key specifies the name of a baseline directory
-  into which this run's output should be copied (when baseline generation is
-  requested), or against which it should be verified (when baseline comparison
-  is requested). Runs whose output is expected to be identical should share a
-  common 'ddts_baseline' value. Run definitions with no 'ddts_baseline' key do
-  not participate in baseline generation or comparison.
+- The 'ddts_baseline' key specifies the name of a baseline directory into which
+  this run's output should be copied (when baseline generation is requested), or
+  against which it should be verified (when baseline comparison is requested).
+  Runs whose output is expected to be identical should share a common
+  'ddts_baseline' value. Run definitions with no 'ddts_baseline' key do not
+  participate in baseline generation or comparison.
 
-- [required] The 'ddts_build' key specifies the name of the build (i.e. the
-  filename of a build definition) to use for this run.
+- The 'ddts_build' key specifies the name of the build (i.e. the filename of a
+  build definition) to use for this run.
 
-- [optional] The 'ddts_extends' key specifies the name of a run definition from
-  which the current definition should inherit, and which it may override.
-  Recursion is supported, but loops in the inheritance chain are fatal errors.
+- The 'ddts_extends' key specifies the name of a run definition from which the
+  current definition should inherit, and which it may override. Recursion is
+  supported, but loops in the inheritance chain are fatal errors.
 
-- [optional] The 'ddts_require' key specifies the name of a run or the names of
-  runs on which this run depends. The value may be a scalar string (for a single
+- The 'ddts_require' key specifies the name of a run or the names of runs on
+  which this run depends. The value may be a scalar string (for a single
   required run), or an array of strings. A run will wait until its required runs
   have completed before starting, and may access those runs' results via the
   env.run.ddts_require_results key. Note that defining run dependencies makes

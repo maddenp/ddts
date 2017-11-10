@@ -88,6 +88,10 @@ module Library
     File.join(rundir, 'stdout')
   end
 
+  def lib_run_nobuild(env, prepkit)
+    true
+  end
+
   def lib_run_check(env, postkit)
     stdout = postkit
     unless (lines = File.open(stdout).read) =~ /SUCCESS/
@@ -96,8 +100,16 @@ module Library
     job_check(stdout, 'SUCCESS') ? env.run.ddts_root : nil
   end
 
+  def lib_run_check_nobuild(env, postkit)
+    true
+  end
+
   def lib_run_post(env, runkit)
     runkit
+  end
+
+  def lib_run_post_nobuild(env, runkit)
+    logi "No-build run OK"
   end
 
   def lib_run_prep(env)
@@ -112,6 +124,10 @@ module Library
     conffile = File.join(rundir, env.run.conffile)
     File.open(conffile, 'w') { |f| f.write(confstr) }
     rundir
+  end
+
+  def lib_run_prep_nobuild(env)
+    true
   end
 
   def lib_suite_post(env)

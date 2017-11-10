@@ -894,7 +894,7 @@ class Run
     # shell after obtaining its build definition. It stores into a global hash
     # the information required by its dependent runs.
 
-    build = @env.run.ddts_build
+    return unless (build = @env.run.ddts_build)
     @env.build = load_env(build_defs, build)
     logd_flush
     name, _override, _hash, unique_name = destruct_build(build)
@@ -1066,16 +1066,23 @@ class TS
     logd 'build_init:'
     logd '----'
     runs = run_or_runs.respond_to?(:each) ? run_or_runs : [run_or_runs]
+
     builds = runs.reduce(Set.new) do |m, e|
-      build_name = load_def(run_defs, e, false, true)['ddts_build']
-      name, _override, _hash, unique_name = destruct_build(build_name)
-      unless unique_name == name
-        logd "Mapping build '#{build_name}' to '#{unique_name}'"
+
+      # If ddts_build is falsey, ignore it.
+
+      if (build_name = load_def(run_defs, e, false, true)['ddts_build'])
+        name, _override, _hash, unique_name = destruct_build(build_name)
+        unless unique_name == name
+          logd "Mapping build '#{build_name}' to '#{unique_name}'"
+        end
+        m.add(File.join(builds_dir, unique_name))
+        logd '----'
       end
-      m.add(File.join(builds_dir, unique_name))
-      logd '----'
+
       m
     end
+
     if Dir.exist?(builds_dir)
       unless env.suite.ddts_retain_builds
         builds.each do |build|
@@ -1089,10 +1096,12 @@ class TS
       FileUtils.mkdir_p(builds_dir)
       logd "Created empty '#{builds_dir}'"
     end
+
     builds.each do |build|
       FileUtils.mkdir_p(build)
       logd "Created empty build directory '#{build}'"
     end
+
     logd_flush
 
   end
@@ -1443,12 +1452,11 @@ class TS
 
       # Check that all runs have defined 'build'.
 
-      unless (name = rundef['ddts_build'])
-        die "Run '#{run}' not associated with any build"
-      end
-      name, = destruct(name)
-      unless builds_all.include?(name)
-        die "Run '#{run}' associated with missing or abstract build '#{name}'"
+      if (name = rundef['ddts_build'])
+        name, = destruct(name)
+        unless builds_all.include?(name)
+          die "Run '#{run}' associated with missing or abstract build '#{name}'"
+        end
       end
 
     end
@@ -1529,7 +1537,7 @@ class TS
 
   def version(_args)
 
-    puts '3.10'
+    puts '3.11'
 
   end
 
