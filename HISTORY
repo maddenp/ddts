@@ -4,6 +4,15 @@ Version numbers are in major.minor form, where changes to the minor component
 indicate bugfixes and similar non-breaking enhanements, and changes to the major
 component indicate breaking changes.
 
+3.12
+
+Add logic to ensure that Comparison and Run threads' delayed loggers are flushed
+in the event of untimely test-suite termination.
+
+3.11
+
+Permit run definition with no build specified.
+
 3.10
 
 Support application of an arbitrary function to the contents of a generated

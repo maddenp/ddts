@@ -38,6 +38,11 @@ module Library
   end
 
   def lib_build_prep(env)
+    if env.suite.crash or env.run.crash
+      logi "Crashing for test purposes..."
+      logd "CRASH SENTINEL"
+      raise Exception
+    end
     FileUtils.cp(File.join(app_dir, env.build.srcfile), env.build.ddts_root)
     FileUtils.mkdir_p(File.join(env.build.ddts_root, env.build.bindir))
   end

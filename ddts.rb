@@ -414,15 +414,6 @@ module Common
 
   end
 
-  def fatal_backtrace(backtrace, message = nil)
-    if message
-      backtrace.push('')
-      backtrace.push(message)
-    end
-    logi_block(:fatal, backtrace)
-    exit 1
-  end
-
   def find_def(dir, name, abstract_ok)
 
     # Look for a definition file first in the directory corresponding to the
@@ -604,16 +595,18 @@ module Common
     # it did not raise an exception, or (b) we are running in 'fail early' mode
     # (i.e. 'ddts_continue' is false).
 
+    all = [].replace(threads)
     live = [].replace(threads)
     failures = 0
     until live.empty?
-      live.each do |e|
-        next if e.alive?
-        live.delete(e)
-        failures += 1 if e.status.nil?
+      live.each do |e0|
+        next if e0.alive?
+        live.delete(e0)
+        failures += 1 if e0.status.nil?
         begin
-          e.join
+          e0.join
         rescue Exception => x
+          all.each { |e1| e1[:dlog].flush }
           raise x unless x.is_a?(DDTSException) and continue
         end
       end
@@ -630,7 +623,7 @@ class Comparison
   include Common
   include Library
 
-  attr_reader :comp_ok, :failruns, :totalruns
+  attr_reader :comp_ok, :dlog, :failruns, :totalruns
 
   def initialize(a, env, ts)
 
@@ -640,16 +633,27 @@ class Comparison
     # variables from passed-in TS object are converted into instance variables
     # of this object.
 
+    @a = a
     @env = env
     @ts = ts
-    @env.suite = OpenStruct.new(@ts.env.marshal_dump)
     @dlog = XlogBuffer.new(ts.ilog)
+  end
+
+  def go
+    @env.suite = OpenStruct.new(@ts.env.marshal_dump)
     @pre = 'Comparison'
-    @totalruns = a.size
+    @totalruns = @a.size
     runs = []
     threads = []
-    set = a.join(', ')
-    a.each { |e| threads << Thread.new { runs << Run.new(e, @ts).result } }
+    set = @a.join(', ')
+    @a.each do |e|
+      threads << Thread.new do
+        run = Run.new(e, @ts)
+        Thread.current[:dlog] = run.dlog
+        run.go
+        runs << run.result
+      end
+    end
     @failruns = threadmon(threads, @ts.env.suite.ddts_continue)
     @comp_ok = true # hope for the best
     return if @ts.env.suite.ddts_build_only
@@ -658,7 +662,7 @@ class Comparison
       set = runs.reduce([]) { |m, e| m.push(e.name) }.sort.join(', ')
       logi "#{set}: Checking..."
       sorted_runs = runs.sort_by(&:name)
-      @comp_ok = comp(sorted_runs, env, @ts.env.suite.ddts_continue)
+      @comp_ok = comp(sorted_runs, @env, @ts.env.suite.ddts_continue)
       logi "#{set}: OK" if @comp_ok
     else
       unless @totalruns == 1
@@ -685,18 +689,23 @@ class Run
   include Common
   include Library
 
+  attr_reader :dlog # for postmortem flush
   attr_reader :result # because initialize()'s return value is the Run object
 
   def initialize(r, ts)
+    @r = r
+    @ts = ts
+    @dlog = XlogBuffer.new(@ts.ilog)
+  end
+
+  def go
 
     # Define a few things.
 
-    @r = r
-    @ts = ts
     @result = OpenStruct.new
     @pre = "Run #{@r}"
-    @dlog = XlogBuffer.new(@ts.ilog)
     name, override, = destruct(@r)
+    old_r = @r
     unless override.empty?
       @ts.runmaster.synchronize do
         @@variant_run = {} unless defined?(@@variant_run)
@@ -704,7 +713,7 @@ class Run
         @r = "#{name}_v#{@@variant_run[name] += 1}"
       end
       @pre = "Run #{@r}"
-      logi "Assigning name '#{@r}' to run '#{r}'"
+      logi "Assigning name '#{@r}' to run '#{old_r}'"
     end
     @activejobs = @ts.activejobs
     @activemaster = @ts.activemaster
@@ -726,7 +735,7 @@ class Run
       # Otherwise, perform the run.
 
       @env = OpenStruct.new(@ts.env.marshal_dump) # private copy
-      @env.run = load_env(run_defs, r)
+      @env.run = load_env(run_defs, old_r)
       logd_flush
       @env.run.ddts_name = @r
       unless override.empty?
@@ -1210,7 +1219,9 @@ class TS
         if runs
           threads << Thread.new do
             comparison = Comparison.new(runs.sort.uniq, group_env, self)
+            Thread.current[:dlog] = comparison.dlog
             Thread.current[:comparison] = comparison
+            comparison.go
             raise DDTSException if Thread.current[:comparison].failruns > 0
           end
         else
@@ -1226,11 +1237,9 @@ class TS
         end
         logi "Suite stats: Failure in #{failgroups} of #{threads.size} group(s)"
       end
-    rescue Interrupt, DDTSException => x
+    rescue Exception => x
       threads.each { |e| e.kill if e.alive? }
       halt(x)
-    rescue Exception => x
-      fatal_backtrace(x.backtrace, x.message)
     end
     if gen_baseline_dir
       if failgroups > 0
@@ -1385,8 +1394,8 @@ class TS
         args.shift
         use_baseline_common(args)
       end
-      run = args.join(' ')
-      runs_all.add(run)
+      runstr = args.join(' ')
+      runs_all.add(runstr)
       sanity_checks(gen_baseline_dir)
     rescue Exception
       exit 1
@@ -1398,18 +1407,18 @@ class TS
       # section of the envrionment so that their functionality will be applied
       # to the run.
 
-      rundef = load_def(run_defs, run, false, true)
+      rundef = load_def(run_defs, runstr, false, true)
       %i[ddts_build_only ddts_retain_builds].each do |suite_option|
         env.suite[suite_option] = rundef[suite_option.to_s]
       end
 
-      build_init(run)
-      Run.new(run, self)
+      build_init(runstr)
+      run = Run.new(runstr, self)
+      run.go
       baseline_gen if gen_baseline_dir
-    rescue Interrupt, DDTSException => x
-      halt(x)
     rescue Exception => x
-      fatal_backtrace(x.backtrace, x.message)
+      run.dlog.flush
+      halt(x)
 
     end
 
@@ -1537,7 +1546,7 @@ class TS
 
   def version(_args)
 
-    puts '3.11'
+    puts '3.12'
 
   end
 
