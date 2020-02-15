@@ -1,7 +1,6 @@
 before_install:
   - sudo apt-get update -qq
   - sudo apt-get install -qq gfortran mpi-default-bin mpi-default-dev
-language: ruby
 rvm:
-  - jruby-9.1.8.0
+  - jruby
 script: ex/tests
