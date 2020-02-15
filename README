@@ -198,7 +198,7 @@ recommended routines should handle errors (i.e. nil values).
 - env.run.ddts_require_results: A hash mapping the names of runs this run was
   defined to require to those runs' results.
 
-- env.run.ddts_root: The path to a unique directory reserved for thsi run. It is
+- env.run.ddts_root: The path to a unique directory reserved for this run. It is
   recommended, but not required, that the run be performed under this directory,
   which will be created automatically by the core driver for use by library
   routines. Access recommended from routines lib_run*.

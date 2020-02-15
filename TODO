@@ -1,5 +1,0 @@
-TODO
-
-- Allow strings/arrays/hashes on same level in Common#pp.
-
-- Factor calls to load_def() so that they occur once per definition per run.
